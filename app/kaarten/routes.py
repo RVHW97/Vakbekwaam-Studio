@@ -307,7 +307,9 @@ def bewerken(kaart_id):
         hdr = request.files.get('header_foto')
         if hdr and hdr.filename:
             foto_naam, foto_fout = save_kaart_header_foto(hdr, kaart.type)
-            if not foto_fout:
+            if foto_fout:
+                flash(f'Foto: {foto_fout}', 'warning')
+            elif foto_naam:
                 if kaart.header_foto:
                     verwijder_bestand(kaart.header_foto)
                 kaart.header_foto = foto_naam
@@ -319,7 +321,9 @@ def bewerken(kaart_id):
         tips_foto = request.files.get('ensceneringstips_foto')
         if tips_foto and tips_foto.filename:
             foto_naam, foto_fout = save_foto(tips_foto, prefix='tips', ratio=4/3)
-            if not foto_fout:
+            if foto_fout:
+                flash(f'Tips-foto: {foto_fout}', 'warning')
+            elif foto_naam:
                 if kaart.ensceneringstips_foto:
                     verwijder_bestand(kaart.ensceneringstips_foto)
                 kaart.ensceneringstips_foto = foto_naam
