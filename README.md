@@ -6,7 +6,7 @@
 
 ## Wat doet de applicatie?
 
-Vakbekwaam Studio is een interne webapp waar oefenleiders en redacteuren via formulieren **kaarten** invullen voor de operationele opleiding van de brandweer. De app maakt van die invoer automatisch een professionele PDF in de huisstijl van Brandweer Limburg-Noord — geen Word-templates, geen handwerk, geen afwijkende lay-outs.
+Vakbekwaam Studio is een interne webapp waar oefencoordinatoren via formulieren **kaarten** invullen voor de operationele opleiding van de brandweer. De app maakt van die invoer automatisch een professionele PDF in de huisstijl van Brandweer Limburg-Noord — geen Word-templates, geen handwerk, geen afwijkende lay-outs.
 
 Wat je er als gebruiker mee doet:
 
