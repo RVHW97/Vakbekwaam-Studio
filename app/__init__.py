@@ -4,6 +4,11 @@ from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 
+# Versie van de applicatie — toont in de footer van elke pagina.
+# Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
+__version__ = '0.1.7'
+__version_date__ = '6 mei 2026'
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -16,6 +21,10 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+
+    @app.context_processor
+    def inject_versie():
+        return {'app_versie': __version__, 'app_versie_datum': __version_date__}
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Je moet eerst inloggen.'

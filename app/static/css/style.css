@@ -1154,6 +1154,13 @@ body {
     background-color: var(--kleur-blauw);
     margin-top: auto;
 }
+.footer-versie {
+    display: inline-block;
+    margin-left: 0.6rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+    letter-spacing: 0.3px;
+}
 
 /* === FASE 4: STATUS, ACTIES, FILTER, GESCHIEDENIS === */
 .badge-status {
