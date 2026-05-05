@@ -1236,7 +1236,7 @@ function setupCropper(config) {
                 imageSmoothingQuality: 'high',
                 fillColor: config.fillColor || '#fff'
             });
-            if (!canvas) { form.dataset[config.processedKey] = 'true'; form.submit(); return; }
+            if (!canvas) { form.dataset[config.processedKey] = 'true'; HTMLFormElement.prototype.submit.call(form); return; }
             canvas.toBlob(function(blob) {
                 try {
                     var naam = (originalFile.name || config.prefix).replace(/\.[^.]+$/, '') + '.jpg';
@@ -1245,12 +1245,13 @@ function setupCropper(config) {
                     fileInput.files = dt.files;
                 } catch (err) { console.error(config.label + ' cropper fout:', err); }
                 form.dataset[config.processedKey] = 'true';
-                form.submit();
+                // Native submit via prototype: 'submit' kan overschaduwd zijn door <input name="submit">
+                HTMLFormElement.prototype.submit.call(form);
             }, 'image/jpeg', 0.92);
         } catch (err) {
             console.error(config.label + ' cropper fout:', err);
             form.dataset[config.processedKey] = 'true';
-            form.submit();
+            HTMLFormElement.prototype.submit.call(form);
         }
     }, true);
 }
@@ -1519,11 +1520,12 @@ setupCropper({
         if (toelichting) toelichting.removeAttribute('required');
         var form = document.querySelector('.kaart-form');
         if (form) {
-            // requestSubmit respecteert submit-events (zoals safety-sync); fallback form.submit()
+            // requestSubmit respecteert submit-events (zoals safety-sync). Fallback: native
+            // submit via prototype, want form.submit kan overschaduwd zijn door <input name="submit">.
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
             } else {
-                form.submit();
+                HTMLFormElement.prototype.submit.call(form);
             }
         }
     }
