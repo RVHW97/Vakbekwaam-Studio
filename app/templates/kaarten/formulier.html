@@ -713,7 +713,7 @@
                         <div class="form-groep-kolom" style="flex: 3;">
                             <div class="form-group" style="margin: 0;">
                                 <label class="form-label" for="doel_id">Kaart koppelen</label>
-                                <select name="doel_id" id="doel_id" class="form-input form-select" required>
+                                <select name="doel_id" id="doel_id" class="form-input form-select">
                                     <option value="">— Kies een kaart —</option>
                                     {% for type_key, blok in beschikbaar_per_type.items() %}
                                     <optgroup label="{{ blok.naam }}">
@@ -840,7 +840,7 @@
                              data-thema-url="{{ url_for('kaarten.thema_kaart_link_toevoegen', kaart_id=kaart.id) }}"
                              style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                             <input type="hidden" name="groep_index" value="{{ groep_index }}">
-                            <select name="doel_id" class="form-input form-select" style="flex:1; min-width:220px;" required>
+                            <select name="doel_id" class="form-input form-select" style="flex:1; min-width:220px;">
                                 <option value="">— kies een kaart om te koppelen —</option>
                                 {% for type_key, blok in thema_beschikbare_kaarten_per_type.items() %}
                                 <optgroup label="{{ blok.naam }}">
@@ -927,7 +927,7 @@
                  data-thema-url="{{ url_for('kaarten.thema_qr_link_toevoegen', kaart_id=kaart.id) }}"
                  style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom: 1rem;">
                 <input type="hidden" name="rij" value="auto">
-                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;" required>
+                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;">
                     <option value="">— kies een QR-code om toe te voegen —</option>
                     {% for cat_key, blok in thema_beschikbare_qrs_per_categorie.items() %}
                     <optgroup label="{{ blok.naam }}">
