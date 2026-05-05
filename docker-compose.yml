@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    image: vakbekwaam-studio:latest
+    container_name: vakbekwaam-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////app/instance/vakbekwaam.db
+    volumes:
+      - ./data/db:/app/instance
+      - ./data/uploads:/app/app/static/uploads
+    expose:
+      - "5050"
+    networks:
+      - vakbekwaam
+
+  nginx:
+    image: nginx:alpine
+    container_name: vakbekwaam-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./data/certbot/certs:/etc/letsencrypt:ro
+      - ./data/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - vakbekwaam
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: vakbekwaam-certbot
+    profiles: ["certbot"]
+    volumes:
+      - ./data/certbot/certs:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: ""
+
+networks:
+  vakbekwaam:
+    driver: bridge

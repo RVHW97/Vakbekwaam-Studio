@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Local data (mag NOOIT in image — komt via volume)
+data/
+instance/
+*.db
+*.sqlite*
+app/static/uploads/
+
+# Secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+.claude/
+
+# Werkmateriaal (komt sowieso niet via git, maar voor de zekerheid)
+huisstijl/
+Concept VakbekwaamStudio.*

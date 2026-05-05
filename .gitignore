@@ -67,6 +67,13 @@ Thumbs.db
 # === Gebruikers-uploads (niet in git) ===
 app/static/uploads/
 
+# === Docker runtime — data en gegenereerde nginx-config ===
+# data/ wordt op de VPS gevuld door docker-compose (DB, uploads, certbot-certs).
+# docker/nginx/conf.d/default.conf wordt door install.sh op de VPS aangemaakt op basis van de FQDN.
+data/
+docker/nginx/conf.d/*
+!docker/nginx/conf.d/.gitkeep
+
 # === Werk-/bronmateriaal (niet nodig voor de app) ===
 # Brand-assets, voorbeelden van VGGM, eigen ontwerpen — staan lokaal, gaan niet naar GitHub.
 # Wat de app actief gebruikt staat in app/static/.
