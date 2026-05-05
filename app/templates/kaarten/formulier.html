@@ -130,6 +130,24 @@
         border: 2px solid #DC2626 !important;
         background-color: #FEF2F2;
     }
+    /* Foto-validatie: directe melding bij ongeldige upload */
+    .foto-validatie-fout {
+        background: #FEE2E2;
+        border: 2px solid #DC2626;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        margin-top: 0.6rem;
+        color: #7F1D1D;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        animation: tab-fout-shake 0.4s ease-out;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
+    }
+    .foto-validatie-fout strong {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #991B1B;
+    }
     .gekoppelde-kaart-rij {
         display: flex;
         align-items: center;
@@ -285,9 +303,9 @@
         <div class="file-upload-area">
             {{ form.header_foto(class="form-file", accept="image/jpeg,image/png,image/webp", id="header-foto-input") }}
             {% if kaart_type == 'thema' %}
-            <p class="form-hint">Liggende foto, minimaal 200×200 px. Wordt achtergrond van de hele themakaart (verhouding A4 liggend). Max 5 MB. (JPG, PNG, WebP)</p>
+            <p class="form-hint">Liggende foto, <strong>minimaal 200×200 px</strong>. Wordt achtergrond van de hele themakaart (verhouding A4 liggend). <strong>Max 5 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
             {% else %}
-            <p class="form-hint">Liggend formaat, minimaal 1200×400 px. Je kunt na uploaden zelf het kader verschuiven en inzoomen. Max 5 MB. (JPG, PNG, WebP)</p>
+            <p class="form-hint">Liggend formaat, <strong>minimaal 1200×400 px</strong>. Je kunt na uploaden zelf het kader verschuiven en inzoomen. <strong>Max 5 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
             {% endif %}
         </div>
 
@@ -1062,19 +1080,88 @@ function setupCropper(config) {
     var cropper = null;
     var originalFile = null;
     var isBevestigd = false;
+    var validatieFoutEl = null;
+
+    function toonValidatieFout(boodschap) {
+        if (!validatieFoutEl) {
+            validatieFoutEl = document.createElement('div');
+            validatieFoutEl.className = 'foto-validatie-fout';
+            validatieFoutEl.setAttribute('role', 'alert');
+            fileInput.parentNode.insertBefore(validatieFoutEl, fileInput.nextSibling);
+        }
+        validatieFoutEl.innerHTML = '<strong>⚠ Foto kan niet gebruikt worden:</strong> ' + boodschap;
+        validatieFoutEl.style.display = 'block';
+        try { validatieFoutEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+    }
+
+    function wisValidatieFout() {
+        if (validatieFoutEl) validatieFoutEl.style.display = 'none';
+    }
+
+    function controleerBestand(file) {
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        var allowed = ['jpg', 'jpeg', 'png', 'webp'];
+        if (allowed.indexOf(ext) === -1) {
+            return 'verkeerd bestandstype (.' + ext + '). Alleen JPG, PNG of WebP.';
+        }
+        var maxBytes = config.maxFileBytes || (5 * 1024 * 1024);
+        if (file.size > maxBytes) {
+            var actMb = (file.size / 1024 / 1024).toFixed(1);
+            var maxMb = Math.round(maxBytes / 1024 / 1024);
+            return 'bestand is te groot (' + actMb + ' MB). Maximaal ' + maxMb + ' MB toegestaan.';
+        }
+        return null;
+    }
 
     fileInput.addEventListener('change', function(e) {
+        // Reset altijd de huidige cropper-staat
+        if (cropper) { cropper.destroy(); cropper = null; }
+        paneel.style.display = 'none';
+        if (statusEl) statusEl.style.display = 'none';
+        isBevestigd = false;
+        originalFile = null;
+        wisValidatieFout();
+
         var file = e.target.files && e.target.files[0];
-        if (!file) {
-            if (cropper) { cropper.destroy(); cropper = null; }
-            paneel.style.display = 'none';
-            if (statusEl) statusEl.style.display = 'none';
-            isBevestigd = false;
+        if (!file) return;
+
+        // 1) Bestandstype + bestandsgrootte
+        var snelleFout = controleerBestand(file);
+        if (snelleFout) {
+            toonValidatieFout(snelleFout);
+            fileInput.value = '';
             return;
         }
-        originalFile = file;
-        isBevestigd = false;
-        if (statusEl) statusEl.style.display = 'none';
+
+        // 2) Afmetingen — pas controleerbaar nadat de afbeelding is geladen
+        var probeerImg = new Image();
+        var probeerUrl = URL.createObjectURL(file);
+        probeerImg.onload = function() {
+            URL.revokeObjectURL(probeerUrl);
+            var minW = config.minW || 0;
+            var minH = config.minH || 0;
+            if (probeerImg.naturalWidth < minW || probeerImg.naturalHeight < minH) {
+                toonValidatieFout(
+                    'afbeelding is te klein (' + probeerImg.naturalWidth + '×' +
+                    probeerImg.naturalHeight + ' px). Minimaal ' + minW + '×' + minH +
+                    ' px nodig — kies een grotere foto of vraag een hogere resolutie.'
+                );
+                fileInput.value = '';
+                return;
+            }
+            // 3) Alles OK — start cropper
+            originalFile = file;
+            startCropper(file);
+        };
+        probeerImg.onerror = function() {
+            URL.revokeObjectURL(probeerUrl);
+            toonValidatieFout('kan deze afbeelding niet inlezen — bestand misschien beschadigd.');
+            fileInput.value = '';
+        };
+        probeerImg.src = probeerUrl;
+    });
+
+    function startCropper(file) {
         var reader = new FileReader();
         reader.onload = function(ev) {
             img.src = ev.target.result;
@@ -1099,7 +1186,7 @@ function setupCropper(config) {
             if (config.onActivate) config.onActivate();
         };
         reader.readAsDataURL(file);
-    });
+    }
 
     paneel.addEventListener('click', function(e) {
         var btn = e.target.closest('[' + config.dataAttr + ']');
@@ -1188,11 +1275,14 @@ setupCropper({
         if (frame) frame.style.backgroundImage = 'none';
     },
     maxW: 1800, maxH: 1273,
+    minW: 200, minH: 200,
     {% else %}
     ratio: 3 / 1,
     rotatable: true,
     maxW: 2400, maxH: 800,
+    minW: 1200, minH: 400,
     {% endif %}
+    maxFileBytes: 5 * 1024 * 1024,
     fillColor: '#000',
     prefix: 'header',
     label: '{{ "achtergrondfoto" if kaart_type == "thema" else "headerfoto" }}',
@@ -1210,6 +1300,8 @@ setupCropper({
     ratio: 4 / 3,
     rotatable: false,
     maxW: 1200, maxH: 900,
+    minW: 200, minH: 200,
+    maxFileBytes: 5 * 1024 * 1024,
     fillColor: '#fff',
     prefix: 'tips',
     label: 'ensceneringstips foto',
