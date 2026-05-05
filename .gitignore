@@ -80,10 +80,12 @@ docker/nginx/conf.d/*
 huisstijl/
 Concept VakbekwaamStudio.*
 
-# === Losse markdown-notities ===
-# Standaard alle .md negeren, behalve de projectkern-bestanden:
+# === Markdown ===
+# Alle losse markdown wordt genegeerd. Alleen README.md hoort op GitHub thuis.
+# CLAUDE.md, changelog.md en roadmap.md zijn interne werkdocumenten (lokaal bij Rebecca)
+# en mogen NOOIT in de publieke repo terechtkomen.
 *.md
-!CLAUDE.md
-!changelog.md
-!roadmap.md
 !README.md
+CLAUDE.md
+changelog.md
+roadmap.md
