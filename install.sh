@@ -178,6 +178,11 @@ cat > .env <<ENV
 SECRET_KEY=$SECRET_KEY
 ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_WACHTWOORD=$ADMIN_WACHTWOORD
+
+# Installatie-info (gebruikt door update.sh — niet door de Flask-app)
+INSTALL_FQDN=$FQDN
+INSTALL_SSL=$USE_SSL
+INSTALL_LE_EMAIL=$LE_EMAIL
 ENV
 chmod 600 .env
 ok ".env aangemaakt (rw alleen voor root)"
@@ -274,6 +279,6 @@ echo
 echo "  Handige commando's:"
 echo "     Status:     cd $INSTALL_DIR && docker compose ps"
 echo "     Logs:       cd $INSTALL_DIR && docker compose logs -f"
-echo "     Update:     cd $INSTALL_DIR && git pull && docker compose up -d --build"
+echo "     Update:     curl -fsSL https://raw.githubusercontent.com/RVHW97/Vakbekwaam-Studio/main/update.sh | sudo bash"
 echo "     Stop:       cd $INSTALL_DIR && docker compose down"
 echo
