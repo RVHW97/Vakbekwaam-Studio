@@ -1,21 +1,20 @@
+
 # Vakbekwaam Studio
 
-> Webapplicatie voor team Vakbekwaamheid van Brandweer Limburg-Noord — om opleidings- en oefenmateriaal centraal te beheren en in een uniforme huisstijl als PDF te leveren.
+> Vakbekwaam Studio is een webapplicatie voor het ontwikkelen, beheren en delen van opleidings- en oefenmateriaal binnen de brandweerorganisatie.
 
----
+De applicatie biedt een centrale, gebruiksvriendelijke omgeving waarin verschillende soorten kaarten (zoals scenario-, instructie-, thema- en opdrachtkaarten) uniform kunnen worden opgesteld volgens de huisstijl. Op basis van ingevoerde content worden automatisch professioneel opgemaakte PDF-documenten gegenereerd.
 
-## Wat doet de applicatie?
+Vakbekwaam Studio is ontwikkeld om versnippering van documenten en werkwijzen tegen te gaan, en om de kwaliteit, consistentie en herbruikbaarheid van opleidingsmateriaal te verbeteren.
 
-Vakbekwaam Studio is een interne webapp waar oefencoordinatoren via formulieren **kaarten** invullen voor de operationele opleiding van de brandweer. De app maakt van die invoer automatisch een professionele PDF in de huisstijl van Brandweer Limburg-Noord — geen Word-templates, geen handwerk, geen afwijkende lay-outs.
+Belangrijkste functionaliteiten:
 
-Wat je er als gebruiker mee doet:
-
-- **Themakaarten** opstellen — leidende principes, afspraken en verwijzingen rond een thema
-- **Instructiekaarten** schrijven — werkwijze in stappen, met foto's en veiligheidsinstructies
-- **Scenariokaarten** uitwerken — meldingstekst, scenariobeschrijving, ensceneringstips, evaluatiecriteria
-- **Opdrachtkaarten** maken — leerdoelen, opdrachten en randvoorwaarden voor oefeningen
-- **QR-codes** genereren die naar deze kaarten verwijzen — handig voor mobiel raadplegen tijdens oefeningen
-- **Versies bijhouden** van elke kaart, plus zoeken/filteren op kerntaak (Brand, IBGS, THV, Water, etc.)
+- **Opstellen en beheren van verschillende kaarttypes via gestructureerde formulieren
+- **Automatische PDF-generatie in vaste huisstijl
+- **Rollen- en rechtenstructuur voor gecontroleerd gebruik
+- **Zoek- en filterfunctionaliteit voor snel terugvinden van content
+- **Dynamische QR-codes voor het ontsluiten van materiaal (bijv. SharePoint, video’s, formulieren)
+- **Basis versiebeheer en workflow voor opstellen, controleren en publiceren
 
 Doelgroep: ~30 medewerkers van team Vakbekwaamheid. Geen externe gebruikers, geen burger-facing functionaliteit.
 
@@ -100,17 +99,12 @@ Voor ~30 actieve gebruikers, met PDF-generatie als zwaarste workload:
 | **Bandbreedte** | 100 Mbit/s gedeeld | idem |
 | **Verkeer/maand** | < 50 GB | idem |
 
-Voorbeelden van geschikte VPS-aanbieders / instanties:
-
-- Hetzner Cloud — `CX22` (€4,51/mnd, 2 vCPU / 4 GB / 40 GB) — ruim voldoende
-- DigitalOcean — Basic Droplet 2 GB / 1 vCPU (≈ $12/mnd)
-- Combell / OVH / Scaleway — vergelijkbare instances rond €5–10/mnd
 
 ### Onderhoudsverplichtingen
 
 - Maandelijks `update.sh` draaien voor app- en security-updates
 - Periodiek `apt upgrade` op het OS zelf
-- Backup-restore eens per kwartaal testen
+- Backup-restore volgend interne procedure
 - Certbot-renewal verloopt automatisch via cron in de certbot-container (out-of-the-box)
 
 ---

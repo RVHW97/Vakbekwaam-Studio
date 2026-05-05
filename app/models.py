@@ -214,11 +214,18 @@ class Kaart(db.Model):
     @staticmethod
     def volgende_nummer(kaart_type):
         prefix = KAART_TYPES[kaart_type]['prefix']
-        laatste = Kaart.query.filter_by(type=kaart_type).order_by(Kaart.id.desc()).first()
-        if laatste:
-            huidig = int(laatste.nummer.split('-')[1])
-            return f'{prefix}-{huidig + 1:03d}'
-        return f'{prefix}-001'
+        kaarten = Kaart.query.filter_by(type=kaart_type).all()
+        max_nr = 0
+        for k in kaarten:
+            deel = (k.nummer or '').split('-', 1)
+            if len(deel) == 2:
+                try:
+                    n = int(deel[1])
+                    if n > max_nr:
+                        max_nr = n
+                except ValueError:
+                    continue  # niet-numerieke achtervoegsels (bv. SK-TEST) overslaan
+        return f'{prefix}-{max_nr + 1:03d}'
 
     def __repr__(self):
         return f'<Kaart {self.nummer} - {self.naam}>'
