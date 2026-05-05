@@ -205,14 +205,29 @@ info "Dit kan 2–4 minuten duren bij eerste keer..."
 
 docker compose up -d --build
 
-info "Wachten tot de app gestart is..."
-for i in {1..30}; do
-    if docker compose exec -T app python -c "import urllib.request; urllib.request.urlopen('http://localhost:5050', timeout=2)" 2>/dev/null; then
-        ok "App reageert"
+info "Wachten tot de app reageert (max 60 sec)..."
+# `< /dev/null` is essentieel: zonder dat zou docker exec de rest van dit script
+# uit stdin consumeren wanneer install.sh via `curl | bash` wordt gedraaid.
+# `set +e` rond het blok zodat een falende health-check de installatie niet
+# afbreekt vóór de slot-sectie met de admin-gegevens.
+APP_OK="nee"
+set +e
+for i in $(seq 1 30); do
+    docker compose exec -T app python -c "import urllib.request; urllib.request.urlopen('http://localhost:5050', timeout=2)" </dev/null >/dev/null 2>&1
+    if [[ $? -eq 0 ]]; then
+        APP_OK="ja"
         break
     fi
     sleep 2
 done
+set -e
+
+if [[ "$APP_OK" == "ja" ]]; then
+    ok "App reageert"
+else
+    warn "App reageert nog niet binnen 60 sec — installatie wordt afgerond."
+    warn "Check straks: cd $INSTALL_DIR && docker compose logs app"
+fi
 
 # --- SSL via Let's Encrypt ---------------------------------------------------
 

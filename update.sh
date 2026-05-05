@@ -164,14 +164,27 @@ info "Image opnieuw bouwen (kan 1–3 minuten duren)..."
 
 docker compose up -d --build
 
-info "Wachten tot de app weer reageert..."
-for i in {1..30}; do
-    if docker compose exec -T app python -c "import urllib.request; urllib.request.urlopen('http://localhost:5050', timeout=2)" 2>/dev/null; then
-        ok "App reageert weer"
+info "Wachten tot de app weer reageert (max 60 sec)..."
+# `< /dev/null` voorkomt dat docker exec de rest van dit script consumeert
+# wanneer update.sh via `curl | bash` wordt gedraaid.
+APP_OK="nee"
+set +e
+for i in $(seq 1 30); do
+    docker compose exec -T app python -c "import urllib.request; urllib.request.urlopen('http://localhost:5050', timeout=2)" </dev/null >/dev/null 2>&1
+    if [[ $? -eq 0 ]]; then
+        APP_OK="ja"
         break
     fi
     sleep 2
 done
+set -e
+
+if [[ "$APP_OK" == "ja" ]]; then
+    ok "App reageert weer"
+else
+    warn "App reageert nog niet binnen 60 sec — update wordt afgerond."
+    warn "Check: cd $INSTALL_DIR && docker compose logs app"
+fi
 
 # Nginx herstarten zodat eventueel nieuwe config geladen wordt
 docker compose restart nginx >/dev/null 2>&1 || true
