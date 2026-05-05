@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Kaarten — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Kaarten</h1>
+    <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-primary">+ Nieuwe kaart</a>
+</div>
+
+<p class="overzicht-intro">Kies een map om de kaarten van dat type te bekijken.</p>
+
+<div class="mappen-grid">
+    {% for map in mappen %}
+    <a href="{{ url_for('kaarten.overzicht_type', kaart_type=map.key) }}" class="map-kaart map-{{ map.key }}">
+        <div class="map-icoon" aria-hidden="true">
+            <svg viewBox="0 0 64 48" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 10 Q4 6 8 6 L22 6 L28 12 L56 12 Q60 12 60 16 L60 40 Q60 44 56 44 L8 44 Q4 44 4 40 Z"/>
+            </svg>
+        </div>
+        <div class="map-inhoud">
+            <h2>{{ map.naam }}</h2>
+            <p class="map-prefix">{{ map.prefix }}-…</p>
+            <p class="map-aantal">
+                {% if map.aantal == 0 %}
+                Nog geen kaarten
+                {% elif map.aantal == 1 %}
+                1 kaart
+                {% else %}
+                {{ map.aantal }} kaarten
+                {% endif %}
+            </p>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% if totaal_archief > 0 %}
+<div class="archief-link-blok">
+    <a href="{{ url_for('kaarten.archief') }}" class="archief-link">
+        Bekijk archief ({{ totaal_archief }} gearchiveerde {% if totaal_archief == 1 %}kaart{% else %}kaarten{% endif %})
+    </a>
+</div>
+{% endif %}
+{% endblock %}

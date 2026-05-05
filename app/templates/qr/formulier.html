@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}{{ titel }} — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ titel }}</h1>
+    <a href="{{ url_for('qr.overzicht') }}" class="btn btn-secondary">← Terug naar overzicht</a>
+</div>
+
+<div class="form-card">
+    <form method="POST" enctype="multipart/form-data" class="qr-form">
+        {{ form.hidden_tag() }}
+
+        <h2 class="form-sectie-kop">Algemeen</h2>
+
+        <div class="form-group">
+            {{ form.naam.label }}
+            {{ form.naam(class="form-input", maxlength=80, placeholder="Bv. Oefening brand — 12 april") }}
+            {% for error in form.naam.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.omschrijving.label }}
+            {{ form.omschrijving(class="form-input", rows=2, maxlength=300) }}
+            {% for error in form.omschrijving.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-group form-group-half">
+                {{ form.categorie.label }}
+                {{ form.categorie(class="form-input", id="qr-categorie") }}
+            </div>
+            <div class="form-group form-group-half" id="qr-categorie-anders-wrap" style="display:none">
+                {{ form.categorie_anders.label }}
+                {{ form.categorie_anders(class="form-input", maxlength=40) }}
+                {% for error in form.categorie_anders.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            </div>
+        </div>
+
+        <h2 class="form-sectie-kop">Doel van de QR</h2>
+        <p class="form-hulp">Kies één doel: een URL (bv. YouTube, Forms, SharePoint) óf upload een PDF.</p>
+
+        <div class="form-group">
+            {{ form.doel_url.label }}
+            {{ form.doel_url(class="form-input", maxlength=500, placeholder="https://...") }}
+            {% for error in form.doel_url.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.pdf_bestand.label }}
+            {{ form.pdf_bestand(class="form-input", accept=".pdf") }}
+            {% for error in form.pdf_bestand.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            {% if qr and qr.pdf_bestand %}
+            <div class="form-hulp">
+                Huidig bestand: <a href="{{ url_for('qr.pdf', bestand=qr.pdf_bestand) }}" target="_blank">bekijken</a>
+            </div>
+            <div class="form-checkbox">
+                {{ form.pdf_verwijderen() }}
+                {{ form.pdf_verwijderen.label }}
+            </div>
+            {% endif %}
+        </div>
+
+        <h2 class="form-sectie-kop">Tekst onder QR</h2>
+
+        <div class="form-group">
+            {{ form.tekst_onder.label }}
+            {{ form.tekst_onder(class="form-input", maxlength=30, id="qr-tekst-onder") }}
+            <span class="teken-teller" id="qr-tekst-onder-teller">0 / 30 tekens</span>
+            {% for error in form.tekst_onder.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <h2 class="form-sectie-kop">Opmaak</h2>
+        <p class="form-hulp">Kies hoe de QR-code eruit komt te zien. Het echte voorbeeld zie je hieronder zodra je opslaat.</p>
+
+        <div class="qr-stijl-keuzes" id="qr-stijl-keuzes">
+            {% for value, label in form.stijl.choices %}
+            <label class="qr-stijl-optie">
+                <input type="radio" name="{{ form.stijl.name }}" value="{{ value }}"
+                       {% if (form.stijl.data or 'navy') == value %}checked{% endif %}>
+                <span class="qr-stijl-voorbeeld qr-stijl-voorbeeld-{{ value }}">
+                    <span class="qr-stijl-vakje qr-stijl-vakje-1"></span>
+                    <span class="qr-stijl-vakje qr-stijl-vakje-2"></span>
+                    <span class="qr-stijl-vakje qr-stijl-vakje-3"></span>
+                    <span class="qr-stijl-schild"></span>
+                </span>
+                <span class="qr-stijl-label">{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% for error in form.stijl.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+        {% if qr %}
+        <h2 class="form-sectie-kop">Voorbeeld + downloaden</h2>
+        <div class="qr-preview-blok"
+             id="qr-preview-blok"
+             data-preview-basis="{{ url_for('qr.preview_png', qr_id=qr.id) }}"
+             data-download-basis="{{ url_for('qr.download', qr_id=qr.id, formaat='__F__') }}"
+             data-cache-bust="{{ qr.bijgewerkt_op.timestamp() }}"
+             data-opgeslagen-stijl="{{ qr.stijl }}">
+            <div class="qr-preview-afbeelding">
+                <img id="qr-preview-img" src="{{ url_for('qr.preview_png', qr_id=qr.id) }}?v={{ qr.bijgewerkt_op.timestamp() }}" alt="QR preview">
+            </div>
+            <div class="qr-preview-info">
+                <div class="qr-meta-rij">
+                    <span class="qr-meta-label">Korte link</span>
+                    <span class="qr-meta-waarde"><code>{{ request.host_url }}q/{{ qr.slug }}</code></span>
+                </div>
+                <div class="qr-meta-rij">
+                    <span class="qr-meta-label">Status</span>
+                    <span class="badge badge-status badge-status-{{ qr.status }}">{{ qr.status|capitalize }}</span>
+                </div>
+                <div class="qr-meta-rij">
+                    <span class="qr-meta-label">Aantal kliks</span>
+                    <span class="qr-meta-waarde">{{ qr.aantal_kliks }}</span>
+                </div>
+                {% if qr.laatste_klik %}
+                <div class="qr-meta-rij">
+                    <span class="qr-meta-label">Laatste klik</span>
+                    <span class="qr-meta-waarde">{{ qr.laatste_klik.strftime('%d-%m-%Y %H:%M') }}</span>
+                </div>
+                {% endif %}
+                <div class="qr-meta-rij">
+                    <span class="qr-meta-label">Eigenaar</span>
+                    <span class="qr-meta-waarde">{{ qr.eigenaar.naam }}</span>
+                </div>
+
+                <p class="form-hulp" id="qr-stijl-hint"></p>
+
+                <div class="qr-download-knoppen">
+                    <a href="#" data-format="png" class="btn btn-small qr-download-knop">PNG</a>
+                    <a href="#" data-format="svg" class="btn btn-small qr-download-knop">SVG</a>
+                    <a href="#" data-format="pdf" class="btn btn-small qr-download-knop">PDF</a>
+                </div>
+                <p class="form-hulp">PNG = scherm/web, SVG = vector, PDF = drukwerk (scherp op elk formaat).</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('qr.overzicht') }}" class="btn btn-secondary">Sluiten</a>
+            {% if qr %}
+            <form method="POST" action="{{ url_for('qr.verwijderen', qr_id=qr.id) }}"
+                  onsubmit="return confirm('Weet je zeker dat je deze QR-code wil verwijderen? Dit is niet ongedaan te maken.');"
+                  style="display:inline; margin-left:auto">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Verwijderen</button>
+            </form>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    // Categorie "Anders" toggle
+    var sel = document.getElementById('qr-categorie');
+    var wrap = document.getElementById('qr-categorie-anders-wrap');
+    function toggle() { wrap.style.display = (sel.value === 'anders') ? '' : 'none'; }
+    if (sel && wrap) { toggle(); sel.addEventListener('change', toggle); }
+
+    // Live teken-teller voor tekst_onder
+    var veld = document.getElementById('qr-tekst-onder');
+    var teller = document.getElementById('qr-tekst-onder-teller');
+    if (veld && teller) {
+        var max = parseInt(veld.getAttribute('maxlength') || '30', 10);
+        function update() {
+            var huidig = veld.value.length;
+            teller.textContent = huidig + ' / ' + max + ' tekens';
+            teller.classList.remove('waarschuwing', 'limiet');
+            if (huidig >= max) teller.classList.add('limiet');
+            else if (huidig >= max * 0.8) teller.classList.add('waarschuwing');
+        }
+        veld.addEventListener('input', update);
+        update();
+    }
+
+    // Stijl-radio: live preview + download-links bijwerken
+    var blok = document.getElementById('qr-preview-blok');
+    var stijlRadios = document.querySelectorAll('#qr-stijl-keuzes input[type="radio"]');
+    var hint = document.getElementById('qr-stijl-hint');
+
+    function huidigeStijl() {
+        for (var i = 0; i < stijlRadios.length; i++) {
+            if (stijlRadios[i].checked) return stijlRadios[i].value;
+        }
+        return 'navy';
+    }
+
+    function updatePreview() {
+        var s = huidigeStijl();
+        if (blok) {
+            var basisPreview = blok.getAttribute('data-preview-basis');
+            var basisDownload = blok.getAttribute('data-download-basis');
+            var cache = blok.getAttribute('data-cache-bust');
+            var opgeslagen = blok.getAttribute('data-opgeslagen-stijl');
+            var img = document.getElementById('qr-preview-img');
+            var knoppen = document.querySelectorAll('.qr-download-knop');
+
+            if (img) {
+                img.src = basisPreview + '?v=' + cache + '&stijl=' + encodeURIComponent(s);
+            }
+            blok.classList.toggle('qr-preview-toont-transparant', s === 'transparant');
+            knoppen.forEach(function(knop) {
+                var fmt = knop.getAttribute('data-format');
+                var url = basisDownload.replace('__F__', fmt);
+                knop.href = url + '?stijl=' + encodeURIComponent(s);
+            });
+            if (hint) {
+                if (s !== opgeslagen) {
+                    hint.textContent = 'Voorbeeld in nieuwe stijl. Klik op Opslaan om deze stijl op te slaan.';
+                    hint.classList.add('waarschuwing');
+                } else {
+                    hint.textContent = '';
+                    hint.classList.remove('waarschuwing');
+                }
+            }
+        }
+    }
+
+    stijlRadios.forEach(function(r) { r.addEventListener('change', updatePreview); });
+    updatePreview();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ titel }} — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ titel }}</h1>
+</div>
+
+<div class="form-card">
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.naam.label }}
+            {{ form.naam(class="form-input", placeholder="Volledige naam") }}
+            {% for error in form.naam.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(class="form-input", placeholder="naam@voorbeeld.nl") }}
+            {% for error in form.email.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.rol.label }}
+            {{ form.rol(class="form-input") }}
+        </div>
+
+        {% if form.actief is defined %}
+        <div class="form-group form-checkbox">
+            {{ form.actief() }}
+            {{ form.actief.label }}
+        </div>
+        {% endif %}
+
+        {% if form.wachtwoord is defined %}
+        <div class="form-group">
+            {{ form.wachtwoord.label }}
+            {{ form.wachtwoord(class="form-input") }}
+            {% for error in form.wachtwoord.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.wachtwoord_bevestig.label }}
+            {{ form.wachtwoord_bevestig(class="form-input") }}
+            {% for error in form.wachtwoord_bevestig.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if form.nieuw_wachtwoord is defined %}
+        <div class="form-group">
+            {{ form.nieuw_wachtwoord.label }}
+            {{ form.nieuw_wachtwoord(class="form-input", placeholder="Laat leeg om niet te wijzigen") }}
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('auth.gebruikers') }}" class="btn btn-secondary">Annuleren</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="welcome">
+    <h1>Welkom, {{ current_user.naam }}</h1>
+    <p>Vakbekwaam Studio — het platform voor opleidings- en oefendocumenten.</p>
+</div>
+
+<div class="card-grid">
+    <a href="{{ url_for('kaarten.kies_type') }}" class="action-card active">
+        <div class="action-icon">&#x1F4DD;</div>
+        <h2>Nieuwe kaart aanmaken</h2>
+        <p>Maak een nieuw opleidingsdocument aan.</p>
+        <span class="badge badge-active">Beschikbaar</span>
+    </a>
+
+    <a href="{{ url_for('kaarten.overzicht') }}" class="action-card active">
+        <div class="action-icon">&#x1F4C2;</div>
+        <h2>Alle kaarten bekijken</h2>
+        <p>Bekijk en beheer bestaande kaarten.</p>
+        <span class="badge badge-active">Beschikbaar</span>
+    </a>
+
+    <a href="{{ url_for('qr.overzicht') }}" class="action-card active">
+        <div class="action-icon">&#x25A3;</div>
+        <h2>QR-codes</h2>
+        <p>Dynamische QR-codes aanmaken en beheren.</p>
+        <span class="badge badge-active">Beschikbaar</span>
+    </a>
+
+    <div class="action-card disabled">
+        <div class="action-icon">&#x1F50D;</div>
+        <h2>Zoeken</h2>
+        <p>Zoek door alle kaarten en documenten.</p>
+        <span class="badge badge-soon">Beschikbaar in fase 5</span>
+    </div>
+
+    {% if current_user.is_beheerder %}
+    <a href="{{ url_for('auth.gebruikers') }}" class="action-card active">
+        <div class="action-icon">&#x1F465;</div>
+        <h2>Gebruikers beheren</h2>
+        <p>Beheer accounts en rechten.</p>
+        <span class="badge badge-active">Beschikbaar</span>
+    </a>
+    {% endif %}
+</div>
+
+<div class="recent-section">
+    <h2>Recente kaarten</h2>
+    {% if recente_kaarten %}
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nummer</th>
+                    <th>Naam</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Datum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kaart in recente_kaarten %}
+                <tr>
+                    <td><strong>{{ kaart.nummer }}</strong></td>
+                    <td>{{ kaart.naam }}</td>
+                    <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
+                    <td><span class="badge badge-concept">{{ kaart.status|capitalize }}</span></td>
+                    <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
+                    <td>
+                        <div class="rij-acties">
+                            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-small" target="_blank" rel="noopener">Openen</a>
+                            <a href="{{ url_for('kaarten.bewerken', kaart_id=kaart.id) }}" class="btn btn-small btn-secondary">Bewerken</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>Er zijn nog geen kaarten aangemaakt.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

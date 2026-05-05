@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Nieuwe kaart — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Nieuwe kaart aanmaken</h1>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Terug naar dashboard</a>
+</div>
+
+<p class="page-intro">Kies het type kaart dat je wilt aanmaken:</p>
+
+<div class="type-grid">
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type='thema') }}" class="type-card">
+        <div class="type-icon">&#x1F4D8;</div>
+        <h2>Themakaart</h2>
+        <p>Hoofdthema, leidende principes, afspraken en verwijzingen.</p>
+    </a>
+
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type='instructie') }}" class="type-card">
+        <div class="type-icon">&#x1F4CB;</div>
+        <h2>Instructiekaart</h2>
+        <p>Toepassing, werkwijze met stappen, veiligheid en onderhoud.</p>
+    </a>
+
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type='scenario') }}" class="type-card">
+        <div class="type-icon">&#x1F3AD;</div>
+        <h2>Scenariokaart</h2>
+        <p>Melding, scenariobeschrijving, enscenering en evaluatie.</p>
+    </a>
+
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type='opdracht') }}" class="type-card">
+        <div class="type-icon">&#x1F3AF;</div>
+        <h2>Opdrachtkaart</h2>
+        <p>Doelen, opdrachten, randvoorwaarden en evaluatie.</p>
+    </a>
+</div>
+{% endblock %}

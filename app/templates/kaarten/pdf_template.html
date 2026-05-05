@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+{% from "kaarten/_kenmerk_iconen.html" import kenmerk_icoon_pdf %}
+{% macro tips_icoon(kleur) %}
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.8.9 1.5 1.8 1.5 2.5h5c0-.7.7-1.6 1.5-2.5A6 6 0 0012 3z" stroke="{{ kleur }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M12 8v4" stroke="{{ kleur }}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
+{% endmacro %}
+{% macro evaluatie_icoon(kleur) %}
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <rect x="5" y="4" width="14" height="17" rx="1.5" stroke="{{ kleur }}" stroke-width="1.6" fill="none"/>
+    <rect x="9" y="2.3" width="6" height="3.4" rx="0.7" stroke="{{ kleur }}" stroke-width="1.6" fill="none"/>
+    <path d="M8.8 13l2 2 4.4-4.4" stroke="{{ kleur }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
+{% endmacro %}
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<style>
+    /* === FONTS === */
+    @import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap");
+
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.regular }}") format("truetype"); font-weight: 400; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.bold }}") format("truetype"); font-weight: 700; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.black }}") format("truetype"); font-weight: 900; }
+
+    /* === PAGINA ===
+       Pagina 1: grote header (40mm) met foto eronder.
+       Pagina 2+: compacte header (14mm), meer ruimte voor content. */
+    @page {
+        size: A4;
+        margin: 18mm 19mm 22mm 15mm;
+        @top-left { content: element(header-rest); }
+        @bottom-left { content: element(page-footer); }
+    }
+    @page :first {
+        margin-top: 42mm;
+        @top-left { content: element(header-first); }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: "Open Sans", sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.55;
+        color: #1A1A1A;
+    }
+    h1, h2, h3, .frutiger { font-family: "Frutiger", "Open Sans", sans-serif; }
+
+    /* === HEADER PAGINA 1 (grote variant met accent-extensie) === */
+    .running-header-first {
+        position: running(header-first);
+        width: 210mm;
+        margin-left: -15mm;
+    }
+    .pdf-header-first {
+        position: relative;
+        width: 210mm;
+        height: 40mm;
+    }
+    .pdf-header-first svg {
+        position: absolute;
+        top: 0; left: 0;
+        width: 210mm;
+        height: 40mm;
+    }
+    .pdf-header-first-titel {
+        position: absolute;
+        top: 0;
+        left: 29mm;
+        right: 15mm;
+        height: 23mm;
+        line-height: 23mm;
+        color: #FFFFFF;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-weight: 900;
+        font-size: 14pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .pdf-header-first-nummer {
+        position: absolute;
+        top: 23mm;
+        left: 3mm;
+        width: 52mm;
+        height: 15mm;
+        line-height: 15mm;
+        color: #FFFFFF;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-weight: 700;
+        font-size: 11pt;
+        text-align: center;
+        letter-spacing: 0.5px;
+    }
+
+    /* === HEADER PAGINA 2+ (compacte variant) ===
+       14mm hoog. Accent is brede strip bovenaan (8mm).
+       Balk begint verder rechts (x=98). */
+    .running-header-rest {
+        position: running(header-rest);
+        width: 210mm;
+        margin-left: -15mm;
+    }
+    .pdf-header-rest {
+        position: relative;
+        width: 210mm;
+        height: 14mm;
+    }
+    .pdf-header-rest svg {
+        position: absolute;
+        top: 0; left: 0;
+        width: 210mm;
+        height: 14mm;
+    }
+    .pdf-header-rest-titel {
+        position: absolute;
+        top: 0;
+        left: 70mm;
+        right: 20mm;
+        height: 14mm;
+        line-height: 14mm;
+        color: #FFFFFF;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-weight: 900;
+        font-size: 11pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .pdf-header-rest-nummer {
+        position: absolute;
+        top: 0;
+        left: 33mm;
+        width: 50mm;
+        height: 8mm;
+        line-height: 8mm;
+        color: #FFFFFF;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-weight: 700;
+        font-size: 8pt;
+        text-align: left;
+        letter-spacing: 0.5px;
+    }
+
+    /* === ZIJBALK (fixed) === */
+    .pdf-zijbalk {
+        position: fixed;
+        top: -3mm;
+        left: 177.5mm;
+        width: 14.5mm;
+        height: 176mm;
+    }
+    .pdf-zijbalk svg {
+        position: absolute;
+        top: 0; left: 0;
+        width: 14.5mm;
+        height: 176mm;
+    }
+    .pdf-zijbalk-label {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        color: #FFFFFF;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-weight: 900;
+        font-size: 13pt;
+        letter-spacing: 3px;
+        white-space: nowrap;
+        text-transform: uppercase;
+    }
+
+    /* === FOOTER (running) === */
+    .running-footer {
+        position: running(page-footer);
+        width: 210mm;
+        margin-left: -15mm;
+    }
+    .pdf-footer {
+        background-color: #000033;
+        height: 16mm;
+        padding: 0 6mm;
+        display: table;
+        width: 100%;
+        color: #FFFFFF;
+        font-family: "Open Sans", sans-serif;
+        font-size: 8pt;
+    }
+    .pdf-footer-cel { display: table-cell; vertical-align: middle; height: 16mm; }
+    .pdf-footer-links { text-align: left; width: 33%; }
+    .pdf-footer-links img { height: 11mm; width: auto; display: block; }
+    .pdf-footer-midden { text-align: center; width: 34%; font-weight: 600; line-height: 1.2; }
+    .pdf-footer-midden .datum { display: block; font-size: 8pt; }
+    .pdf-footer-midden .versie { display: block; font-size: 8pt; font-weight: 700; }
+    .pdf-footer-rechts { text-align: right; width: 33%; line-height: 1; }
+    .pdf-footer-pagina::after { content: "Pagina " counter(page) " van " counter(pages); }
+
+    /* === HEADERFOTO (pagina 1, content flow) === */
+    .pdf-headerfoto {
+        width: 204mm;
+        height: 55mm;
+        overflow: hidden;
+        position: relative;
+        margin-left: -12mm;
+        margin-top: -20mm;
+        margin-bottom: 4mm;
+    }
+    .pdf-headerfoto img { width: 204mm; height: 55mm; display: block; }
+    .pdf-headerfoto-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.40);
+    }
+
+    /* === SECTIES === */
+    .pdf-sectie { margin-bottom: 5.5mm; }
+    .pdf-sectie-titel {
+        page-break-after: avoid;
+        break-after: avoid;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #000033;
+        background-color: #F0EFEC;
+        padding: 1.5mm 4mm 1.5mm 6mm;
+        margin-bottom: 2.5mm;
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .pdf-sectie-inhoud {
+        font-family: "Open Sans", sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.65;
+        padding: 0 1mm 1mm 1mm;
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* === INFOSTRIP: Doelgroep / Oefenstaf / Tijdsduur === */
+    .pdf-infostrip {
+        page-break-inside: avoid;
+        margin-bottom: 5mm;
+    }
+    .pdf-infostrip-rij {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+    .pdf-infostrip-kolom {
+        display: table-cell;
+        vertical-align: top;
+        padding: 3mm 4mm;
+        background-color: #F0EFEC;
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+    }
+    .pdf-infostrip-kolom + .pdf-infostrip-kolom {
+        border-left: 0.5mm solid #D9D5CC;
+    }
+    .pdf-infostrip-kolom:first-child {
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+    }
+    .pdf-infostrip-icoon {
+        display: block;
+        width: 6mm;
+        height: 6mm;
+        margin-bottom: 1.5mm;
+    }
+    .pdf-infostrip-label {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 7pt;
+        font-weight: 700;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 1mm;
+    }
+    .pdf-infostrip-waarde {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #000033;
+        line-height: 1.3;
+    }
+    .pdf-infostrip-detail {
+        font-family: "Open Sans", sans-serif;
+        font-size: 8pt;
+        color: #555;
+        line-height: 1.5;
+        margin-top: 1mm;
+    }
+    .pdf-infostrip-sublijst {
+        margin-top: 0.5mm;
+        padding-left: 3mm;
+        font-size: 7pt;
+        font-style: italic;
+        color: #777;
+        line-height: 1.5;
+    }
+    .pdf-infostrip-sublijst span { display: block; }
+
+    /* === PAGERBERICHT C35 === */
+    .pdf-pager-sectie { page-break-inside: avoid; }
+    .pdf-pager-scenario {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 4mm 0;
+        margin: 0 -4mm;
+        page-break-inside: avoid;
+    }
+    .pdf-pager-scenario-links {
+        vertical-align: top;
+        width: 30%;
+    }
+    .pdf-pager-scenario-rechts {
+        vertical-align: top;
+        width: 70%;
+    }
+    .pdf-pager-scenario-links .pdf-pager-wrapper {
+        margin: 0;
+        width: 100%;
+    }
+    .pdf-pager-scenario-links .pdf-pager-bg {
+        width: 100%;
+    }
+    .pdf-pager-wrapper {
+        position: relative;
+        width: 65mm;
+        margin: 2mm 0 4mm 0;
+    }
+    .pdf-pager-bg {
+        width: 65mm;
+        display: block;
+    }
+    .pdf-pager-overlay {
+        position: absolute;
+        left: 22.48%;
+        top: 32%;
+        width: 44.36%;
+        height: 35.99%;
+        background: #B3B3B3;
+        padding: 1mm 1.5mm;
+        box-sizing: border-box;
+        font-family: "Courier New", "Courier", monospace;
+        font-size: 6pt;
+        line-height: 1.3;
+        color: #1a1a1a;
+        overflow: hidden;
+    }
+    .pdf-pager-regel {
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    /* === KENMERKENSCHEMA — navy tint, gecentreerd === */
+    .pdf-kenmerken-wrapper {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        background: #00003310;
+        border-top: 1.5mm solid {{ kerntaak_kleur }};
+        border-bottom: 1.5mm solid {{ kerntaak_kleur }};
+        padding: 4mm 5mm 2mm 5mm;
+        width: 85%;
+        margin: 14mm auto 5mm auto;
+    }
+    .pdf-kenmerken-wrapper .pdf-sectie-titel-plain {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #000033;
+        padding: 0 0 2mm 0;
+        margin: 0 0 3mm 0;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        text-align: center;
+    }
+    .pdf-doc-tabel {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1mm;
+    }
+    .pdf-doc-rij { page-break-inside: avoid; }
+    .pdf-doc-links {
+        width: 62mm;
+        vertical-align: top;
+        padding: 0 4mm 4mm 0;
+    }
+    .pdf-doc-rechts {
+        vertical-align: top;
+        padding: 0 0 4mm 0;
+    }
+    .pdf-doc-kop {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .pdf-doc-icoon-cel {
+        width: 13mm;
+        vertical-align: middle;
+        padding: 0;
+    }
+    .pdf-doc-icoon-badge {
+        display: inline-block;
+        width: 12mm;
+        height: 12mm;
+        border-radius: 50%;
+        text-align: center;
+        padding: 1.5mm 0;
+        box-sizing: border-box;
+    }
+    .pdf-doc-icoon-badge span {
+        width: 8mm !important;
+        height: 8mm !important;
+        vertical-align: middle;
+    }
+    .pdf-doc-titel-cel {
+        vertical-align: middle;
+        padding-left: 2mm;
+    }
+    .pdf-doc-titel {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 9.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4pt;
+        color: #000033;
+    }
+    .pdf-doc-tekst {
+        font-family: "Open Sans", sans-serif;
+        font-size: 9pt;
+        line-height: 1.55;
+        color: #000033;
+        padding-top: 3mm;
+    }
+    .pdf-kenmerk-rij-tekst {
+        vertical-align: top;
+        padding-top: 1.2mm;
+        font-family: "Open Sans", sans-serif;
+        font-size: 9pt;
+        line-height: 1.55;
+        color: #000033;
+    }
+
+    /* === TIPS MET FOTO === */
+    .pdf-tips-met-foto {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: avoid;
+    }
+    .pdf-tips-tekst {
+        vertical-align: top;
+        padding-right: 5mm;
+    }
+    .pdf-tips-foto {
+        width: 40mm;
+        vertical-align: top;
+    }
+    .pdf-tips-foto img {
+        width: 40mm;
+        border-radius: 1.5mm;
+        box-shadow: 0 0.5mm 2mm rgba(0, 0, 51, 0.12);
+    }
+
+    /* === TIPSLIJST (ensceneringstips / evaluatie) === */
+    .pdf-tipslijst { list-style: disc; padding: 0 0 0 5mm; margin: 0; color: #000033; }
+    .pdf-tipslijst li {
+        padding: 0.3mm 0 0.3mm 4mm;
+        line-height: 1.55;
+        list-style: disc;
+        color: #000033;
+        page-break-inside: avoid;
+    }
+
+    /* === SPECIALE KAART-BLOKKEN (ensceneringstips / evaluatie) ===
+       Lichte tint van kerntaak-kleur, dikkere accent-strook links,
+       grijze titelbalk in dezelfde stijl als de andere secties. */
+    .pdf-sectie-kaart {
+        position: relative;
+        background-color: #00003310;
+        border-left: 2.5mm solid #000033;
+        margin-bottom: 5.5mm;
+        page-break-inside: avoid;
+    }
+    .pdf-sectie-kaart-inner {
+        padding: 0 4mm 3mm 4mm;
+    }
+    .pdf-sectie-kaart .pdf-sectie-titel-plain {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #000033;
+        padding: 3mm 14mm 0 4mm;
+        margin: 0 0 2mm 0;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .pdf-sectie-kaart .pdf-tipslijst li::before { background: #000033; }
+    .pdf-nummerlijst {
+        list-style: disc;
+        padding: 0 0 0 5mm;
+        margin: 0;
+        color: #000033;
+    }
+    .pdf-nummerlijst li {
+        padding: 0.3mm 0 0.3mm 4mm;
+        line-height: 1.55;
+        list-style: disc;
+        color: #000033;
+    }
+    .pdf-sectie-kaart-decoratie {
+        position: absolute;
+        top: 2.5mm;
+        right: 3mm;
+        width: 10mm;
+        height: 10mm;
+        opacity: 0.25;
+    }
+    .pdf-sectie-kaart-decoratie svg { width: 10mm; height: 10mm; display: block; }
+
+    /* === 2-KOLOMS BLOK (ensceneringstips naast evaluatie) === */
+    .pdf-duo {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 4mm 0;
+        margin: 0 -4mm 5.5mm -4mm;
+        page-break-inside: avoid;
+    }
+    .pdf-duo-kolom { width: 50%; vertical-align: top; }
+    /* In 2-koloms variant: tabel-cellen krijgen automatisch dezelfde hoogte. */
+    td.pdf-sectie-kaart { padding: 0; }
+
+    /* === AFBEELDINGEN === */
+    .pdf-afbeeldingen { page-break-inside: avoid; margin-top: 5mm; }
+    .pdf-afbeeldingen-blok {
+        background: #00003308;
+        padding: 4mm;
+        border-radius: 2mm;
+    }
+    .pdf-afbeeldingen-grid {
+        display: table;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 3mm;
+    }
+    .pdf-afbeeldingen-rij { display: table-row; }
+    .pdf-afbeeldingen-rij .pdf-afbeelding {
+        display: table-cell;
+        width: 50%;
+        vertical-align: top;
+        text-align: center;
+    }
+    .pdf-afbeelding {
+        text-align: center;
+        margin-bottom: 3mm;
+        page-break-inside: avoid;
+    }
+    .pdf-afbeelding img {
+        width: 100%;
+        max-height: 65mm;
+        object-fit: cover;
+        border-radius: 1.5mm;
+        box-shadow: 0 0.5mm 2mm rgba(0, 0, 51, 0.12);
+    }
+    .pdf-afbeelding-naam {
+        font-family: "Open Sans", sans-serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #000033;
+        margin-top: 1.5mm;
+    }
+
+    /* === GEKOPPELDE KAARTEN === */
+    .pdf-koppelingen { margin-top: 6mm; page-break-inside: avoid; }
+    .pdf-koppeling {
+        display: block;
+        padding: 2mm 3mm 2mm 4mm;
+        margin-bottom: 1.5mm;
+        background-color: #F8F7F4;
+        border-left: 1.2mm solid #000033;
+        font-size: 9pt;
+        line-height: 1.4;
+    }
+    .pdf-koppeling-type {
+        display: inline-block;
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 7pt; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.3px;
+        color: #FFFFFF;
+        padding: 0.5mm 2mm; border-radius: 1mm;
+        margin-right: 2mm; vertical-align: middle;
+    }
+    .pdf-koppeling-nummer { font-weight: 700; color: #1A1A1A; }
+    .pdf-koppeling-naam { color: #555; margin-left: 2mm; }
+
+    /* === VERWIJZINGEN (achtergrondinformatie + QR-codes) === */
+    .pdf-verwijzingen { margin-top: 4mm; page-break-inside: avoid; }
+    .pdf-verwijzingen-qr { margin-top: 4mm; }
+    .pdf-verwijzingen-hint {
+        font-family: "Open Sans", sans-serif;
+        font-size: 7.5pt;
+        font-style: italic;
+        color: #999;
+        margin-bottom: 3mm;
+    }
+    .pdf-verwijzingen-lijst {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+        page-break-inside: avoid;
+    }
+    .pdf-verwijzing-item {
+        display: table-cell;
+        text-align: center;
+        vertical-align: top;
+        padding: 0 1.5mm;
+        page-break-inside: avoid;
+    }
+    .pdf-verwijzing-qr-placeholder {
+        width: 22mm;
+        height: 22mm;
+        margin: 0 auto 2mm auto;
+        background: #F0EFEC;
+        border: 0.5mm dashed #CCC;
+        border-radius: 1.5mm;
+    }
+    .pdf-verwijzing-naam {
+        display: block;
+        font-family: "Open Sans", sans-serif;
+        font-size: 6.5pt;
+        color: #555;
+        margin-top: 1mm;
+        line-height: 1.3;
+    }
+    .pdf-verwijzing-toelichting {
+        display: block;
+        font-family: "Open Sans", sans-serif;
+        font-size: 6pt;
+        font-style: italic;
+        color: #888;
+        margin-top: 0.5mm;
+        line-height: 1.3;
+    }
+</style>
+</head>
+<body>
+
+<!-- HEADER PAGINA 1 (grote variant met accent-extensie) -->
+<div class="running-header-first">
+    <div class="pdf-header-first">
+        <svg viewBox="0 0 510 94" xmlns="http://www.w3.org/2000/svg">
+            <polygon fill="#000033" points="18,0 503,0 503,56 151,56 41,56"/>
+            <polygon fill="{{ kerntaak_kleur }}" points="7,0 18,0 41,56 151,56 148,68 141,94 7,94"/>
+        </svg>
+        <div class="pdf-header-first-titel">{{ kaart.naam }}</div>
+        <div class="pdf-header-first-nummer">{{ kaart.nummer }}</div>
+    </div>
+</div>
+
+<!-- HEADER PAGINA 2+ (compacte variant) -->
+<div class="running-header-rest">
+    <div class="pdf-header-rest">
+        <svg viewBox="0 0 510 34" xmlns="http://www.w3.org/2000/svg">
+            <polygon fill="#000033" points="98,0 503,0 503,34 209,34 117,34"/>
+            <polygon fill="{{ kerntaak_kleur }}" points="7,0 165,0 160,20 126,20 7,20"/>
+        </svg>
+        <div class="pdf-header-rest-titel">{{ kaart.naam }}</div>
+        <div class="pdf-header-rest-nummer">{{ kaart.nummer }}</div>
+    </div>
+</div>
+
+<!-- KERNTAAK ZIJBALK -->
+{% if kerntaak_afk %}
+<div class="pdf-zijbalk">
+    <svg viewBox="0 0 14.5 176" xmlns="http://www.w3.org/2000/svg">
+        <polygon fill="{{ kerntaak_kleur }}" points="0,0 14.5,0 14.5,176 0,169"/>
+    </svg>
+    <span class="pdf-zijbalk-label">{{ kerntaak_afk }}</span>
+</div>
+{% endif %}
+
+<!-- RUNNING FOOTER -->
+<div class="running-footer">
+    <div class="pdf-footer">
+        <div class="pdf-footer-cel pdf-footer-links">
+            <img src="{{ logo_wit_pad }}" alt="Brandweer Limburg-Noord">
+        </div>
+        <div class="pdf-footer-cel pdf-footer-midden">
+            <span class="datum">{{ versie_datum_tekst }}</span>
+            <span class="versie">{{ versie_tekst }}</span>
+        </div>
+        <div class="pdf-footer-cel pdf-footer-rechts pdf-footer-pagina"></div>
+    </div>
+</div>
+
+<!-- HEADERFOTO (alleen pagina 1) -->
+{% if header_foto_pad %}
+<div class="pdf-headerfoto">
+    <img src="{{ header_foto_pad }}" alt="">
+    <div class="pdf-headerfoto-overlay"></div>
+</div>
+{% endif %}
+
+<!-- INFOSTRIP: Doelgroep / Oefenstaf / Tijdsduur (alleen scenariokaarten) -->
+{% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen'] %}
+{% set pager_velden = ['pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen'] %}
+{% set verwijzing_velden = ['verwijzing_url_1', 'verwijzing_label_1', 'verwijzing_url_2', 'verwijzing_label_2', 'verwijzing_url_3', 'verwijzing_label_3', 'verwijzing_url_4', 'verwijzing_label_4', 'verwijzing_url_5', 'verwijzing_label_5'] %}
+{% set pager_soort_tekst = inhoud.get('pager_soort_anders') if inhoud.get('pager_soort') == 'anders' else inhoud.get('pager_soort', '') %}
+{% set heeft_pager = inhoud.get('pager_prio') or pager_soort_tekst or inhoud.get('pager_voertuigen') %}
+{% set kenmerken_velden = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
+{% set heeft_kenmerken = namespace(v=false) %}
+{% for k in kenmerken_velden %}{% if inhoud.get(k) %}{% set heeft_kenmerken.v = true %}{% endif %}{% endfor %}
+{% set doelgroep_tekst = inhoud.get('doelgroep_anders') if inhoud.get('doelgroep') == 'anders' else (inhoud.get('doelgroep', '')|capitalize) %}
+{% set heeft_infostrip = inhoud.get('doelgroep') or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or inhoud.get('oefenmiddelen') %}
+{% if heeft_infostrip %}
+<div class="pdf-infostrip">
+    <div class="pdf-infostrip-rij">
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="7" r="4" fill="{{ kerntaak_kleur }}"/>
+                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+            </svg>
+            <div class="pdf-infostrip-label">Doelgroep</div>
+            <div class="pdf-infostrip-waarde">{{ doelgroep_tekst or '—' }}</div>
+        </div>
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M12 7v5l3.5 3.5" stroke="{{ kerntaak_kleur }}" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div class="pdf-infostrip-label">Tijdsduur</div>
+            <div class="pdf-infostrip-waarde">{{ inhoud.get('tijdsduur', '—')|replace('_', ' ')|capitalize }}</div>
+        </div>
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="6" r="3" fill="{{ kerntaak_kleur }}"/>
+                <circle cx="16" cy="6" r="3" fill="{{ kerntaak_kleur }}"/>
+                <path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="{{ kerntaak_kleur }}" stroke-width="1.5" fill="none"/>
+                <path d="M10 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="{{ kerntaak_kleur }}" stroke-width="1.5" fill="none"/>
+            </svg>
+            <div class="pdf-infostrip-label">Oefenstaf</div>
+            <div class="pdf-infostrip-detail">
+                {% set rol_labels = {'PKD-brand': 'PKD Brand', 'PKD-ibgs': 'PKD IBGS', 'PKD-water': 'PKD Waterongevallen', 'PKD-thv': 'PKD THV', 'PKD-moi': 'PKD MOI', 'PKD-zagen': 'PKD Zagen'} %}
+                {% set rol_raw = inhoud.get('oefenleider_rol') %}
+                {% set rol_tekst = inhoud.get('oefenleider_rol_anders') if rol_raw == 'anders' else rol_labels.get(rol_raw, '') %}
+                {% if inhoud.get('oefenleider_aantal') %}Oefenleider: <strong>{{ inhoud.get('oefenleider_aantal') }}</strong>{% if rol_tekst %} <em>({{ rol_tekst }})</em>{% endif %}<br>{% endif %}
+                {% set ensc = inhoud.get('ensceneerder_aantal')|int if inhoud.get('ensceneerder_aantal') else 0 %}
+                {% set waarn = inhoud.get('waarnemer_aantal')|int if inhoud.get('waarnemer_aantal') else 0 %}
+                {% set overig = inhoud.get('overig_aantal')|int if inhoud.get('overig_aantal') else 0 %}
+                {% set ondersteuners_totaal = ensc + waarn + overig %}
+                {% if ondersteuners_totaal > 0 %}
+                Ondersteuners: <strong>{{ ondersteuners_totaal }}</strong>
+                <div class="pdf-infostrip-sublijst">
+                    {% if ensc %}<span>Ensceneerder ({{ ensc }})</span>{% endif %}
+                    {% if waarn %}<span>Waarnemer ({{ waarn }})</span>{% endif %}
+                    {% if overig and inhoud.get('overig_functie') %}<span>{{ inhoud.get('overig_functie') }} ({{ overig }})</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="8" width="18" height="11" rx="1.5" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M3 13h18" stroke="{{ kerntaak_kleur }}" stroke-width="1.5"/>
+            </svg>
+            <div class="pdf-infostrip-label">Oefenmiddelen</div>
+            <div class="pdf-infostrip-detail">
+                {% if inhoud.get('oefenmiddelen') %}
+                    {% for regel in inhoud.get('oefenmiddelen').split('\n') %}
+                        {% if regel.strip() %}<div>{{ regel.strip() }}</div>{% endif %}
+                    {% endfor %}
+                {% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- INHOUD SECTIES -->
+{% set scenario_inline = namespace(v=false) %}
+{% set evaluatie_inline = namespace(v=false) %}
+{% set heeft_tips = inhoud.get('ensceneringstips') %}
+{% set heeft_evaluatie = inhoud.get('evaluatie') %}
+{% for veld in velden %}
+    {% if veld == 'pager_prio' and heeft_pager %}
+        {% if inhoud.get('scenariobeschrijving') %}
+        {# Eén sectie "Scenariobeschrijving" met pager-image als visual links #}
+        <div class="pdf-sectie">
+            <div class="pdf-sectie-titel">Scenariobeschrijving</div>
+            <table class="pdf-pager-scenario"><tr>
+                <td class="pdf-pager-scenario-links">
+                    <div class="pdf-pager-wrapper">
+                        <img class="pdf-pager-bg" src="{{ pager_c35_pad }}">
+                        <div class="pdf-pager-overlay">
+                            {% if inhoud.get('pager_prio') or pager_soort_tekst %}
+                            <div class="pdf-pager-regel">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
+                            {% endif %}
+                            {% if inhoud.get('pager_voertuigen') %}
+                            <div class="pdf-pager-regel">{{ inhoud.get('pager_voertuigen') }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td class="pdf-pager-scenario-rechts">
+                    <div class="pdf-sectie-inhoud">{{ inhoud['scenariobeschrijving'] | replace('\n', '<br>')|safe }}</div>
+                </td>
+            </tr></table>
+        </div>
+        {% set scenario_inline.v = true %}
+        {% else %}
+        <div class="pdf-sectie pdf-pager-sectie">
+            <div class="pdf-sectie-titel">Pagerbericht</div>
+            <div class="pdf-pager-wrapper">
+                <img class="pdf-pager-bg" src="{{ pager_c35_pad }}">
+                <div class="pdf-pager-overlay">
+                    {% if inhoud.get('pager_prio') or pager_soort_tekst %}
+                    <div class="pdf-pager-regel">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
+                    {% endif %}
+                    {% if inhoud.get('pager_voertuigen') %}
+                    <div class="pdf-pager-regel">{{ inhoud.get('pager_voertuigen') }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% elif veld == 'scenariobeschrijving' and scenario_inline.v %}
+    {# scenariobeschrijving al inline gerenderd naast pager #}
+    {% elif veld in pager_velden %}
+    {# overige pager-velden overgeslagen #}
+    {% elif veld == 'kenmerken_kerntaak' and heeft_kenmerken.v %}
+    <div class="pdf-kenmerken-wrapper">
+        <div class="pdf-sectie-titel-plain">Kenmerkenschema</div>
+        <table class="pdf-doc-tabel">
+        {% for k in kenmerken_velden %}
+            {% if inhoud.get(k) %}
+            <tr class="pdf-doc-rij">
+                <td class="pdf-doc-links">
+                    <table class="pdf-doc-kop"><tr>
+                        <td class="pdf-doc-icoon-cel">
+                            <span class="pdf-doc-icoon-badge" style="background: #00003325;">{{ kenmerk_icoon_pdf(k, kaart.kerntaak, '#000033') }}</span>
+                        </td>
+                        <td class="pdf-doc-titel-cel">
+                            <div class="pdf-doc-titel">{{ labels[k] }}</div>
+                        </td>
+                    </tr></table>
+                </td>
+                <td class="pdf-doc-rechts">
+                    <div class="pdf-doc-tekst">{{ inhoud[k] | replace('\n', '<br>')|safe }}</div>
+                </td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+        </table>
+    </div>
+    {% elif veld == 'ensceneringstips' and heeft_tips %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">{{ labels['ensceneringstips'] }}</div>
+        {% if tips_foto_pad %}
+        <table class="pdf-tips-met-foto"><tr>
+            <td class="pdf-tips-tekst">
+                <ul class="pdf-tipslijst">
+                    {% for regel in inhoud['ensceneringstips'].split('\n') %}
+                        {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                    {% endfor %}
+                </ul>
+            </td>
+            <td class="pdf-tips-foto">
+                <img src="{{ tips_foto_pad }}" alt="">
+            </td>
+        </tr></table>
+        {% else %}
+        <div class="pdf-sectie-inhoud">
+            <ul class="pdf-tipslijst">
+                {% for regel in inhoud['ensceneringstips'].split('\n') %}
+                    {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% elif veld == 'evaluatie' and heeft_evaluatie %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">{{ labels['evaluatie'] }}</div>
+        <div class="pdf-sectie-inhoud">
+            <ol class="pdf-nummerlijst">
+                {% for regel in inhoud['evaluatie'].split('\n') %}
+                    {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+    {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in verwijzing_velden %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">{{ labels[veld] }}</div>
+        <div class="pdf-sectie-inhoud">{{ inhoud[veld] | replace('\n', '<br>')|safe }}</div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+
+<!-- VERWIJZINGEN (eigen URLs + gekoppelde kaarten als QR-codes) -->
+{% set eigen_verwijzingen = [] %}
+{% for i in range(1, 6) %}
+    {% if inhoud.get('verwijzing_url_' ~ i) %}
+        {% set _ = eigen_verwijzingen.append({'url': inhoud['verwijzing_url_' ~ i], 'label': inhoud.get('verwijzing_label_' ~ i, '')}) %}
+    {% endif %}
+{% endfor %}
+{% if eigen_verwijzingen or gekoppelde %}
+<div class="pdf-sectie pdf-verwijzingen">
+    <div class="pdf-sectie-titel">Verwijzingen</div>
+    <p class="pdf-verwijzingen-hint">QR-codes worden beschikbaar zodra de applicatie online is.</p>
+    {% if eigen_verwijzingen %}
+    <div class="pdf-verwijzingen-lijst">
+        {% for v in eigen_verwijzingen %}
+        <div class="pdf-verwijzing-item">
+            <div class="pdf-verwijzing-qr-placeholder"></div>
+            <span class="pdf-verwijzing-naam">{{ v.label or v.url }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if gekoppelde %}
+    <div class="pdf-verwijzingen-lijst" style="margin-top: 3mm;">
+        {% for k in gekoppelde %}
+        <div class="pdf-verwijzing-item">
+            <div class="pdf-verwijzing-qr-placeholder"></div>
+            <span class="pdf-koppeling-type" style="background-color: {{ k.kleur }};">{{ k.type_naam }}</span>
+            <span class="pdf-verwijzing-naam">{{ k.nummer }} — {{ k.naam }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+</body>
+</html>

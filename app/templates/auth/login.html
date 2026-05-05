@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Inloggen — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-header">
+            <img src="{{ url_for('static', filename='img/vakbekwaam-studio-logo.svg') }}" alt="Vakbekwaam Studio" class="login-logo">
+            <p class="login-subtitle">Vakbekwaam Studio</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-input", placeholder="naam@voorbeeld.nl", autofocus=true) }}
+            </div>
+
+            <div class="form-group">
+                {{ form.wachtwoord.label }}
+                {{ form.wachtwoord(class="form-input", placeholder="Wachtwoord") }}
+            </div>
+
+            <div class="form-group form-checkbox">
+                {{ form.onthoud_mij() }}
+                {{ form.onthoud_mij.label }}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-full") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

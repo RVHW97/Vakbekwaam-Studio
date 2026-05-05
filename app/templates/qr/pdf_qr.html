@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>{{ qr.naam }}</title>
+<style>
+    @page {
+        size: A4;
+        margin: 25mm;
+    }
+    body {
+        font-family: 'Open Sans', sans-serif;
+        color: #000033;
+        text-align: center;
+    }
+    .qr-titel {
+        font-size: 22pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4mm;
+        color: #000033;
+    }
+    .qr-omschrijving {
+        font-size: 11pt;
+        color: #4A4A4A;
+        margin-bottom: 12mm;
+    }
+    .qr-afbeelding {
+        display: block;
+        margin: 0 auto;
+        width: 110mm;
+        height: auto;
+    }
+    .qr-voet {
+        margin-top: 12mm;
+        padding-top: 4mm;
+        border-top: 2px solid #CC9933;
+        font-size: 9pt;
+        color: #6E6E6E;
+    }
+    .qr-link {
+        font-family: monospace;
+        font-size: 9pt;
+        color: #000033;
+        margin-top: 2mm;
+    }
+</style>
+</head>
+<body>
+    <div class="qr-titel">{{ qr.naam }}</div>
+    {% if qr.omschrijving %}<div class="qr-omschrijving">{{ qr.omschrijving }}</div>{% endif %}
+    <img src="{{ png_data_uri }}" class="qr-afbeelding" alt="QR-code">
+    <div class="qr-voet">
+        <div>Vakbekwaam Studio &mdash; Brandweer Limburg-Noord</div>
+        <div class="qr-link">/q/{{ qr.slug }}</div>
+    </div>
+</body>
+</html>

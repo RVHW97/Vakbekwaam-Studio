@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}QR niet actief — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="leeg-blok" style="text-align:center; padding:3rem 1.5rem">
+    <h1>Deze QR-code is niet meer actief</h1>
+    {% if qr.status == 'gepauzeerd' %}
+    <p>De beheerder heeft deze code (tijdelijk) gepauzeerd.</p>
+    {% elif qr.status == 'verlopen' %}
+    <p>Deze code is verlopen op {{ qr.vervaldatum.strftime('%d-%m-%Y') }}.</p>
+    {% else %}
+    <p>Deze code is momenteel niet beschikbaar.</p>
+    {% endif %}
+    <p style="margin-top:1.5rem; color:#666">Neem contact op met de afzender als je hulp nodig hebt.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}QR-codes — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>QR-codes</h1>
+    <a href="{{ url_for('qr.nieuw') }}" class="btn btn-primary">+ Nieuwe QR-code</a>
+</div>
+
+<form method="GET" action="{{ url_for('qr.overzicht') }}" class="qr-filters">
+    <label>
+        <span>Categorie</span>
+        <select name="categorie" class="form-input" onchange="this.form.submit()">
+            <option value="">— Alle —</option>
+            {% for key, label in qr_categorieen %}
+            <option value="{{ key }}" {% if filter_categorie == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>
+        <span>Status</span>
+        <select name="status" class="form-input" onchange="this.form.submit()">
+            <option value="">— Alle —</option>
+            <option value="actief"      {% if filter_status == 'actief' %}selected{% endif %}>Actief</option>
+            <option value="gepauzeerd"  {% if filter_status == 'gepauzeerd' %}selected{% endif %}>Gepauzeerd</option>
+            <option value="verlopen"    {% if filter_status == 'verlopen' %}selected{% endif %}>Verlopen</option>
+        </select>
+    </label>
+    <label class="qr-filter-checkbox">
+        <input type="checkbox" name="mij" value="1" {% if alleen_van_mij %}checked{% endif %} onchange="this.form.submit()">
+        <span>Alleen van mij</span>
+    </label>
+    {% if filter_categorie or filter_status or alleen_van_mij %}
+    <a href="{{ url_for('qr.overzicht') }}" class="btn btn-secondary btn-small">Filters wissen</a>
+    {% endif %}
+</form>
+
+{% if not qrs %}
+<div class="leeg-blok">
+    <p>Nog geen QR-codes. <a href="{{ url_for('qr.nieuw') }}">Maak de eerste aan</a>.</p>
+</div>
+{% else %}
+<div class="table-wrapper">
+    <table class="table qr-tabel">
+        <thead>
+            <tr>
+                <th>Naam</th>
+                <th>Categorie</th>
+                <th>Doel</th>
+                <th>Kliks</th>
+                <th>Status</th>
+                <th>Eigenaar</th>
+                <th>Acties</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for qr in qrs %}
+            <tr>
+                <td>
+                    <div class="qr-rij-naam">{{ qr.naam }}</div>
+                    <div class="qr-rij-slug"><code>/q/{{ qr.slug }}</code></div>
+                </td>
+                <td>{{ qr.categorie_naam }}</td>
+                <td>
+                    {% if qr.pdf_bestand %}
+                    <span class="qr-doel-tag">PDF</span>
+                    {% elif qr.doel_url %}
+                    <span class="qr-doel-tag">URL</span>
+                    <div class="qr-doel-url">{{ qr.doel_url|truncate(45) }}</div>
+                    {% else %}
+                    <span class="qr-doel-tag qr-doel-leeg">Geen doel</span>
+                    {% endif %}
+                </td>
+                <td>{{ qr.aantal_kliks }}</td>
+                <td><span class="badge badge-status badge-status-{{ qr.status }}">{{ qr.status|capitalize }}</span></td>
+                <td>{{ qr.eigenaar.naam }}</td>
+                <td class="qr-acties-cel">
+                    {% if qr.mag_bewerken(current_user) %}
+                    <a href="{{ url_for('qr.bewerken', qr_id=qr.id) }}" class="btn btn-small">Bewerken</a>
+                    <form method="POST" action="{{ url_for('qr.pauzeren', qr_id=qr.id) }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-secondary">
+                            {{ 'Pauzeren' if qr.actief else 'Activeren' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Gebruikers — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Gebruikers</h1>
+    <a href="{{ url_for('auth.gebruiker_nieuw') }}" class="btn btn-primary">+ Nieuwe gebruiker</a>
+</div>
+
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Naam</th>
+                <th>E-mailadres</th>
+                <th>Rol</th>
+                <th>Status</th>
+                <th>Acties</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.naam }}</td>
+                <td>{{ user.email }}</td>
+                <td><span class="badge badge-rol badge-rol-{{ user.rol }}">{{ user.rol_naam }}</span></td>
+                <td><span class="badge badge-{{ 'active' if user.actief else 'inactive' }}">{{ 'Actief' if user.actief else 'Inactief' }}</span></td>
+                <td>
+                    <a href="{{ url_for('auth.gebruiker_bewerken', user_id=user.id) }}" class="btn btn-small">Bewerken</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

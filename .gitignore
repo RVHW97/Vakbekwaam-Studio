@@ -1,0 +1,81 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+venv/
+.venv/
+env/
+
+# === Flask / database ===
+instance/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# === Geheimen & credentials (NOOIT in git) ===
+.env
+.env.*
+*.env
+secrets.py
+secrets/
+credentials/
+credentials.json
+client_secret*.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+service-account*.json
+
+# === Logs & runtime-bestanden ===
+*.log
+logs/
+*.pid
+
+# === Testing & coverage ===
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# === Backups & tijdelijke bestanden ===
+*.bak
+*.swp
+*.swo
+*~
+*.tmp
+
+# === OS ===
+.DS_Store
+Thumbs.db
+# Office lock-files
+~$*
+
+# === IDE / editor ===
+.vscode/
+.idea/
+.claude/
+*.code-workspace
+
+# === Gebruikers-uploads (niet in git) ===
+app/static/uploads/
+
+# === Werk-/bronmateriaal (niet nodig voor de app) ===
+# Brand-assets, voorbeelden van VGGM, eigen ontwerpen — staan lokaal, gaan niet naar GitHub.
+# Wat de app actief gebruikt staat in app/static/.
+huisstijl/
+Concept VakbekwaamStudio.*
+
+# === Losse markdown-notities ===
+# Standaard alle .md negeren, behalve de drie projectkern-bestanden:
+*.md
+!CLAUDE.md
+!changelog.md
+!roadmap.md

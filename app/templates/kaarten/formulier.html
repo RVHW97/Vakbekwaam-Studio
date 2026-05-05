@@ -1,0 +1,1642 @@
+{% extends "base.html" %}
+{% block title %}{{ type_info.naam }} {{ 'bewerken' if bewerken else 'aanmaken' }} — Vakbekwaam Studio{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+<style>
+    .cropper-knoppen { display:flex; flex-wrap:wrap; gap:0.5rem; }
+    .cropper-knoppen .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+    .cropper-container { max-height: 400px; }
+    .dynamische-lijst-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+    .dynamische-lijst-item input {
+        flex: 1;
+    }
+    .dynamische-lijst-item .btn-verwijder {
+        flex: 0 0 auto;
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        color: #999;
+        padding: 0.35rem 0.6rem;
+        line-height: 1;
+    }
+    .dynamische-lijst-item .btn-verwijder:hover {
+        color: #C8102E;
+        border-color: #C8102E;
+    }
+
+    /* === Tabs === */
+    .tabs-nav {
+        display: flex;
+        gap: 0.15rem;
+        border-bottom: 2px solid var(--kleur-rand);
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .tab-knop {
+        padding: 0.75rem 1.3rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #555;
+        cursor: pointer;
+        position: relative;
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+        border-radius: 4px 4px 0 0;
+        min-height: 44px;
+    }
+    .tab-knop:hover {
+        color: var(--kleur-blauw);
+        background: rgba(0, 0, 51, 0.04);
+    }
+    .tab-knop.actief {
+        color: var(--kleur-blauw);
+        border-bottom-color: var(--kleur-blauw);
+    }
+    .tab-knop.heeft-fout::after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 9px;
+        height: 9px;
+        background: #f59e0b;
+        border-radius: 50%;
+    }
+    .tab-paneel {
+        display: none;
+    }
+    .tab-paneel.actief {
+        display: block;
+    }
+    .tab-nav-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--kleur-rand);
+    }
+    .tab-nav-footer > span.tab-nav-spacer {
+        flex: 0 0 auto;
+    }
+    .tab-fout-melding {
+        background: #FFF3CD;
+        border: 1px solid #F59E0B;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        color: #856404;
+    }
+    .tab-fout-melding strong {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #7a4e00;
+    }
+    .tab-fout-melding ul {
+        margin: 0;
+        padding-left: 1.25rem;
+    }
+    .tab-fout-melding li {
+        margin: 0.1rem 0;
+    }
+    .gekoppelde-kaart-rij {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8f9fa;
+        border: 1px solid var(--kleur-rand);
+        border-radius: 6px;
+        margin-bottom: 0.4rem;
+    }
+    .gekoppelde-kaart-naam {
+        flex: 1;
+        color: #555;
+    }
+    .gekoppelde-kaart-rij .btn-verwijder {
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        color: #999;
+        padding: 0.3rem 0.55rem;
+        font-size: 0.9rem;
+    }
+    .gekoppelde-kaart-rij .btn-verwijder:hover {
+        color: #C8102E;
+        border-color: #C8102E;
+    }
+    .teken-teller {
+        display: block;
+        font-size: 0.8rem;
+        color: #888;
+        text-align: right;
+        margin-top: 0.2rem;
+        user-select: none;
+    }
+    .teken-teller.waarschuwing { color: #d97706; }
+    .teken-teller.limiet { color: #C8102E; font-weight: 600; }
+
+    /* === Themakaart foto-preview met huisstijl-overlay === */
+    .thema-foto-preview {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        aspect-ratio: 841.89 / 595.28;
+        background-color: #1A1A1A;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .thema-preview-cropper-target {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        z-index: 1;
+    }
+    .thema-preview-cropper-target img {
+        display: block;
+    }
+    .thema-preview-leeg {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.5);
+        font-style: italic;
+        font-size: 0.9rem;
+        z-index: 1;
+    }
+    .thema-preview-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    /* Categorie-kopjes binnen een sectie */
+    .thema-kaart-groep-titel {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin: 0.3rem 0 0.25rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>
+        {{ type_info.naam }} {{ 'bewerken' if bewerken else 'aanmaken' }}
+        {% if bewerken and kaart %}<span class="kaart-nummer">— {{ kaart.nummer }}</span>{% endif %}
+    </h1>
+    <div class="btn-group">
+        {% if bewerken and kaart %}
+            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary" target="_blank" rel="noopener">Bekijk PDF</a>
+            <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
+        {% else %}
+            <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
+        {% endif %}
+    </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="kaart-form">
+    {{ form.hidden_tag() }}
+    <input type="hidden" name="auto_save_tab" id="auto-save-tab" value="">
+
+    {# ==================== ALGEMEEN BLOK (naam + kerntaak + header foto) ==================== #}
+    {% macro render_algemeen() %}
+    {% if form.naam is defined %}
+    <div class="form-group">
+        {{ form.naam.label(class="form-label") }}
+        {{ form.naam(class="form-input", placeholder="Bijv. Brandbestrijding binnenaanval", maxlength=40) }}
+        {% for error in form.naam.errors %}
+        <span class="form-error">{{ error }}</span>
+        {% endfor %}
+        <p class="form-hint">Maximaal 40 tekens. Deze titel komt in HOOFDLETTERS bovenaan de PDF te staan en moet kort en helder zijn.</p>
+    </div>
+    {% endif %}
+
+    {% if form.kerntaak is defined %}
+    <div class="form-group">
+        {{ form.kerntaak.label(class="form-label") }}
+        {{ form.kerntaak(class="form-input form-select") }}
+        {% for error in form.kerntaak.errors %}
+        <span class="form-error">{{ error }}</span>
+        {% endfor %}
+        <p class="form-hint">Bepaalt de kleur van de zijbalk in de PDF en maakt filteren op kerntaak mogelijk.</p>
+    </div>
+    {% endif %}
+
+    {% if form.header_foto is defined %}
+    <div class="form-group">
+        {{ form.header_foto.label(class="form-label") }}
+        {% if bewerken and kaart and kaart.header_foto %}
+        <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
+            <label class="bestaande-afbeelding">
+                <img src="{{ url_for('static', filename='uploads/' + kaart.header_foto) }}"
+                     alt="Huidige headerfoto" style="max-height: 120px;">
+                <span class="verwijder-checkbox">
+                    <input type="checkbox" name="verwijder_header_foto" value="1">
+                    Verwijderen
+                </span>
+            </label>
+        </div>
+        {% endif %}
+        <div class="file-upload-area">
+            {{ form.header_foto(class="form-file", accept="image/jpeg,image/png,image/webp", id="header-foto-input") }}
+            {% if kaart_type == 'thema' %}
+            <p class="form-hint">Liggende foto, minimaal 200×200 px. Wordt achtergrond van de hele themakaart (verhouding A4 liggend). Max 5 MB. (JPG, PNG, WebP)</p>
+            {% else %}
+            <p class="form-hint">Liggend formaat, minimaal 1200×400 px. Je kunt na uploaden zelf het kader verschuiven en inzoomen. Max 5 MB. (JPG, PNG, WebP)</p>
+            {% endif %}
+        </div>
+
+        {% if kaart_type == 'thema' %}
+        {# === THEMAKAART: PREVIEW MET DOORZICHTIGE HUISSTIJL-VLAKKEN === #}
+        {% set thema_kleur = kaart.kerntaak_kleur if (bewerken and kaart and kaart.kerntaak) else '#B6463D' %}
+        <div class="form-subgroep-blok" style="margin-top: 1rem;">
+            <h4 class="form-subgroep-titel">Voorbeeld op de themakaart</h4>
+            <p class="form-hint">Zo valt de foto met de huisstijl-vlakken erover. De vlakken zijn doorzichtig zodat je kunt zien wat eronder valt.{% if bewerken and kaart %} Vlakkleur volgt de gekozen kerntaak.{% endif %}</p>
+            <div class="thema-foto-preview" id="thema-foto-preview"
+                 {% if bewerken and kaart and kaart.header_foto %}style="background-image: url('{{ url_for('static', filename='uploads/' + kaart.header_foto) }}');"{% endif %}>
+                <div class="thema-preview-cropper-target" id="thema-preview-cropper-target"></div>
+                {% if not (bewerken and kaart and kaart.header_foto) %}
+                <div class="thema-preview-leeg" id="thema-preview-leeg">Nog geen foto geüpload</div>
+                {% endif %}
+                <svg class="thema-preview-overlay" viewBox="0 0 841.89 595.28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Navy chevron met ondertitel-strook -->
+                    <path fill="#000033" fill-opacity="0.55" d="M554.27,73.78l-75.65.51-11.37,42.68-2.29,8.59-16.39.04-1.32.02-17.09-.03-1.35.03-195.3-.06-149.14-.13L.01,125.62V0s23.67,0,23.67,0l25.1,61.02c1.23,3,2.18,5.27,3.03,8.44.28,1.05,2.55,2.12,2.19,4.08,3.22.22,5.28.35,8.7.35l369.28-.09,42.32-.05,79.97.03Z"/>
+                    <!-- Header-balk in kerntaak-kleur -->
+                    <path fill="{{ thema_kleur }}" fill-opacity="0.55" d="M841.89,0v73.66l-367.59.09-42.32.05-369.28.09c-3.42,0-5.48-.13-8.7-.35.36-1.96-1.91-3.03-2.19-4.08-.85-3.17-1.8-5.44-3.03-8.44L23.68,0h818.21Z"/>
+                    <!-- Navy rechtervlak -->
+                    <rect fill="#000033" fill-opacity="0.55" x="554.27" y="73.83" width="287.62" height="382"/>
+                    <!-- Footer-balk in kerntaak-kleur -->
+                    <rect fill="{{ thema_kleur }}" fill-opacity="0.55" x="0" y="541.81" width="841.89" height="53.47"/>
+                </svg>
+            </div>
+        </div>
+        {% endif %}
+
+        <div id="cropper-paneel" style="display:none; margin-top: 1rem;">
+            <div class="form-subgroep-blok">
+                <h4 class="form-subgroep-titel">Kader bijsnijden</h4>
+                {% if kaart_type == 'thema' %}
+                <p class="form-hint">Sleep de foto om te verschuiven. Gebruik de knoppen om in/uit te zoomen. Het kader heeft de A4-liggend verhouding van de themakaart — het voorbeeld hierboven laat live zien hoe het er met de huisstijl-vlakken erover uit komt te zien.</p>
+                {% else %}
+                <p class="form-hint">Sleep de foto om te verschuiven. Gebruik de knoppen om in/uit te zoomen of te spiegelen. Het kader heeft de vaste 3:1 verhouding van de PDF-header.</p>
+                {% endif %}
+                <div style="max-width: 100%; max-height: 400px; background: #1A1A1A; margin: 0.75rem 0;">
+                    <img id="cropper-afbeelding" style="display:block; max-width:100%;">
+                </div>
+                <div class="cropper-knoppen">
+                    <button type="button" class="btn btn-secondary btn-sm" data-cropper-actie="zoom-in">Inzoomen +</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cropper-actie="zoom-uit">Uitzoomen −</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cropper-actie="reset">Reset</button>
+                    {% if kaart_type != 'thema' %}
+                    <button type="button" class="btn btn-secondary btn-sm" data-cropper-actie="links">↺ Linksom</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-cropper-actie="rechts">↻ Rechtsom</button>
+                    {% endif %}
+                    <button type="button" class="btn btn-primary btn-sm" id="header-crop-bevestig">Bevestig bijsnijden</button>
+                </div>
+                <div id="header-crop-status" style="display:none; margin-top: 0.5rem; padding: 0.5rem; background: #d4edda; border-radius: 4px; color: #155724; font-size: 0.85rem;">
+                    Foto bijgesneden en klaar voor opslaan.
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endmacro %}
+
+    {# ==================== SCENARIO-SPECIFIEKE BLOKKEN ==================== #}
+    {% macro render_opzet_blok() %}
+    {# Doelgroep + Oefenstaf + Tijdsduur #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Doelgroep, Oefenstaf & Tijdsduur</h3>
+
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Doelgroep</h4>
+            <div class="form-groep-rij">
+                <div class="form-groep-kolom">
+                    <div class="form-group">
+                        {{ form.doelgroep.label(class="form-label") }}
+                        {{ form.doelgroep(class="form-input form-select", id="doelgroep-select") }}
+                        {% for error in form.doelgroep.errors %}
+                        <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-groep-kolom" id="doelgroep-anders-kolom" style="{% if form.doelgroep.data != 'anders' %}display:none;{% endif %}">
+                    <div class="form-group">
+                        {{ form.doelgroep_anders.label(class="form-label") }}
+                        {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
+                        {% for error in form.doelgroep_anders.errors %}
+                        <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Oefenstaf</h4>
+            <div class="form-groep-rij">
+                <div class="form-groep-kolom">
+                    <div class="form-group">
+                        {{ form.oefenleider_aantal.label(class="form-label") }}
+                        {{ form.oefenleider_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
+                        {% for error in form.oefenleider_aantal.errors %}
+                        <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-groep-kolom" style="flex: 2;">
+                    <div class="form-group">
+                        {{ form.oefenleider_rol.label(class="form-label") }}
+                        {{ form.oefenleider_rol(class="form-input form-select", id="oefenleider-rol-select") }}
+                        <p class="form-hint">Optioneel. Specificeer de rol van de oefenleider.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="form-groep-rij" id="oefenleider-rol-anders-rij" style="{% if form.oefenleider_rol.data != 'anders' %}display:none;{% endif %}">
+                <div class="form-groep-kolom">
+                    <div class="form-group">
+                        {{ form.oefenleider_rol_anders.label(class="form-label") }}
+                        {{ form.oefenleider_rol_anders(class="form-input", placeholder="Bijv. Duiker, Pompbediener...", maxlength=60) }}
+                    </div>
+                </div>
+            </div>
+            <div class="form-subgroep-blok">
+                <h4 class="form-subgroep-titel">Ondersteuners</h4>
+                <p class="form-hint">Geef per functie het aantal ondersteuners aan.</p>
+                <div class="form-groep-rij">
+                    <div class="form-groep-kolom">
+                        <div class="form-group">
+                            {{ form.ensceneerder_aantal.label(class="form-label") }}
+                            {{ form.ensceneerder_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
+                        </div>
+                    </div>
+                    <div class="form-groep-kolom">
+                        <div class="form-group">
+                            {{ form.waarnemer_aantal.label(class="form-label") }}
+                            {{ form.waarnemer_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-groep-rij">
+                    <div class="form-groep-kolom">
+                        <div class="form-group">
+                            {{ form.overig_aantal.label(class="form-label") }}
+                            {{ form.overig_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
+                        </div>
+                    </div>
+                    <div class="form-groep-kolom" style="flex: 2;">
+                        <div class="form-group">
+                            {{ form.overig_functie.label(class="form-label") }}
+                            {{ form.overig_functie(class="form-input", placeholder="Bijv. Veiligheidsfunctionaris", maxlength=40) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Tijdsduur</h4>
+            <div class="form-groep-rij">
+                <div class="form-groep-kolom">
+                    <div class="form-group">
+                        {{ form.tijdsduur.label(class="form-label") }}
+                        {{ form.tijdsduur(class="form-input form-select") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Oefenmiddelen #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Oefenmiddelen</h3>
+        <p class="form-hint">Max 7 items. Kort houden (bijv. "Ladder", "CO-meter").</p>
+        {{ form.oefenmiddelen(style="display:none", id="oefenmiddelen-hidden") }}
+        <div class="dynamische-lijst" id="oefenmiddelen-lijst" data-hidden="oefenmiddelen-hidden" data-max="7" data-placeholder="Bijv. Ladder, CO-meter..."></div>
+        <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="oefenmiddelen-lijst" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+    </div>
+
+    {# Oefendoel #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Oefendoel</h3>
+        <div class="form-group">
+            {{ form.aanleiding_doelen(class="form-input form-textarea", rows=8, maxlength=2000,
+               placeholder="Formuleer een SMART oefendoel.&#10;&#10;Hoofddoel:&#10;De deelnemers kunnen binnen 10 minuten...&#10;&#10;Subdoelen:&#10;- Subdoel 1&#10;- Subdoel 2") }}
+            <p class="form-hint">Formuleer een SMART oefendoel (Specifiek, Meetbaar, Acceptabel, Realistisch, Tijdgebonden). Voeg eventueel subdoelen toe. Max 2000 tekens.</p>
+            {% for error in form.aanleiding_doelen.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endmacro %}
+
+    {% macro render_scenario_blok() %}
+    {# Pagerbericht #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Pagerbericht (C35)</h3>
+        <p class="form-hint">Max 24 tekens per regel. De tekst verschijnt op het pagerscherm in de PDF.</p>
+        <div class="form-groep-rij">
+            <div class="form-groep-kolom">
+                <div class="form-group">
+                    {{ form.pager_prio.label(class="form-label") }}
+                    {{ form.pager_prio(class="form-input form-select") }}
+                </div>
+            </div>
+            <div class="form-groep-kolom" style="flex: 2;">
+                <div class="form-group">
+                    {{ form.pager_soort.label(class="form-label") }}
+                    {{ form.pager_soort(class="form-input form-select", id="pager-soort-select") }}
+                </div>
+            </div>
+        </div>
+        <div class="form-groep-rij" id="pager-soort-anders-rij" style="{% if form.pager_soort.data != 'anders' %}display:none;{% endif %}">
+            <div class="form-groep-kolom">
+                <div class="form-group">
+                    {{ form.pager_soort_anders.label(class="form-label") }}
+                    {{ form.pager_soort_anders(class="form-input", maxlength=24, placeholder="Bv. BR-schuur") }}
+                </div>
+            </div>
+        </div>
+        <div class="form-groep-rij">
+            <div class="form-groep-kolom">
+                <div class="form-group">
+                    {{ form.pager_voertuigen.label(class="form-label") }}
+                    {{ form.pager_voertuigen(class="form-input", maxlength=24, placeholder="Bv. TS 2441 MAARN") }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Scenariobeschrijving #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Scenariobeschrijving</h3>
+        <div class="form-group">
+            {{ form.scenariobeschrijving(class="form-input form-textarea", rows=6, maxlength=800,
+               placeholder="Beschrijf het scenario dat de deelnemers voorgeschoteld krijgen...") }}
+            <p class="form-hint">Beschrijf het scenario bondig. In de PDF verschijnt dit naast het pagerbericht. Max 800 tekens.</p>
+            {% for error in form.scenariobeschrijving.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Kenmerkenschema #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Kenmerkenschema</h3>
+        <p class="form-hint">Beschrijf kort per kenmerk. Hou het beknopt (max 180 tekens per veld).</p>
+        {% set kenmerken_groep = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
+        {% for subnaam in kenmerken_groep %}
+            {% set subfield = form[subnaam] %}
+            <div class="form-subgroep-blok">
+                <div class="form-group">
+                    {{ subfield.label(class="form-label") }}
+                    {{ subfield(class="form-input form-textarea", rows=2, maxlength=180,
+                       placeholder="Typ hier de " + subfield.label.text|lower + "...") }}
+                    {% for error in subfield.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% endmacro %}
+
+    {% macro render_uitvoering_blok() %}
+    {# Ensceneringstips (+ foto) #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Ensceneringstips</h3>
+        <p class="form-hint">Max 7 tips.</p>
+        {{ form.ensceneringstips(style="display:none", id="ensceneringstips-hidden") }}
+        <div class="dynamische-lijst" id="ensceneringstips-lijst" data-hidden="ensceneringstips-hidden" data-max="7" data-placeholder="Bijv. Rookmachine in hoek plaatsen"></div>
+        <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="ensceneringstips-lijst" style="margin-top: 0.5rem;">+ Tip toevoegen</button>
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Foto bij ensceneringstips (optioneel)</h4>
+            {% if bewerken and kaart and kaart.ensceneringstips_foto %}
+            <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
+                <label class="bestaande-afbeelding">
+                    <img src="{{ url_for('static', filename='uploads/' + kaart.ensceneringstips_foto) }}"
+                         alt="Huidige foto" style="max-height: 120px;">
+                    <span class="verwijder-checkbox">
+                        <input type="checkbox" name="verwijder_ensceneringstips_foto" value="1">
+                        Verwijderen
+                    </span>
+                </label>
+            </div>
+            {% endif %}
+            <div class="file-upload-area">
+                <input type="file" name="ensceneringstips_foto" class="form-file"
+                       accept="image/jpeg,image/png,image/webp" id="tips-foto-input">
+                <p class="form-hint">Liggend formaat (4:3). Je kunt na uploaden bijsnijden. Max 5 MB. (JPG, PNG, WebP)</p>
+            </div>
+            <div id="tips-cropper-paneel" style="display:none; margin-top: 1rem;">
+                <div class="form-subgroep-blok">
+                    <h4 class="form-subgroep-titel">Foto bijsnijden</h4>
+                    <p class="form-hint">Sleep om te verschuiven, knoppen om in/uit te zoomen. Vast 4:3 formaat. Klik "Bevestig" als je tevreden bent.</p>
+                    <div style="max-width: 100%; max-height: 350px; background: #1A1A1A; margin: 0.75rem 0;">
+                        <img id="tips-cropper-img" style="display:block; max-width:100%;">
+                    </div>
+                    <div class="cropper-knoppen">
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="zoom-in">Inzoomen +</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="zoom-uit">Uitzoomen −</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="reset">Reset</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="tips-crop-bevestig">Bevestig bijsnijden</button>
+                    </div>
+                    <div id="tips-crop-status" style="display:none; margin-top: 0.5rem; padding: 0.5rem; background: #d4edda; border-radius: 4px; color: #155724; font-size: 0.85rem;">
+                        Foto bijgesneden en klaar voor opslaan.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Evaluatie #}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Evaluatie</h3>
+        <p class="form-hint">Max 7 voorbeeldvragen.</p>
+        {{ form.evaluatie(style="display:none", id="evaluatie-hidden") }}
+        <div class="dynamische-lijst" id="evaluatie-lijst" data-hidden="evaluatie-hidden" data-max="7" data-placeholder="Bijv. Was het doel van de oefening behaald?"></div>
+        <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="evaluatie-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
+    </div>
+    {% endmacro %}
+
+    {% macro render_verwijzingen_blok() %}
+    <div class="form-groep-blok">
+        <h3 class="form-groep-titel">Verwijzingen</h3>
+        <p class="form-hint">Voeg eigen links toe (URL + korte toelichting). Deze verschijnen als QR-codes in de PDF.</p>
+        {% for i in range(1, 6) %}
+        <div class="form-groep-rij verwijzing-rij" id="verwijzing-rij-{{ i }}" style="margin-bottom: 0.5rem; align-items: flex-end;{% if i > 1 and not form['verwijzing_url_' ~ i].data %} display:none;{% endif %}">
+            <div class="form-groep-kolom" style="flex: 2;">
+                <div class="form-group">
+                    <label class="form-label">URL {{ i }}</label>
+                    {{ form['verwijzing_url_' ~ i](class="form-input verwijzing-url", placeholder="https://...", maxlength=200) }}
+                </div>
+            </div>
+            <div class="form-groep-kolom" style="flex: 1;">
+                <div class="form-group">
+                    <label class="form-label">Toelichting</label>
+                    {{ form['verwijzing_label_' ~ i](class="form-input verwijzing-label", placeholder="Max 40 tekens", maxlength=40) }}
+                </div>
+            </div>
+            <div class="form-groep-kolom" style="flex: 0 0 auto;">
+                <button type="button" class="btn btn-secondary btn-sm verwijzing-verwijder" data-rij="{{ i }}" title="Verwijdering wissen" style="margin-bottom: 0.6rem;">✕</button>
+            </div>
+        </div>
+        {% endfor %}
+        <button type="button" class="btn btn-secondary btn-sm" id="verwijzing-toevoegen" style="margin-top: 0.5rem;">+ Verwijzing toevoegen</button>
+    </div>
+    {% endmacro %}
+
+    <div class="form-card">
+
+    {% if kaart_type == 'scenario' %}
+        {# ============================================================ #}
+        {# TABS VARIANT — alleen voor scenariokaart                     #}
+        {# ============================================================ #}
+        <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop" data-tab="opzet">Oefenopzet</button>
+            <button type="button" class="tab-knop" data-tab="scenario">Scenario</button>
+            <button type="button" class="tab-knop" data-tab="uitvoering">Uitvoering</button>
+            <button type="button" class="tab-knop" data-tab="verwijzingen">Verwijzingen</button>
+        </div>
+
+        <div class="tab-paneel actief" data-tab="algemeen">
+            {{ render_algemeen() }}
+            <div class="tab-nav-footer">
+                <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="opzet">Volgende →</button>
+            </div>
+        </div>
+
+        <div class="tab-paneel" data-tab="opzet">
+            {{ render_opzet_blok() }}
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="scenario">Volgende →</button>
+            </div>
+        </div>
+
+        <div class="tab-paneel" data-tab="scenario">
+            {{ render_scenario_blok() }}
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="opzet">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="uitvoering">Volgende →</button>
+            </div>
+        </div>
+
+        <div class="tab-paneel" data-tab="uitvoering">
+            {{ render_uitvoering_blok() }}
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="scenario">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="verwijzingen">Volgende →</button>
+            </div>
+        </div>
+
+        <div class="tab-paneel" data-tab="verwijzingen">
+            {{ render_verwijzingen_blok() }}
+
+            {% if bewerken and kaart %}
+            <div class="form-groep-blok" style="margin-top: 1.5rem;">
+                <h3 class="form-groep-titel">Gekoppelde kaarten</h3>
+                <p class="form-hint">Koppel andere kaarten die bij deze scenariokaart horen. Ze verschijnen als QR-code onder de eigen verwijzingen in de PDF.</p>
+
+                {% if gekoppelde_kaarten %}
+                <div class="gekoppelde-lijst" style="margin-bottom: 0.75rem;">
+                    {% for k in gekoppelde_kaarten %}
+                    <div class="gekoppelde-kaart-rij">
+                        <span class="badge badge-type">{{ k.type_naam }}</span>
+                        <strong>{{ k.nummer }}</strong>
+                        <span class="gekoppelde-kaart-naam">{{ k.naam }}</span>
+                        <form method="POST" action="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="actie" value="verwijderen">
+                            <input type="hidden" name="doel_id" value="{{ k.id }}">
+                            <button type="submit" class="btn-verwijder" title="Loskoppelen">✕</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="form-hint" style="font-style: italic; margin-bottom: 0.75rem;">Nog geen gekoppelde kaarten.</p>
+                {% endif %}
+
+                {% if beschikbaar_per_type %}
+                <form method="POST" action="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}" class="koppel-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="actie" value="toevoegen">
+                    <div class="form-groep-rij" style="align-items: flex-end; gap: 0.5rem;">
+                        <div class="form-groep-kolom" style="flex: 3;">
+                            <div class="form-group" style="margin: 0;">
+                                <label class="form-label" for="doel_id">Kaart koppelen</label>
+                                <select name="doel_id" id="doel_id" class="form-input form-select" required>
+                                    <option value="">— Kies een kaart —</option>
+                                    {% for type_key, blok in beschikbaar_per_type.items() %}
+                                    <optgroup label="{{ blok.naam }}">
+                                        {% for k in blok.kaarten %}
+                                        <option value="{{ k.id }}">{{ k.nummer }} — {{ k.naam }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-groep-kolom" style="flex: 0 0 auto;">
+                            <button type="submit" class="btn btn-secondary">+ Koppelen</button>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <p class="form-hint" style="font-style: italic;">Er zijn geen andere kaarten beschikbaar om te koppelen.</p>
+                {% endif %}
+            </div>
+            {% elif not bewerken %}
+            <p class="form-hint" style="margin-top: 1rem; font-style: italic;">Sla de kaart eerst op als concept — daarna kun je kaarten koppelen.</p>
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="uitvoering">← Vorige</button>
+                <span class="tab-nav-spacer"></span>
+            </div>
+        </div>
+
+    {% elif kaart_type == 'thema' %}
+        {# ============================================================ #}
+        {# THEMAKAART — drie tabs (Algemeen / Secties / QR-codes)       #}
+        {# ============================================================ #}
+        <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop" data-tab="secties">Secties</button>
+            <button type="button" class="tab-knop" data-tab="qr">QR-codes</button>
+        </div>
+
+        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
+        <div class="tab-paneel actief" data-tab="algemeen">
+            {{ render_algemeen() }}
+
+            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Tekst op de kaart</h3>
+            <div class="form-group">
+                {{ form.titel.label(class="form-label") }}
+                {{ form.titel(class="form-input", maxlength=40,
+                   placeholder="Bijv. Lig jij op koers?") }}
+                {% for error in form.titel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                <p class="form-hint">Max 40 tekens. Verschijnt in HOOFDLETTERS in de rode balk bovenaan. Wordt ook gebruikt in lijsten en zoeken.</p>
+            </div>
+            <div class="form-group">
+                {{ form.ondertitel.label(class="form-label") }}
+                {{ form.ondertitel(class="form-input", maxlength=50,
+                   placeholder="Bijv. Bereid je voor op een inzet op het water") }}
+                {% for error in form.ondertitel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                <p class="form-hint">Max 50 tekens. Verschijnt klein en cursief in de blauwe balk eronder.</p>
+            </div>
+
+            <div class="tab-nav-footer">
+                <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="secties">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 2: SECTIES ---------------- #}
+        <div class="tab-paneel" data-tab="secties">
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style: italic;">Sla eerst tab "Algemeen" op — daarna kun je tussentitels en kaarten koppelen.</p>
+            {% else %}
+            {% set aantal_kaarten = (thema_kaart_links[0]|length) + (thema_kaart_links[1]|length) + (thema_kaart_links[2]|length) %}
+            <p class="form-hint">
+                Maximaal 3 secties met elk een tussentitel. Aan elke sectie kun je kaarten koppelen die rechts op de themakaart in een lijst verschijnen.
+                In totaal <strong>{{ aantal_kaarten }}/{{ THEMA_MAX_KAARTEN_TOTAAL }}</strong> kaarten gekoppeld.
+            </p>
+
+            {% for groep_index in [0, 1, 2] %}
+                {% set sectie_nr = groep_index + 1 %}
+                {% set heeft_inhoud = form['tussentitel_' ~ sectie_nr].data or thema_kaart_links[groep_index] %}
+                {% set vorige_heeft_inhoud = (groep_index == 0) or form['tussentitel_' ~ groep_index].data or thema_kaart_links[groep_index - 1] %}
+
+                <div class="thema-sectie-blok" data-sectie="{{ sectie_nr }}"
+                     {% if groep_index > 0 and not heeft_inhoud %}style="display:none;"{% endif %}>
+                    <div class="form-groep-blok">
+                        <h3 class="form-groep-titel">Sectie {{ sectie_nr }}</h3>
+                        <div class="form-group">
+                            {{ form['tussentitel_' ~ sectie_nr].label(class="form-label") }}
+                            {{ form['tussentitel_' ~ sectie_nr](class="form-input", maxlength=35,
+                               placeholder='Bijv. Check je basisvaardigheden') }}
+                            {% for error in form['tussentitel_' ~ sectie_nr].errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                            <p class="form-hint">Max 35 tekens. Verschijnt als kopje boven de gekoppelde kaarten.</p>
+                        </div>
+
+                        <h4 class="form-subgroep-titel">Gekoppelde kaarten ({{ thema_kaart_links[groep_index]|length }})</h4>
+                        {% if thema_kaart_links[groep_index] %}
+                        {% set links_in_groep = thema_kaart_links[groep_index] %}
+                        {# Groepeer gekoppelde kaarten per type binnen deze sectie #}
+                        {% for type_key, type_naam in [('instructie', 'Instructiekaarten'), ('scenario', 'Scenariokaarten'), ('opdracht', 'Opdrachtkaarten')] %}
+                            {% set links_van_type = links_in_groep | selectattr('gekoppelde_kaart.type', 'equalto', type_key) | list %}
+                            {% if links_van_type %}
+                            <div class="thema-kaart-groep">
+                                <p class="thema-kaart-groep-titel">{{ type_naam }}</p>
+                                <ul style="list-style:none; padding:0; margin: 0 0 0.6rem 0;">
+                                    {% for link in links_van_type %}
+                                    <li class="dynamische-lijst-item" style="background: #f8f8f8; padding: 0.4rem 0.6rem; border-radius: 4px;">
+                                        <span style="flex:1;">
+                                            <strong>{{ link.gekoppelde_kaart.nummer }}</strong> — {{ link.gekoppelde_kaart.naam }}
+                                        </span>
+                                        <button type="button" class="btn-verwijder thema-actie-knop" title="Verwijder koppeling"
+                                                data-thema-url="{{ url_for('kaarten.thema_kaart_link_verwijderen', kaart_id=kaart.id, link_id=link.id) }}">×</button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p style="color:#888; font-style:italic; margin: 0 0 0.6rem 0;">Nog geen kaarten gekoppeld.</p>
+                        {% endif %}
+
+                        {% if thema_beschikbare_kaarten_per_type and aantal_kaarten < THEMA_MAX_KAARTEN_TOTAAL %}
+                        <div class="thema-koppel-blok"
+                             data-thema-url="{{ url_for('kaarten.thema_kaart_link_toevoegen', kaart_id=kaart.id) }}"
+                             style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                            <input type="hidden" name="groep_index" value="{{ groep_index }}">
+                            <select name="doel_id" class="form-input form-select" style="flex:1; min-width:220px;" required>
+                                <option value="">— kies een kaart om te koppelen —</option>
+                                {% for type_key, blok in thema_beschikbare_kaarten_per_type.items() %}
+                                <optgroup label="{{ blok.naam }}">
+                                    {% for k in blok.kaarten %}
+                                    <option value="{{ k.id }}">{{ k.nummer }} — {{ k.naam }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-sm thema-actie-knop" data-thema-veld-blok>+ Koppelen</button>
+                        </div>
+                        {% elif aantal_kaarten >= THEMA_MAX_KAARTEN_TOTAAL %}
+                        <p class="form-hint" style="color:#b6463d;">Maximum van {{ THEMA_MAX_KAARTEN_TOTAAL }} kaarten bereikt.</p>
+                        {% else %}
+                        <p class="form-hint">Geen beschikbare kaarten meer.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Knop "+ Sectie X+1 toevoegen" — alleen tonen als deze sectie er IS en de volgende NIET zichtbaar is en we nog niet bij sectie 3 zijn #}
+                {% if sectie_nr < 3 %}
+                {% set volgende_heeft_inhoud = form['tussentitel_' ~ (sectie_nr + 1)].data or thema_kaart_links[groep_index + 1] %}
+                <div class="thema-sectie-toevoeg-knop" data-toon-sectie="{{ sectie_nr + 1 }}"
+                     {% if volgende_heeft_inhoud or (groep_index > 0 and not heeft_inhoud) %}style="display:none;"{% endif %}>
+                    <button type="button" class="btn btn-secondary btn-sm thema-sectie-toon-knop"
+                            data-doel-sectie="{{ sectie_nr + 1 }}">+ Sectie {{ sectie_nr + 1 }} toevoegen</button>
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="qr">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 3: QR-CODES ---------------- #}
+        <div class="tab-paneel" data-tab="qr">
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style: italic;">Sla eerst tab "Algemeen" op — daarna kun je QR-codes koppelen.</p>
+            {% else %}
+            {% set qr_lijst = thema_qr_links_op_volgorde %}
+            {% set qr_aantal = qr_lijst|length %}
+            {% set qr_max = THEMA_MAX_QR_TOP + THEMA_MAX_QR_BOTTOM %}
+            <p class="form-hint">
+                <strong>{{ qr_aantal }}/{{ qr_max }}</strong> QR-codes gekoppeld.
+                De volgorde bepaalt de plaats op de themakaart — de eerste codes komen op de bovenste rij (alleen bij meer dan 10), de rest op de onderste.
+                Het label onder een QR-code is een eigen korte tekst (max {{ THEMA_QR_LABEL_MAX }} tekens); laat leeg om de QR-naam te gebruiken.
+            </p>
+
+            {% if qr_lijst %}
+            <ul style="list-style:none; padding:0; margin: 0 0 1rem 0;">
+                {% for link in qr_lijst %}
+                <li class="thema-qr-rij" style="display:flex; gap:0.5rem; align-items:center; background:#f8f8f8; padding:0.5rem 0.6rem; border-radius:4px; margin-bottom:0.4rem;">
+                    <span style="display:inline-block; min-width:1.5rem; color:#888; font-weight:600; text-align:center;">{{ loop.index }}.</span>
+                    <strong style="min-width:140px;">{{ link.qr_code.naam if link.qr_code else '— verwijderd —' }}</strong>
+                    <div class="thema-koppel-blok"
+                         data-thema-url="{{ url_for('kaarten.thema_qr_link_label', kaart_id=kaart.id, link_id=link.id) }}"
+                         style="display:flex; gap:0.4rem; align-items:center; flex:1;">
+                        <input type="text" name="label" value="{{ link.label }}"
+                               maxlength="{{ THEMA_QR_LABEL_MAX }}"
+                               placeholder="Eigen label (optioneel)"
+                               class="form-input" style="flex:1;">
+                        <button type="button" class="btn btn-secondary btn-sm thema-actie-knop" data-thema-veld-blok>Opslaan</button>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm thema-actie-knop" title="Omhoog"
+                            data-thema-url="{{ url_for('kaarten.thema_qr_link_omhoog', kaart_id=kaart.id, link_id=link.id) }}"
+                            {% if loop.first %}disabled{% endif %}>↑</button>
+                    <button type="button" class="btn btn-secondary btn-sm thema-actie-knop" title="Omlaag"
+                            data-thema-url="{{ url_for('kaarten.thema_qr_link_omlaag', kaart_id=kaart.id, link_id=link.id) }}"
+                            {% if loop.last %}disabled{% endif %}>↓</button>
+                    <button type="button" class="btn-verwijder thema-actie-knop" title="Verwijder QR-koppeling"
+                            data-thema-url="{{ url_for('kaarten.thema_qr_link_verwijderen', kaart_id=kaart.id, link_id=link.id) }}">×</button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color:#888; font-style:italic; margin: 0 0 0.75rem 0;">Nog geen QR-codes gekoppeld.</p>
+            {% endif %}
+
+            {% if thema_beschikbare_qrs_per_categorie and qr_aantal < qr_max %}
+            <div class="thema-koppel-blok"
+                 data-thema-url="{{ url_for('kaarten.thema_qr_link_toevoegen', kaart_id=kaart.id) }}"
+                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom: 1rem;">
+                <input type="hidden" name="rij" value="auto">
+                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;" required>
+                    <option value="">— kies een QR-code om toe te voegen —</option>
+                    {% for cat_key, blok in thema_beschikbare_qrs_per_categorie.items() %}
+                    <optgroup label="{{ blok.naam }}">
+                        {% for qr in blok.qrs %}
+                        <option value="{{ qr.id }}">{{ qr.naam }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <input type="text" name="label" maxlength="{{ THEMA_QR_LABEL_MAX }}"
+                       placeholder="Label (optioneel)" class="form-input" style="flex:0 0 200px;">
+                <button type="button" class="btn btn-secondary btn-sm thema-actie-knop" data-thema-veld-blok>+ Toevoegen</button>
+            </div>
+            {% elif qr_aantal >= qr_max %}
+            <p class="form-hint" style="color:#b6463d;">Maximum van {{ qr_max }} QR-codes bereikt.</p>
+            {% else %}
+            <p class="form-hint">Geen beschikbare QR-codes meer (of maak er eerst een aan via het QR-codes-menu).</p>
+            {% endif %}
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="secties">← Vorige</button>
+                <span class="tab-nav-spacer"></span>
+            </div>
+        </div>
+
+    {% else %}
+        {# ============================================================ #}
+        {# NORMALE VARIANT — instructie / opdracht: generieke rendering #}
+        {# ============================================================ #}
+        <h2 class="form-section-title">Algemeen</h2>
+        {{ render_algemeen() }}
+
+        {% set skip_fields = ['naam', 'kerntaak', 'header_foto', 'afbeeldingen', 'submit', 'csrf_token'] %}
+
+        <h2 class="form-section-title">Inhoud</h2>
+        {% for field in form %}
+            {% if field.name not in skip_fields %}
+                <div class="form-group">
+                    {{ field.label(class="form-label") }}
+                    {% if field.type == 'TextAreaField' %}
+                        {{ field(class="form-input form-textarea", rows=4,
+                           placeholder="Typ hier de " + field.label.text|lower + "...") }}
+                    {% else %}
+                        {{ field(class="form-input",
+                           placeholder="Typ hier de " + field.label.text|lower + "...") }}
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {# ==================== ALTIJD ZICHTBAAR ONDERAAN ==================== #}
+    {% if bewerken %}
+    <h2 class="form-section-title" style="margin-top: 2rem;">Toelichting wijziging</h2>
+    <div class="form-group">
+        <label class="form-label" for="wijziging_toelichting">
+            Waarom wijzig je deze kaart? <span class="verplicht">*</span>
+        </label>
+        <textarea id="wijziging_toelichting" name="wijziging_toelichting"
+                  class="form-input form-textarea" rows="3" required
+                  placeholder="Bijv. Stappen bijgewerkt na evaluatie van oefening maart">{{ wijziging_toelichting|default('', true) }}</textarea>
+        {% if toelichting_fout %}
+        <span class="form-error">{{ toelichting_fout }}</span>
+        {% endif %}
+        <p class="form-hint">Deze toelichting komt in de geschiedenis van de kaart te staan.</p>
+    </div>
+    {% endif %}
+
+    <div id="form-fouten-onderaan"></div>
+    <div class="form-actions">
+        {{ form.submit(class="btn btn-primary btn-large") }}
+        {% if bewerken and kaart %}
+            <button type="submit" name="volgende_actie" value="pdf" class="btn btn-secondary btn-large" formtarget="_blank">Opslaan & bekijk PDF</button>
+            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary" target="_blank" rel="noopener">Bekijk PDF</a>
+            <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
+        {% else %}
+            <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
+        {% endif %}
+    </div>
+
+    </div>{# /form-card #}
+</form>
+
+{# ==================== SCRIPTS ==================== #}
+<script>
+/* === Doelgroep "anders"-veld tonen/verbergen === */
+(function() {
+    var sel = document.getElementById('doelgroep-select');
+    var kol = document.getElementById('doelgroep-anders-kolom');
+    if (!sel || !kol) return;
+    sel.addEventListener('change', function() {
+        kol.style.display = (sel.value === 'anders') ? '' : 'none';
+    });
+})();
+
+/* === Pager-soort "anders"-veld tonen/verbergen === */
+(function() {
+    var sel = document.getElementById('pager-soort-select');
+    var rij = document.getElementById('pager-soort-anders-rij');
+    if (!sel || !rij) return;
+    sel.addEventListener('change', function() {
+        rij.style.display = (sel.value === 'anders') ? '' : 'none';
+    });
+})();
+
+/* === Oefenleider-rol "anders"-veld tonen/verbergen === */
+(function() {
+    var sel = document.getElementById('oefenleider-rol-select');
+    var rij = document.getElementById('oefenleider-rol-anders-rij');
+    if (!sel || !rij) return;
+    sel.addEventListener('change', function() {
+        rij.style.display = (sel.value === 'anders') ? '' : 'none';
+    });
+})();
+</script>
+
+<script>
+/* === Gedeelde cropper-hulpfuncties === */
+function setupCropper(config) {
+    var fileInput = document.getElementById(config.inputId);
+    var paneel = document.getElementById(config.paneelId);
+    var img = document.getElementById(config.imgId);
+    var bevestigBtn = document.getElementById(config.bevestigId);
+    var statusEl = document.getElementById(config.statusId);
+    var form = fileInput ? fileInput.closest('form') : null;
+    if (!fileInput || !paneel || !img || !form) return;
+
+    var cropper = null;
+    var originalFile = null;
+    var isBevestigd = false;
+
+    fileInput.addEventListener('change', function(e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            paneel.style.display = 'none';
+            if (statusEl) statusEl.style.display = 'none';
+            isBevestigd = false;
+            return;
+        }
+        originalFile = file;
+        isBevestigd = false;
+        if (statusEl) statusEl.style.display = 'none';
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            img.src = ev.target.result;
+            paneel.style.display = 'block';
+            if (cropper) cropper.destroy();
+            var cropperOpts = {
+                aspectRatio: config.ratio,
+                viewMode: 1,
+                autoCropArea: 1,
+                background: false,
+                responsive: true,
+                movable: true,
+                zoomable: true,
+                rotatable: config.rotatable || false,
+                scalable: false
+            };
+            if (config.previewSelector) {
+                cropperOpts.preview = config.previewSelector;
+            }
+            cropper = new Cropper(img, cropperOpts);
+            // Bij thema: verberg de "leeg" placeholder en de huidige bg-foto zodra de cropper overneemt
+            if (config.onActivate) config.onActivate();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    paneel.addEventListener('click', function(e) {
+        var btn = e.target.closest('[' + config.dataAttr + ']');
+        if (!btn || !cropper) return;
+        var actie = btn.getAttribute(config.dataAttr);
+        if (actie === 'zoom-in')  cropper.zoom(0.1);
+        if (actie === 'zoom-uit') cropper.zoom(-0.1);
+        if (actie === 'reset')  { cropper.reset(); isBevestigd = false; if (statusEl) statusEl.style.display = 'none'; }
+        if (actie === 'links')    cropper.rotate(-90);
+        if (actie === 'rechts')   cropper.rotate(90);
+    });
+
+    if (bevestigBtn) {
+        bevestigBtn.addEventListener('click', function() {
+            if (!cropper) return;
+            isBevestigd = true;
+            if (statusEl) statusEl.style.display = 'block';
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        if (!cropper || !originalFile) return;
+        if (form.dataset[config.processedKey] === 'true') return;
+
+        // Bij auto-save (tab-wissel): geen blokkade, foto wordt later opnieuw ge-upload
+        var autoSaveInput = document.getElementById('auto-save-tab');
+        var isAutoSave = autoSaveInput && autoSaveInput.value;
+
+        // Waarschuw als niet bevestigd (alleen bij echte opslag, niet auto-save)
+        if (!isBevestigd && !isAutoSave) {
+            var foutenEl = document.getElementById('form-fouten-onderaan');
+            if (foutenEl) {
+                foutenEl.innerHTML = '<div class="flash-bericht flash-warning" style="margin-bottom: 1rem;">Bevestig eerst het bijsnijden van de ' + config.label + ' voordat je opslaat.</div>';
+                foutenEl.scrollIntoView({ behavior: 'smooth' });
+            }
+            e.preventDefault();
+            return;
+        }
+        // Bij auto-save met onbevestigde foto: skip crop, laat file gewoon in file-input
+        if (isAutoSave && !isBevestigd) return;
+
+        e.preventDefault();
+        try {
+            var canvas = cropper.getCroppedCanvas({
+                maxWidth: config.maxW || 1200,
+                maxHeight: config.maxH || 900,
+                imageSmoothingQuality: 'high',
+                fillColor: config.fillColor || '#fff'
+            });
+            if (!canvas) { form.dataset[config.processedKey] = 'true'; form.submit(); return; }
+            canvas.toBlob(function(blob) {
+                try {
+                    var naam = (originalFile.name || config.prefix).replace(/\.[^.]+$/, '') + '.jpg';
+                    var dt = new DataTransfer();
+                    dt.items.add(new File([blob], naam, { type: 'image/jpeg' }));
+                    fileInput.files = dt.files;
+                } catch (err) { console.error(config.label + ' cropper fout:', err); }
+                form.dataset[config.processedKey] = 'true';
+                form.submit();
+            }, 'image/jpeg', 0.92);
+        } catch (err) {
+            console.error(config.label + ' cropper fout:', err);
+            form.dataset[config.processedKey] = 'true';
+            form.submit();
+        }
+    }, true);
+}
+
+// Header foto cropper
+setupCropper({
+    inputId: 'header-foto-input',
+    paneelId: 'cropper-paneel',
+    imgId: 'cropper-afbeelding',
+    bevestigId: 'header-crop-bevestig',
+    statusId: 'header-crop-status',
+    dataAttr: 'data-cropper-actie',
+    {% if kaart_type == 'thema' %}
+    ratio: 841.89 / 595.28,
+    rotatable: false,
+    previewSelector: '#thema-preview-cropper-target',
+    onActivate: function() {
+        // Verberg "leeg"-placeholder en bestaande bg-foto, zodat de cropper-preview de bovenlaag wordt
+        var leeg = document.getElementById('thema-preview-leeg');
+        if (leeg) leeg.style.display = 'none';
+        var frame = document.getElementById('thema-foto-preview');
+        if (frame) frame.style.backgroundImage = 'none';
+    },
+    maxW: 1800, maxH: 1273,
+    {% else %}
+    ratio: 3 / 1,
+    rotatable: true,
+    maxW: 2400, maxH: 800,
+    {% endif %}
+    fillColor: '#000',
+    prefix: 'header',
+    label: '{{ "achtergrondfoto" if kaart_type == "thema" else "headerfoto" }}',
+    processedKey: 'headerProcessed'
+});
+
+// Tips foto cropper
+setupCropper({
+    inputId: 'tips-foto-input',
+    paneelId: 'tips-cropper-paneel',
+    imgId: 'tips-cropper-img',
+    bevestigId: 'tips-crop-bevestig',
+    statusId: 'tips-crop-status',
+    dataAttr: 'data-tips-crop',
+    ratio: 4 / 3,
+    rotatable: false,
+    maxW: 1200, maxH: 900,
+    fillColor: '#fff',
+    prefix: 'tips',
+    label: 'ensceneringstips foto',
+    processedKey: 'tipsProcessed'
+});
+</script>
+
+{% if form.kenmerken_kerntaak is defined %}
+<script>
+(function() {
+    var LABELS = {
+        'algemeen': 'Algemene kenmerken',
+        'brand':    'Brandkenmerken',
+        'thv':      'THV-kenmerken',
+        'ibgs':     'IBGS-kenmerken',
+        'water':    'WO-kenmerken'
+    };
+    var kerntaakSel = document.getElementById('kerntaak');
+    var labelEl = document.querySelector('label[for="kenmerken_kerntaak"]');
+    if (!kerntaakSel || !labelEl) return;
+    function updateLabel() {
+        labelEl.textContent = LABELS[kerntaakSel.value] || 'Kerntaak-kenmerken';
+    }
+    kerntaakSel.addEventListener('change', updateLabel);
+})();
+</script>
+{% endif %}
+
+<script>
+/* === Dynamische lijsten (ensceneringstips, evaluatie, oefenmiddelen) === */
+(function() {
+    function initDynamischeLijst(container) {
+        var hiddenId = container.dataset.hidden;
+        var max = parseInt(container.dataset.max) || 7;
+        var placeholder = container.dataset.placeholder || '';
+        var hidden = document.getElementById(hiddenId);
+        if (!hidden) return;
+
+        var toevoegBtn = document.querySelector('[data-lijst="' + container.id + '"]');
+
+        function maakItem(waarde) {
+            var div = document.createElement('div');
+            div.className = 'dynamische-lijst-item';
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input';
+            input.placeholder = placeholder;
+            input.value = waarde || '';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn-verwijder';
+            btn.textContent = '✕';
+            btn.title = 'Verwijderen';
+            btn.addEventListener('click', function() {
+                div.remove();
+                syncNaarHidden();
+                updateToevoegKnop();
+            });
+            div.appendChild(input);
+            div.appendChild(btn);
+            container.appendChild(div);
+            return input;
+        }
+
+        function syncNaarHidden() {
+            var inputs = container.querySelectorAll('input[type="text"]');
+            var regels = [];
+            inputs.forEach(function(inp) {
+                if (inp.value.trim()) regels.push(inp.value.trim());
+            });
+            hidden.value = regels.join('\n');
+        }
+
+        function updateToevoegKnop() {
+            if (!toevoegBtn) return;
+            var items = container.querySelectorAll('.dynamische-lijst-item');
+            toevoegBtn.style.display = items.length >= max ? 'none' : '';
+        }
+
+        // Init: bestaande waarden laden
+        var bestaand = hidden.value ? hidden.value.split('\n').filter(function(r) { return r.trim(); }) : [];
+        if (bestaand.length === 0) {
+            maakItem('');
+        } else {
+            bestaand.forEach(function(r) { maakItem(r); });
+        }
+        updateToevoegKnop();
+
+        // Sync bij elke wijziging
+        container.addEventListener('input', syncNaarHidden);
+
+        // Toevoeg-knop
+        if (toevoegBtn) {
+            toevoegBtn.addEventListener('click', function() {
+                var items = container.querySelectorAll('.dynamische-lijst-item');
+                if (items.length >= max) return;
+                var inp = maakItem('');
+                inp.focus();
+                updateToevoegKnop();
+            });
+        }
+    }
+
+    document.querySelectorAll('.dynamische-lijst').forEach(initDynamischeLijst);
+
+    // SAFETY: bij elke form-submit, sync alle dynamische lijsten naar hidden
+    // (fallback voor het geval input-event niet getriggerd is)
+    var form = document.querySelector('.kaart-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            document.querySelectorAll('.dynamische-lijst').forEach(function(container) {
+                var hiddenId = container.dataset.hidden;
+                var hidden = document.getElementById(hiddenId);
+                if (!hidden) return;
+                var inputs = container.querySelectorAll('input[type="text"]');
+                var regels = [];
+                inputs.forEach(function(inp) {
+                    if (inp.value.trim()) regels.push(inp.value.trim());
+                });
+                hidden.value = regels.join('\n');
+            });
+        }, true); // capture-fase: vóór andere submit-listeners
+    }
+})();
+
+/* === Verwijzingen: toevoegen + verwijderen === */
+(function() {
+    var toevoegBtn = document.getElementById('verwijzing-toevoegen');
+
+    // Toevoegen
+    if (toevoegBtn) {
+        toevoegBtn.addEventListener('click', function() {
+            var rijen = document.querySelectorAll('.verwijzing-rij');
+            for (var i = 0; i < rijen.length; i++) {
+                if (rijen[i].style.display === 'none') {
+                    rijen[i].style.display = '';
+                    if (i >= rijen.length - 1) toevoegBtn.style.display = 'none';
+                    return;
+                }
+            }
+            toevoegBtn.style.display = 'none';
+        });
+    }
+
+    // Verwijderen (leegmaken + verbergen)
+    document.querySelectorAll('.verwijzing-verwijder').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var rij = document.getElementById('verwijzing-rij-' + btn.dataset.rij);
+            if (!rij) return;
+            rij.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+            rij.style.display = 'none';
+            if (toevoegBtn) toevoegBtn.style.display = '';
+        });
+    });
+})();
+
+/* === Teken-teller voor velden met maxlength === */
+(function() {
+    document.querySelectorAll('input[maxlength], textarea[maxlength]').forEach(function(el) {
+        var max = parseInt(el.getAttribute('maxlength'), 10);
+        if (!max || max < 1) return;
+        if (el.offsetParent === null && el.style.display === 'none') return; // skip hidden lijst-textareas
+        var teller = document.createElement('span');
+        teller.className = 'teken-teller';
+        el.insertAdjacentElement('afterend', teller);
+        function update() {
+            var len = el.value.length;
+            teller.textContent = len + ' / ' + max + ' tekens';
+            teller.classList.toggle('waarschuwing', len >= max * 0.8 && len < max);
+            teller.classList.toggle('limiet', len >= max);
+        }
+        el.addEventListener('input', update);
+        update();
+    });
+})();
+
+/* === Tabs (alleen als tab-nav aanwezig is) === */
+(function() {
+    var tabsNav = document.querySelector('.tabs-nav');
+    if (!tabsNav) return;
+
+    var knoppen = tabsNav.querySelectorAll('.tab-knop');
+    var panelen = document.querySelectorAll('.tab-paneel');
+
+    function zetActief(tabId) {
+        knoppen.forEach(function(k) {
+            k.classList.toggle('actief', k.dataset.tab === tabId);
+        });
+        panelen.forEach(function(p) {
+            p.classList.toggle('actief', p.dataset.tab === tabId);
+        });
+        // URL hash bijwerken zonder scroll
+        if (history.replaceState) {
+            history.replaceState(null, '', '#tab-' + tabId);
+        }
+        // Scroll naar boven van form (niet helemaal naar top)
+        var form = document.querySelector('.kaart-form');
+        if (form) {
+            var rect = form.getBoundingClientRect();
+            if (rect.top < 0) {
+                window.scrollTo({ top: window.scrollY + rect.top - 20, behavior: 'smooth' });
+            }
+        }
+    }
+
+    // Auto-save: zet hidden tab-doel en submit form
+    function autoSaveEnSwitch(doelTab) {
+        var huidig = document.querySelector('.tab-paneel.actief');
+        // Als we al op de doeltab zijn, niets doen
+        if (huidig && huidig.dataset.tab === doelTab) return;
+        var autoSaveInput = document.getElementById('auto-save-tab');
+        if (autoSaveInput) autoSaveInput.value = doelTab;
+        // Toelichting wijziging is bij auto-save niet vereist — HTML required tijdelijk weghalen
+        var toelichting = document.getElementById('wijziging_toelichting');
+        if (toelichting) toelichting.removeAttribute('required');
+        var form = document.querySelector('.kaart-form');
+        if (form) {
+            // requestSubmit respecteert submit-events (zoals safety-sync); fallback form.submit()
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }
+    }
+
+    // Tab-klik bovenaan → auto-save + switch
+    knoppen.forEach(function(k) {
+        k.addEventListener('click', function() {
+            autoSaveEnSwitch(k.dataset.tab);
+        });
+    });
+
+    // Verplichte velden per tab (label = tekst in melding)
+    // Velden waarvan het ID niet bestaat op de pagina worden geskipt — zo werkt
+    // dezelfde lijst voor scenario (heeft 'naam') en thema (heeft 'titel').
+    var TAB_VERPLICHT = {
+        'algemeen': [
+            { id: 'naam', label: 'Logische naam' },
+            { id: 'titel', label: 'Titel' },
+            { id: 'kerntaak', label: 'Kerntaak' }
+        ],
+        'opzet': [
+            { id: 'doelgroep-select', label: 'Doelgroep' },
+            { id: 'oefenleider_aantal', label: 'Aantal oefenleiders' },
+            { id: 'tijdsduur', label: 'Tijdsduur' },
+            { type: 'lijst', hidden: 'oefenmiddelen-hidden', label: 'Oefenmiddelen (minimaal 1)', min: 1 },
+            { id: 'aanleiding_doelen', label: 'Oefendoel' }
+        ],
+        'scenario': [
+            { id: 'pager_prio', label: 'Prioriteit' },
+            { id: 'pager-soort-select', label: 'Soort melding' },
+            { id: 'pager_voertuigen', label: 'Voertuigen / eenheden' },
+            { id: 'scenariobeschrijving', label: 'Scenariobeschrijving' },
+            { id: 'kenmerken_kerntaak', label: 'Kerntaak-kenmerken' },
+            { id: 'gebouwkenmerken', label: 'Gebouwkenmerken' },
+            { id: 'menskenmerken', label: 'Menskenmerken' },
+            { id: 'omgevingskenmerken', label: 'Omgevingskenmerken' },
+            { id: 'interventiekenmerken', label: 'Interventiekenmerken' }
+        ],
+        'uitvoering': [
+            { type: 'lijst', hidden: 'ensceneringstips-hidden', label: 'Ensceneringstips (minimaal 1)', min: 1 },
+            { type: 'lijst', hidden: 'evaluatie-hidden', label: 'Evaluatie (minimaal 1)', min: 1 }
+        ],
+        'verwijzingen': []
+    };
+
+    function valideerTab(tabId) {
+        var verplicht = TAB_VERPLICHT[tabId] || [];
+        var ontbrekend = [];
+        verplicht.forEach(function(v) {
+            if (v.type === 'lijst') {
+                var hidden = document.getElementById(v.hidden);
+                if (hidden) {
+                    var regels = hidden.value.split('\n').filter(function(r) { return r.trim(); });
+                    if (regels.length < (v.min || 1)) ontbrekend.push(v.label);
+                }
+            } else {
+                var el = document.getElementById(v.id);
+                if (el && !(el.value || '').trim()) ontbrekend.push(v.label);
+            }
+        });
+        // Voorwaardelijk: doelgroep='anders' → doelgroep_anders verplicht
+        if (tabId === 'opzet') {
+            var dg = document.getElementById('doelgroep-select');
+            if (dg && dg.value === 'anders') {
+                var dgA = document.getElementById('doelgroep_anders');
+                if (dgA && !(dgA.value || '').trim()) ontbrekend.push('Eigen doelgroep');
+            }
+            var orol = document.getElementById('oefenleider-rol-select');
+            if (orol && orol.value === 'anders') {
+                var orolA = document.getElementById('oefenleider_rol_anders');
+                if (orolA && !(orolA.value || '').trim()) ontbrekend.push('Eigen rol (oefenleider)');
+            }
+        }
+        if (tabId === 'scenario') {
+            var ps = document.getElementById('pager-soort-select');
+            if (ps && ps.value === 'anders') {
+                var psA = document.getElementById('pager_soort_anders');
+                if (psA && !(psA.value || '').trim()) ontbrekend.push('Eigen soort melding');
+            }
+        }
+        return ontbrekend;
+    }
+
+    function toonTabFout(tabId, ontbrekend) {
+        var paneel = document.querySelector('.tab-paneel[data-tab="' + tabId + '"]');
+        if (!paneel) return;
+        var meldingId = 'tab-fout-' + tabId;
+        var melding = document.getElementById(meldingId);
+        if (!melding) {
+            melding = document.createElement('div');
+            melding.id = meldingId;
+            melding.className = 'tab-fout-melding';
+            paneel.insertBefore(melding, paneel.firstChild);
+        }
+        melding.innerHTML = '<strong>Vul eerst alles in voordat je verder gaat:</strong><ul>' +
+            ontbrekend.map(function(l) { return '<li>' + l + '</li>'; }).join('') +
+            '</ul>';
+        melding.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function wisTabFout(tabId) {
+        var el = document.getElementById('tab-fout-' + tabId);
+        if (el) el.remove();
+    }
+
+    // Vorige/Volgende knoppen binnen tabs — beide triggeren auto-save
+    document.querySelectorAll('.tab-vorige, .tab-volgende').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            // Volgende: valideer huidige tab voor waarschuwing (niet blokkerend)
+            if (btn.classList.contains('tab-volgende')) {
+                var huidig = document.querySelector('.tab-paneel.actief');
+                if (huidig) {
+                    var huidigTab = huidig.dataset.tab;
+                    var ontbrekend = valideerTab(huidigTab);
+                    if (ontbrekend.length > 0) {
+                        toonTabFout(huidigTab, ontbrekend);
+                        return; // blokkeer alleen bij ontbrekende velden
+                    }
+                    wisTabFout(huidigTab);
+                }
+            }
+            autoSaveEnSwitch(btn.dataset.naar);
+        });
+    });
+
+    // Initieel: URL hash lezen
+    var hash = window.location.hash;
+    if (hash && hash.indexOf('#tab-') === 0) {
+        var gewenst = hash.substring(5);
+        if (Array.from(knoppen).some(function(k) { return k.dataset.tab === gewenst; })) {
+            zetActief(gewenst);
+        }
+    }
+
+    // Foutindicator: scan panelen op .form-error en zet heeft-fout op knoppen
+    function markeerFoutTabs() {
+        panelen.forEach(function(p) {
+            var tabId = p.dataset.tab;
+            var heeftFout = p.querySelector('.form-error') !== null;
+            var knop = tabsNav.querySelector('.tab-knop[data-tab="' + tabId + '"]');
+            if (knop) knop.classList.toggle('heeft-fout', heeftFout);
+        });
+    }
+    markeerFoutTabs();
+
+    // Bij submit: als er na validatie fouten zijn, spring naar eerste tab met fout
+    // (Dit werkt alleen via server-side render na submit — dan staan .form-error in juiste paneel)
+    // Initieel bij page-load met fouten: activeer eerste tab met fout
+    var eersteFoutTab = null;
+    for (var i = 0; i < panelen.length; i++) {
+        if (panelen[i].querySelector('.form-error')) {
+            eersteFoutTab = panelen[i].dataset.tab;
+            break;
+        }
+    }
+    if (eersteFoutTab && !hash) {
+        zetActief(eersteFoutTab);
+    }
+})();
+
+/* === Themakaart: progressive disclosure van sectie 2 en 3 === */
+(function() {
+    var toonKnoppen = document.querySelectorAll('.thema-sectie-toon-knop');
+    if (!toonKnoppen.length) return;
+    toonKnoppen.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var sectieNr = btn.dataset.doelSectie;
+            var sectie = document.querySelector('.thema-sectie-blok[data-sectie="' + sectieNr + '"]');
+            if (sectie) sectie.style.display = '';
+            // Verberg de knop-wrapper die nu opent
+            var wrapper = btn.closest('.thema-sectie-toevoeg-knop');
+            if (wrapper) wrapper.style.display = 'none';
+            // Focus de tussentitel-input van de zojuist getoonde sectie
+            var input = sectie ? sectie.querySelector('input[name="tussentitel_' + sectieNr + '"]') : null;
+            if (input) input.focus();
+        });
+    });
+})();
+
+/* === Themakaart: alle koppel-acties JS-driven (geen nested forms) ===
+   Dit voorkomt dat klikken op "+ Koppel" / "Opslaan" / "↑↓" / "×" het hoofdform
+   submit (en dus de wijziging-toelichting eist). De acties gaan via fetch en
+   de pagina wordt na elke actie ververst zodat de lijst klopt. */
+(function() {
+    var knoppen = document.querySelectorAll('.thema-actie-knop');
+    if (!knoppen.length) return;
+    var csrfMeta = document.querySelector('input[name="csrf_token"]');
+    var csrfToken = csrfMeta ? csrfMeta.value : '';
+
+    knoppen.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (btn.disabled) return;
+            var url = btn.dataset.themaUrl;
+            if (!url) return;
+            var fd = new FormData();
+            // Verzamel velden uit het bijbehorende blok (bij toevoeg/label-acties)
+            if (btn.hasAttribute('data-thema-veld-blok')) {
+                var blok = btn.closest('.thema-koppel-blok');
+                if (blok) {
+                    blok.querySelectorAll('input[name], select[name]').forEach(function(el) {
+                        fd.append(el.name, el.value);
+                    });
+                }
+            }
+            fd.append('csrf_token', csrfToken);
+            // Toon korte status
+            btn.disabled = true;
+            var origTekst = btn.textContent;
+            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function(r) {
+                    // Server geeft 302 redirect terug naar /kaarten/X/bewerken
+                    // fetch volgt redirects standaard — we hoeven alleen te reloaden.
+                    var hash = window.location.hash;
+                    window.location.href = window.location.pathname + (hash || '');
+                })
+                .catch(function(err) {
+                    console.error('Thema-actie fout:', err);
+                    btn.disabled = false;
+                    btn.textContent = origTekst;
+                });
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}
+{% if type_info %}{{ type_info.naam }}{% elif weergave == 'archief' %}Archief{% else %}Kaarten{% endif %} — Vakbekwaam Studio
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('kaarten.overzicht') }}">Kaarten</a>
+    <span class="breadcrumb-sep">›</span>
+    {% if type_info %}
+    <span>{{ type_info.naam }}</span>
+    {% elif weergave == 'archief' %}
+    <span>Archief</span>
+    {% endif %}
+</div>
+
+<div class="page-header">
+    <h1>
+        {% if type_info %}
+            {{ type_info.naam }}
+        {% elif weergave == 'archief' %}
+            Archief
+        {% endif %}
+    </h1>
+    <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-primary">+ Nieuwe kaart</a>
+</div>
+
+{% if kaart_type %}
+<div class="filter-tabs">
+    <a href="{{ url_for('kaarten.overzicht_type', kaart_type=kaart_type, weergave='actief') }}"
+       class="filter-tab {% if weergave != 'archief' %}actief{% endif %}">Actief</a>
+    <a href="{{ url_for('kaarten.overzicht_type', kaart_type=kaart_type, weergave='archief') }}"
+       class="filter-tab {% if weergave == 'archief' %}actief{% endif %}">Archief</a>
+</div>
+
+<form method="GET" action="{{ url_for('kaarten.overzicht_type', kaart_type=kaart_type) }}" class="map-zoek">
+    <input type="hidden" name="weergave" value="{{ weergave }}">
+    <input type="search" name="q" value="{{ q|default('', true) }}"
+           placeholder="Zoek in deze map (naam, nummer of inhoud)..." class="map-zoek-input">
+    <select name="kerntaak" class="form-input form-select" style="max-width: 210px;">
+        <option value="">Alle kerntaken</option>
+        {% for key, info in kerntaken.items() %}
+        <option value="{{ key }}" {% if kerntaak_filter == key %}selected{% endif %}>{{ info.naam }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary">Zoeken</button>
+    {% if q or kerntaak_filter %}
+    <a href="{{ url_for('kaarten.overzicht_type', kaart_type=kaart_type, weergave=weergave) }}" class="btn btn-small">Wis</a>
+    {% endif %}
+</form>
+
+{% if q %}
+<p class="zoek-resultaat-info">
+    {% if kaarten %}{{ kaarten|length }} resultaat{{ 'en' if kaarten|length != 1 else '' }} voor "<strong>{{ q }}</strong>"{% else %}Geen resultaten voor "<strong>{{ q }}</strong>"{% endif %}
+</p>
+{% endif %}
+{% endif %}
+
+{% if kaarten %}
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nummer</th>
+                <th>Naam</th>
+                <th>Kerntaak</th>
+                {% if not kaart_type %}<th>Type</th>{% endif %}
+                <th>Status</th>
+                <th>Laatst gewijzigd door</th>
+                <th>Datum</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kaart in kaarten %}
+            <tr>
+                <td><strong>{{ kaart.nummer }}</strong></td>
+                <td>{{ kaart.naam }}</td>
+                <td>
+                    {% if kaart.kerntaak %}
+                    <span class="badge badge-kerntaak badge-kerntaak-{{ kaart.kerntaak }}">{{ kaart.kerntaak_naam }}</span>
+                    {% else %}
+                    <span class="badge badge-kerntaak badge-kerntaak-leeg">—</span>
+                    {% endif %}
+                </td>
+                {% if not kaart_type %}<td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>{% endif %}
+                <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status|capitalize }}</span></td>
+                <td>{{ (kaart.bijgewerkt_door.naam if kaart.bijgewerkt_door else kaart.auteur.naam) }}</td>
+                <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
+                <td>
+                    <div class="rij-acties">
+                        <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-small" target="_blank" rel="noopener">Openen</a>
+                        <a href="{{ url_for('kaarten.bewerken', kaart_id=kaart.id) }}" class="btn btn-small btn-secondary">Bewerken</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    {% if weergave == 'archief' %}
+    <p>Er staan geen gearchiveerde kaarten in deze map.</p>
+    {% else %}
+    <p>Er zijn nog geen kaarten in deze map.</p>
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type=kaart_type) }}" class="btn btn-primary" style="margin-top: 1rem;">Maak de eerste {{ type_info.naam|lower }}</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

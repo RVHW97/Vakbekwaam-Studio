@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Zoeken — Vakbekwaam Studio{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('kaarten.overzicht') }}">Kaarten</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>Zoekresultaten</span>
+</div>
+
+<div class="page-header">
+    <h1>Zoeken in alle kaarten</h1>
+</div>
+
+<form method="GET" action="{{ url_for('kaarten.zoeken') }}" class="zoek-formulier">
+    <div class="zoek-rij-hoofd">
+        <input type="search" name="q" value="{{ q }}" placeholder="Typ zoekterm..." class="zoek-hoofdinput" autofocus>
+        <button type="submit" class="btn btn-primary">Zoeken</button>
+    </div>
+    <div class="zoek-rij-filters">
+        <label class="zoek-filter">
+            <span>Type</span>
+            <select name="type">
+                <option value="">Alle types</option>
+                {% for type_key, type_info in types.items() %}
+                <option value="{{ type_key }}" {% if kaart_type == type_key %}selected{% endif %}>{{ type_info.naam }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="zoek-filter">
+            <span>Status</span>
+            <select name="status">
+                <option value="">Concept + gepubliceerd</option>
+                <option value="concept" {% if status == 'concept' %}selected{% endif %}>Concept</option>
+                <option value="gepubliceerd" {% if status == 'gepubliceerd' %}selected{% endif %}>Gepubliceerd</option>
+                <option value="gearchiveerd" {% if status == 'gearchiveerd' %}selected{% endif %}>Gearchiveerd</option>
+            </select>
+        </label>
+    </div>
+</form>
+
+{% if q %}
+<p class="zoek-resultaat-info">
+    {% if resultaten %}
+    {{ resultaten|length }} resultaat{{ 'en' if resultaten|length != 1 else '' }} voor "<strong>{{ q }}</strong>"
+    {% else %}
+    Geen resultaten voor "<strong>{{ q }}</strong>"
+    {% endif %}
+</p>
+
+{% if resultaten %}
+<div class="table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nummer</th>
+                <th>Naam</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Datum</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kaart in resultaten %}
+            <tr>
+                <td><strong>{{ kaart.nummer }}</strong></td>
+                <td>{{ kaart.naam }}</td>
+                <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
+                <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status|capitalize }}</span></td>
+                <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
+                <td>
+                    <div class="rij-acties">
+                        <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-small" target="_blank" rel="noopener">Openen</a>
+                        <a href="{{ url_for('kaarten.bewerken', kaart_id=kaart.id) }}" class="btn btn-small btn-secondary">Bewerken</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% else %}
+<div class="empty-state">
+    <p>Vul een zoekterm in om alle kaarten te doorzoeken op naam, nummer of inhoud.</p>
+</div>
+{% endif %}
+{% endblock %}

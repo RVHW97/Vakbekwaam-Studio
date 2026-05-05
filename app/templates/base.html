@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vakbekwaam Studio{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="stylesheet" href="https://use.typekit.net/atd3vrp.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300;1,400;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Brandweer Limburg-Noord" class="nav-logo">
+            <span class="nav-title">Vakbekwaam Studio</span>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-link">Dashboard</a>
+            <a href="{{ url_for('kaarten.overzicht') }}" class="nav-link">Kaarten</a>
+            <a href="{{ url_for('qr.overzicht') }}" class="nav-link">QR-codes</a>
+            {% if current_user.is_beheerder %}
+            <a href="{{ url_for('auth.gebruikers') }}" class="nav-link">Gebruikers</a>
+            {% endif %}
+        </div>
+        <form method="GET" action="{{ url_for('kaarten.zoeken') }}" class="nav-zoek">
+            <input type="search" name="q" placeholder="Zoek in alle kaarten..." class="nav-zoek-input"
+                   value="{{ request.args.get('q', '') if request.endpoint == 'kaarten.zoeken' else '' }}">
+            <button type="submit" class="nav-zoek-knop" aria-label="Zoeken">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+            </button>
+        </form>
+        <div class="nav-user">
+            <span class="nav-username">{{ current_user.naam }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="nav-link nav-logout">Uitloggen</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+                {{ message }}
+                <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>Vakbekwaam Studio &mdash; Brandweer Limburg Noord</p>
+    </footer>
+</body>
+</html>
