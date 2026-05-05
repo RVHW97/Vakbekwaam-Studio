@@ -93,17 +93,27 @@
         flex: 0 0 auto;
     }
     .tab-fout-melding {
-        background: #FFF3CD;
-        border: 1px solid #F59E0B;
+        background: #FEE2E2;
+        border: 2px solid #DC2626;
         border-radius: 6px;
         padding: 1rem 1.25rem;
         margin-bottom: 1.25rem;
-        color: #856404;
+        color: #7F1D1D;
+        animation: tab-fout-shake 0.4s ease-out;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    }
+    @keyframes tab-fout-shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-6px); }
+        40% { transform: translateX(6px); }
+        60% { transform: translateX(-3px); }
+        80% { transform: translateX(3px); }
     }
     .tab-fout-melding strong {
         display: block;
         margin-bottom: 0.5rem;
-        color: #7a4e00;
+        color: #991B1B;
+        font-size: 1.05rem;
     }
     .tab-fout-melding ul {
         margin: 0;
@@ -111,6 +121,14 @@
     }
     .tab-fout-melding li {
         margin: 0.1rem 0;
+    }
+    /* Velden die ontbreken bij tab-fout krijgen een rode rand */
+    .form-input.veld-ontbreekt,
+    .form-select.veld-ontbreekt,
+    select.veld-ontbreekt,
+    textarea.veld-ontbreekt {
+        border: 2px solid #DC2626 !important;
+        background-color: #FEF2F2;
     }
     .gekoppelde-kaart-rij {
         display: flex;
@@ -1508,16 +1526,56 @@ setupCropper({
             melding.className = 'tab-fout-melding';
             paneel.insertBefore(melding, paneel.firstChild);
         }
-        melding.innerHTML = '<strong>Vul eerst alles in voordat je verder gaat:</strong><ul>' +
+        // Force een reflow zodat de shake-animatie elke keer opnieuw afspeelt
+        melding.style.animation = 'none';
+        void melding.offsetWidth;
+        melding.style.animation = '';
+        melding.innerHTML = '<strong>⚠ Vul eerst alles in voordat je verder gaat:</strong><ul>' +
             ontbrekend.map(function(l) { return '<li>' + l + '</li>'; }).join('') +
             '</ul>';
         melding.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Markeer de ontbrekende velden zelf met een rode rand
+        document.querySelectorAll('.veld-ontbreekt').forEach(function(el) {
+            el.classList.remove('veld-ontbreekt');
+        });
+        var verplicht = TAB_VERPLICHT[tabId] || [];
+        verplicht.forEach(function(v) {
+            if (ontbrekend.indexOf(v.label) === -1) return;
+            if (v.type === 'lijst') {
+                var container = document.querySelector('[data-hidden="' + v.hidden + '"]');
+                var input = container ? container.querySelector('input[type="text"]') : null;
+                if (input) input.classList.add('veld-ontbreekt');
+            } else {
+                var el = document.getElementById(v.id);
+                if (el) el.classList.add('veld-ontbreekt');
+            }
+        });
     }
 
     function wisTabFout(tabId) {
         var el = document.getElementById('tab-fout-' + tabId);
         if (el) el.remove();
+        document.querySelectorAll('.veld-ontbreekt').forEach(function(elv) {
+            elv.classList.remove('veld-ontbreekt');
+        });
     }
+
+    // Zodra een ontbrekend veld wordt ingevuld: rode rand weghalen
+    document.addEventListener('input', function(e) {
+        var el = e.target;
+        if (el && el.classList && el.classList.contains('veld-ontbreekt') &&
+            el.value && el.value.trim()) {
+            el.classList.remove('veld-ontbreekt');
+        }
+    });
+    document.addEventListener('change', function(e) {
+        var el = e.target;
+        if (el && el.classList && el.classList.contains('veld-ontbreekt') &&
+            el.value && el.value.trim()) {
+            el.classList.remove('veld-ontbreekt');
+        }
+    });
 
     // Vorige/Volgende knoppen binnen tabs — beide triggeren auto-save
     document.querySelectorAll('.tab-vorige, .tab-volgende').forEach(function(btn) {
