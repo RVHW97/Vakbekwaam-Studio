@@ -81,8 +81,9 @@ huisstijl/
 Concept VakbekwaamStudio.*
 
 # === Losse markdown-notities ===
-# Standaard alle .md negeren, behalve de drie projectkern-bestanden:
+# Standaard alle .md negeren, behalve de projectkern-bestanden:
 *.md
 !CLAUDE.md
 !changelog.md
 !roadmap.md
+!README.md
