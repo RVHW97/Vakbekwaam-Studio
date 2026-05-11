@@ -22,17 +22,20 @@
 
         <!-- Gekleurde vlakken in huisstijl + thema-kleuren -->
         <svg class="thema-bg-vorm" viewBox="0 0 841.89 595.28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Lichte basis-overlay over de hele foto (onder de chevron, boven de footer) -->
-            <rect fill="#000033" fill-opacity="0.28" x="0" y="125" width="841.89" height="416.81"/>
+            <defs>
+                <linearGradient id="basisOverlaySchets" x1="0" y1="125" x2="0" y2="541.81" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#000000" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#000000" stop-opacity="0.45"/>
+                </linearGradient>
+            </defs>
+            <!-- Basis-overlay met verloop: licht bovenaan, donkerder onderaan -->
+            <rect fill="url(#basisOverlaySchets)" x="0" y="125" width="841.89" height="416.81"/>
             <!-- Navy chevron-balk (onder de rode, met ondertitel) -->
-            <path fill="#000033" d="M554.27,73.78l-75.65.51-11.37,42.68-2.29,8.59-16.39.04-1.32.02-17.09-.03-1.35.03-195.3-.06-149.14-.13L.01,125.62V0s23.67,0,23.67,0l25.1,61.02c1.23,3,2.18,5.27,3.03,8.44.28,1.05,2.55,2.12,2.19,4.08,3.22.22,5.28.35,8.7.35l369.28-.09,42.32-.05,79.97.03Z"/>
+            <path fill="#1B2A4A" d="M554.27,73.78l-75.65.51-11.37,42.68-2.29,8.59-16.39.04-1.32.02-17.09-.03-1.35.03-195.3-.06-149.14-.13L.01,125.62V0s23.67,0,23.67,0l39.02,73.89l369.28-.09,42.32-.05,79.97.03Z"/>
             <!-- Rode header-bar in thema-kleur (kerntaak: brand) -->
-            <path fill="#B6463D" d="M841.89,0v73.66l-367.59.09-42.32.05-369.28.09c-3.42,0-5.48-.13-8.7-.35.36-1.96-1.91-3.03-2.19-4.08-.85-3.17-1.8-5.44-3.03-8.44L23.68,0h818.21Z"/>
-            <!-- Navy tekstvlak rechts: aansluitend op rode header (y=73.66) en op rechter dark overlay -->
-            <rect fill="#000033" x="554.27" y="73.66" width="287.62" height="382.17"/>
-            <!-- Donkerder overlay over de QR-zones (rechts sluit aan op panelbodem y=455.83) -->
-            <rect fill="#000033" fill-opacity="0.4" x="0" y="381" width="554.27" height="160.81"/>
-            <rect fill="#000033" fill-opacity="0.4" x="554.27" y="455.83" width="287.62" height="85.98"/>
+            <path fill="#B6463D" d="M841.89,0v73.66l-367.59.09-42.32.05-369.28.09L23.68,0h818.21Z"/>
+            <!-- Navy tekstvlak rechts (originele hoogte — onder y=455.83 valt de rechterkolom terug op de basis-overlay) -->
+            <rect fill="#1B2A4A" x="554.27" y="73.66" width="287.62" height="382.17"/>
             <!-- Footer in dezelfde thema-kleur als de header -->
             <rect fill="#B6463D" x="0" y="541.81" width="841.89" height="53.47"/>
         </svg>

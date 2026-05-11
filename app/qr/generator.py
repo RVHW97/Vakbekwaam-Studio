@@ -16,7 +16,7 @@ from qrcode.constants import ERROR_CORRECT_H
 from PIL import Image, ImageDraw, ImageFont
 
 
-KLEUR_NAVY = '#000033'
+KLEUR_NAVY = '#1B2A4A'
 KLEUR_GOUD = '#CC9933'
 KLEUR_ROOD = '#C8102E'
 KLEUR_WIT  = '#FFFFFF'

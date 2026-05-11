@@ -8,7 +8,7 @@
     --kleur-rood-hover: #B00E09;
     --kleur-goud: #CC9933;
     --kleur-goud-licht: #E8C872;
-    --kleur-blauw: #000033;
+    --kleur-blauw: #1B2A4A;
     --kleur-zwart: #000000;
     --kleur-wit: #FFFFFF;
 
@@ -1067,7 +1067,7 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #000033;
+    color: #1B2A4A;
     margin: 0 0 0.6rem 0;
     padding: 1rem 4rem 0 1.25rem;
 }
@@ -1084,9 +1084,9 @@ body {
 }
 .kaart-sectie-kaart-navy {
     background-color: rgba(0, 0, 51, 0.06);
-    border-left-color: #000033;
+    border-left-color: #1B2A4A;
 }
-.kaart-sectie-kaart .kaart-tipslijst li::before { background: #000033; }
+.kaart-sectie-kaart .kaart-tipslijst li::before { background: #1B2A4A; }
 .kaart-nummerlijst {
     list-style: none;
     padding: 0;
@@ -1108,7 +1108,7 @@ body {
     top: 0.2rem;
     width: 1.4rem;
     font-weight: 700;
-    color: #000033;
+    color: #1B2A4A;
 }
 .kaart-sectie-kaart-decoratie {
     position: absolute;
@@ -1838,7 +1838,7 @@ body {
     overflow: hidden;
 }
 
-.qr-stijl-voorbeeld-navy { background: #000033; }
+.qr-stijl-voorbeeld-navy { background: #1B2A4A; }
 .qr-stijl-voorbeeld-rood { background: #C8102E; }
 .qr-stijl-voorbeeld-goud { background: #CC9933; }
 .qr-stijl-voorbeeld-transparant {
@@ -1865,7 +1865,7 @@ body {
 .qr-stijl-vakje-3 { bottom: 8px; left: 8px; }
 
 .qr-stijl-voorbeeld-transparant .qr-stijl-vakje {
-    border-color: #000033;
+    border-color: #1B2A4A;
 }
 
 /* Schild-cirkeltje in midden van voorbeeld */
@@ -1891,7 +1891,7 @@ body {
     clip-path: polygon(50% 0, 100% 30%, 100% 70%, 50% 100%, 0 70%, 0 30%);
 }
 .qr-stijl-voorbeeld-transparant .qr-stijl-schild::after {
-    background: #000033;
+    background: #1B2A4A;
 }
 
 .qr-stijl-label {

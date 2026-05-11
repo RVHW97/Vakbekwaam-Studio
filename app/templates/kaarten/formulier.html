@@ -323,11 +323,11 @@
                 {% endif %}
                 <svg class="thema-preview-overlay" viewBox="0 0 841.89 595.28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                     <!-- Navy chevron met ondertitel-strook -->
-                    <path fill="#000033" fill-opacity="0.55" d="M554.27,73.78l-75.65.51-11.37,42.68-2.29,8.59-16.39.04-1.32.02-17.09-.03-1.35.03-195.3-.06-149.14-.13L.01,125.62V0s23.67,0,23.67,0l25.1,61.02c1.23,3,2.18,5.27,3.03,8.44.28,1.05,2.55,2.12,2.19,4.08,3.22.22,5.28.35,8.7.35l369.28-.09,42.32-.05,79.97.03Z"/>
+                    <path fill="#1B2A4A" fill-opacity="0.55" d="M554.27,73.78l-75.65.51-11.37,42.68-2.29,8.59-16.39.04-1.32.02-17.09-.03-1.35.03-195.3-.06-149.14-.13L.01,125.62V0s23.67,0,23.67,0l39.02,73.89l369.28-.09,42.32-.05,79.97.03Z"/>
                     <!-- Header-balk in kerntaak-kleur -->
-                    <path fill="{{ thema_kleur }}" fill-opacity="0.55" d="M841.89,0v73.66l-367.59.09-42.32.05-369.28.09c-3.42,0-5.48-.13-8.7-.35.36-1.96-1.91-3.03-2.19-4.08-.85-3.17-1.8-5.44-3.03-8.44L23.68,0h818.21Z"/>
+                    <path fill="{{ thema_kleur }}" fill-opacity="0.55" d="M841.89,0v73.66l-367.59.09-42.32.05-369.28.09L23.68,0h818.21Z"/>
                     <!-- Navy rechtervlak -->
-                    <rect fill="#000033" fill-opacity="0.55" x="554.27" y="73.83" width="287.62" height="382"/>
+                    <rect fill="#1B2A4A" fill-opacity="0.55" x="554.27" y="73.83" width="287.62" height="382"/>
                     <!-- Footer-balk in kerntaak-kleur -->
                     <rect fill="{{ thema_kleur }}" fill-opacity="0.55" x="0" y="541.81" width="841.89" height="53.47"/>
                 </svg>
@@ -1759,28 +1759,29 @@ setupCropper({
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             if (btn.disabled) return;
+            // URL kan op de knop staan (acties op een bestaande koppeling) of
+            // op het bovenliggende blok (bij + Toevoegen / + Koppelen / Opslaan-label).
             var url = btn.dataset.themaUrl;
+            var blok = btn.hasAttribute('data-thema-veld-blok')
+                       ? btn.closest('.thema-koppel-blok') : null;
+            if (!url && blok) url = blok.dataset.themaUrl;
             if (!url) return;
             var fd = new FormData();
             // Verzamel velden uit het bijbehorende blok (bij toevoeg/label-acties)
-            if (btn.hasAttribute('data-thema-veld-blok')) {
-                var blok = btn.closest('.thema-koppel-blok');
-                if (blok) {
-                    blok.querySelectorAll('input[name], select[name]').forEach(function(el) {
-                        fd.append(el.name, el.value);
-                    });
-                }
+            if (blok) {
+                blok.querySelectorAll('input[name], select[name]').forEach(function(el) {
+                    fd.append(el.name, el.value);
+                });
             }
             fd.append('csrf_token', csrfToken);
             // Toon korte status
             btn.disabled = true;
             var origTekst = btn.textContent;
             fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function(r) {
-                    // Server geeft 302 redirect terug naar /kaarten/X/bewerken
-                    // fetch volgt redirects standaard — we hoeven alleen te reloaden.
-                    var hash = window.location.hash;
-                    window.location.href = window.location.pathname + (hash || '');
+                .then(function() {
+                    // Hash blijft automatisch bewaard — geen handmatige href-assignment
+                    // (die deed niets bij identieke URL, dus geen reload).
+                    window.location.reload();
                 })
                 .catch(function(err) {
                     console.error('Thema-actie fout:', err);
