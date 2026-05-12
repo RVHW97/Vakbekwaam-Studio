@@ -91,9 +91,9 @@ class ThemakaartForm(FlaskForm):
     ondertitel = StringField('Ondertitel',
                               validators=[Optional(), Length(max=50, message='Max 50 tekens.')])
 
-    tussentitel_1 = StringField('Tussentitel 1', validators=[Optional(), Length(max=35, message='Max 35 tekens.')])
-    tussentitel_2 = StringField('Tussentitel 2', validators=[Optional(), Length(max=35, message='Max 35 tekens.')])
-    tussentitel_3 = StringField('Tussentitel 3', validators=[Optional(), Length(max=35, message='Max 35 tekens.')])
+    tussentitel_1 = StringField('Tussentitel 1', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
+    tussentitel_2 = StringField('Tussentitel 2', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
+    tussentitel_3 = StringField('Tussentitel 3', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
 
     submit = SubmitField('Opslaan als concept')
 

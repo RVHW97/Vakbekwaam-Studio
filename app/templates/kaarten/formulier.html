@@ -820,10 +820,10 @@
                         <h3 class="form-groep-titel">Sectie {{ sectie_nr }}</h3>
                         <div class="form-group">
                             {{ form['tussentitel_' ~ sectie_nr].label(class="form-label") }}
-                            {{ form['tussentitel_' ~ sectie_nr](class="form-input", maxlength=35,
+                            {{ form['tussentitel_' ~ sectie_nr](class="form-input", maxlength=45,
                                placeholder='Bijv. Check je basisvaardigheden') }}
                             {% for error in form['tussentitel_' ~ sectie_nr].errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                            <p class="form-hint">Max 35 tekens. Verschijnt als kopje boven de gekoppelde kaarten.</p>
+                            <p class="form-hint">Max 45 tekens. Verschijnt als kopje boven de gekoppelde kaarten.</p>
                         </div>
 
                         <h4 class="form-subgroep-titel">Gekoppelde kaarten ({{ thema_kaart_links[groep_index]|length }})</h4>
@@ -1748,12 +1748,34 @@ setupCropper({
 /* === Themakaart: alle koppel-acties JS-driven (geen nested forms) ===
    Dit voorkomt dat klikken op "+ Koppel" / "Opslaan" / "↑↓" / "×" het hoofdform
    submit (en dus de wijziging-toelichting eist). De acties gaan via fetch en
-   de pagina wordt na elke actie ververst zodat de lijst klopt. */
+   de pagina wordt na elke actie ververst zodat de lijst klopt.
+
+   Vóór elke actie wordt eerst een auto-save van het hoofdform uitgevoerd, zodat
+   onbewaarde tussentitels/titels niet verloren gaan bij de page-reload. */
 (function() {
     var knoppen = document.querySelectorAll('.thema-actie-knop');
     if (!knoppen.length) return;
     var csrfMeta = document.querySelector('input[name="csrf_token"]');
     var csrfToken = csrfMeta ? csrfMeta.value : '';
+    var hoofdForm = document.querySelector('.kaart-form');
+
+    function bewaarHoofdformVelden() {
+        // Auto-save van titel/ondertitel/tussentitels/kerntaak — alleen tekst-velden
+        // (geen bestanden, geen wijziging_toelichting), zodat geen validatie struikelt.
+        if (!hoofdForm) return Promise.resolve();
+        var fd = new FormData();
+        fd.append('csrf_token', csrfToken);
+        fd.append('auto_save_tab', 'secties');
+        // Verzamel relevante velden: alleen direct in hoofd-form, niet uit koppel-blokken
+        var velden = ['titel', 'ondertitel', 'kerntaak',
+                      'tussentitel_1', 'tussentitel_2', 'tussentitel_3'];
+        velden.forEach(function(naam) {
+            var el = hoofdForm.querySelector('[name="' + naam + '"]');
+            if (el && !el.closest('.thema-koppel-blok')) fd.append(naam, el.value);
+        });
+        return fetch(hoofdForm.action || window.location.pathname,
+                     { method: 'POST', body: fd, credentials: 'same-origin' });
+    }
 
     knoppen.forEach(function(btn) {
         btn.addEventListener('click', function(e) {
@@ -1777,7 +1799,10 @@ setupCropper({
             // Toon korte status
             btn.disabled = true;
             var origTekst = btn.textContent;
-            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+            bewaarHoofdformVelden()
+                .then(function() {
+                    return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                })
                 .then(function() {
                     // Hash blijft automatisch bewaard — geen handmatige href-assignment
                     // (die deed niets bij identieke URL, dus geen reload).
