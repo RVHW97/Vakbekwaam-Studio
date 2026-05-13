@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, IntegerField
+from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, IntegerField, RadioField
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
 NAAM_MAX = 40
@@ -98,18 +98,21 @@ class ThemakaartForm(FlaskForm):
     submit = SubmitField('Opslaan als concept')
 
 
+INSTRUCTIE_TYPE_KEUZES = [
+    ('materiaal', 'Materiaal'),
+    ('procedure', 'Procedure / werkwijze'),
+]
+
+
 class InstructiekaartForm(FlaskForm):
-    naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
+    # De logische naam is óók de titel op de PDF (HOOFDLETTERS bovenaan).
+    naam = StringField('Titel', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
     header_foto = FileField('Headerfoto')
-    toepassing = TextAreaField('Toepassing', validators=[Optional()])
-    onderdelen = TextAreaField('Onderdelen', validators=[Optional()])
-    veiligheid = TextAreaField('Veiligheid', validators=[Optional()])
-    werkwijze = TextAreaField('Werkwijze (stappen)', validators=[Optional()])
-    achtergrondinformatie = TextAreaField('Achtergrondinformatie', validators=[Optional()])
-    verbeterpunten = TextAreaField('Verbeterpunten / tips', validators=[Optional()])
-    onderhoud = TextAreaField('Onderhoud', validators=[Optional()])
-    afbeeldingen = MultipleFileField('Afbeeldingen')
+    instructie_type = RadioField('Type instructiekaart',
+                                  choices=INSTRUCTIE_TYPE_KEUZES,
+                                  default='procedure',
+                                  validators=[DataRequired(message='Kies of dit een materiaal- of procedurekaart is.')])
     submit = SubmitField('Opslaan als concept')
 
 
@@ -193,8 +196,7 @@ FORMULIEREN = {
 INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
               'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
-    'instructie': ['toepassing', 'onderdelen', 'veiligheid', 'werkwijze',
-                   'achtergrondinformatie', 'verbeterpunten', 'onderhoud'],
+    'instructie': ['instructie_type'],
     'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',

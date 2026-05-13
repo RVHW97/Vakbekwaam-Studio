@@ -225,6 +225,13 @@ def aanmaken(kaart_type):
     form = form_class()
 
     if form.validate_on_submit():
+        # Header-foto is verplicht voor élke kaart.
+        if not (form.header_foto.data and form.header_foto.data.filename):
+            form.header_foto.errors = list(form.header_foto.errors) + ['Een header-foto is verplicht.']
+            type_info = KAART_TYPES[kaart_type]
+            return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
+                                   type_info=type_info, bewerken=False, kaart=None)
+
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart_type]:
             inhoud[veld] = getattr(form, veld).data or ''
@@ -240,12 +247,13 @@ def aanmaken(kaart_type):
         )
         kaart.set_inhoud(inhoud)
 
-        if form.header_foto.data and form.header_foto.data.filename:
-            foto_naam, foto_fout = save_kaart_header_foto(form.header_foto.data, kaart_type)
-            if foto_fout:
-                flash(f'Foto: {foto_fout}', 'warning')
-            else:
-                kaart.header_foto = foto_naam
+        foto_naam, foto_fout = save_kaart_header_foto(form.header_foto.data, kaart_type)
+        if foto_fout:
+            form.header_foto.errors = list(form.header_foto.errors) + [foto_fout]
+            type_info = KAART_TYPES[kaart_type]
+            return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
+                                   type_info=type_info, bewerken=False, kaart=None)
+        kaart.header_foto = foto_naam
 
         db.session.add(kaart)
         db.session.flush()
@@ -337,7 +345,20 @@ def bewerken(kaart_id):
     if request.method == 'POST' and not wijziging_toelichting:
         toelichting_fout = 'Vul een korte toelichting in waarom je deze kaart wijzigt.'
 
-    if form.validate_on_submit() and not toelichting_fout:
+    # WTForms valideren — moet vóór de foto-check omdat validate_on_submit() de errors-dict reset.
+    is_valid = form.validate_on_submit()
+
+    # Header-foto verplicht: er moet ofwel een bestaande foto blijven, ofwel een nieuwe upload zijn.
+    foto_fout_label = None
+    if request.method == 'POST' and not is_auto_save:
+        wil_verwijderen = bool(request.form.get('verwijder_header_foto'))
+        heeft_nieuwe = form.header_foto.data and form.header_foto.data.filename
+        blijft_bestaande = bool(kaart.header_foto) and not wil_verwijderen
+        if not heeft_nieuwe and not blijft_bestaande:
+            foto_fout_label = 'Een header-foto is verplicht.'
+            form.header_foto.errors = list(form.header_foto.errors) + [foto_fout_label]
+
+    if is_valid and not toelichting_fout and not foto_fout_label:
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = getattr(form, veld).data or ''

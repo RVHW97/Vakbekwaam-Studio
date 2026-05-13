@@ -257,7 +257,7 @@
     </div>
 </div>
 
-<form method="POST" enctype="multipart/form-data" class="kaart-form">
+<form method="POST" enctype="multipart/form-data" class="kaart-form" novalidate>
     {{ form.hidden_tag() }}
     <input type="hidden" name="auto_save_tab" id="auto-save-tab" value="">
 
@@ -287,7 +287,10 @@
 
     {% if form.header_foto is defined %}
     <div class="form-group">
-        {{ form.header_foto.label(class="form-label") }}
+        <label class="form-label" for="{{ form.header_foto.id }}">{{ form.header_foto.label.text }} <span class="verplicht">*</span></label>
+        {% for error in form.header_foto.errors %}
+        <span class="form-error">{{ error }}</span>
+        {% endfor %}
         {% if bewerken and kaart and kaart.header_foto %}
         <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
             <label class="bestaande-afbeelding">
@@ -651,6 +654,24 @@
 
     <div class="form-card">
 
+    {# ==================== ALGEMENE FOUTSAMENVATTING (server-side) ==================== #}
+    {% if form.errors or toelichting_fout %}
+    <div class="tab-fout-melding form-fouten-samenvatting" role="alert" id="form-fouten-samenvatting">
+        <strong>⚠ Er zijn nog dingen niet correct ingevuld:</strong>
+        <ul>
+            {% for veld_naam, fouten in form.errors.items() %}
+                {% set veld = form[veld_naam] %}
+                {% for fout in fouten %}
+                <li><strong>{{ veld.label.text }}</strong> — {{ fout }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% if toelichting_fout %}
+            <li><strong>Toelichting wijziging</strong> — {{ toelichting_fout }}</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
     {% if kaart_type == 'scenario' %}
         {# ============================================================ #}
         {# TABS VARIANT — alleen voor scenariokaart                     #}
@@ -972,9 +993,88 @@
             </div>
         </div>
 
+    {% elif kaart_type == 'instructie' %}
+        {# ============================================================ #}
+        {# INSTRUCTIEKAART — eigen tabs                                 #}
+        {# ============================================================ #}
+        {% set is_materiaal = (form.instructie_type.data == 'materiaal') %}
+        {% set productinfo_label = 'Productinformatie' if is_materiaal else 'Omschrijving' %}
+
+        <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop" data-tab="productinfo" id="tab-knop-productinfo">{{ productinfo_label }}</button>
+            <button type="button" class="tab-knop" data-tab="veiligheid">Veiligheid</button>
+            <button type="button" class="tab-knop" data-tab="werkwijze">Werkwijze</button>
+            <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
+        </div>
+
+        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
+        <div class="tab-paneel actief" data-tab="algemeen">
+            {{ render_algemeen() }}
+
+            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Type instructiekaart <span class="verplicht">*</span></h3>
+            <div class="form-group">
+                <div class="instructie-type-rij" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom: 0.5rem;">
+                    {% for sub in form.instructie_type %}
+                    <label class="instructie-type-knop" style="flex:1; min-width:200px; padding: 0.75rem 1rem; border: 2px solid #ccc; border-radius: 6px; cursor: pointer; display:flex; align-items:center; gap:0.5rem; background: #fff;">
+                        {{ sub }}
+                        <span style="font-weight:600;">{{ sub.label.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% for error in form.instructie_type.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                <p class="form-hint"><strong>Materiaal</strong> — een apparaat of middel met onderdelen (zoals een gasmeter of motorzaag). <strong>Procedure</strong> — een werkwijze of inzettactiek met stappen.</p>
+            </div>
+
+            <div class="tab-nav-footer">
+                <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="productinfo">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 2: PRODUCTINFO / OMSCHRIJVING (placeholder fase 2) ---------------- #}
+        <div class="tab-paneel" data-tab="productinfo">
+            <h2 class="form-section-title">{{ productinfo_label }}</h2>
+            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 2. Bij <strong>materiaal</strong>: omschrijving + geannoteerde productfoto met legenda. Bij <strong>procedure</strong>: vrije omschrijving.</p>
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="veiligheid">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 3: VEILIGHEID (placeholder fase 3) ---------------- #}
+        <div class="tab-paneel" data-tab="veiligheid">
+            <h2 class="form-section-title">Veiligheid</h2>
+            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 3. PBM-vinklijst met standaardset (helm, uitrukpak, handschoenen, …) + vrij veld voor overige. LMRA-QR-code als placeholder.</p>
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="productinfo">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="werkwijze">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 4: WERKWIJZE (placeholder fase 4) ---------------- #}
+        <div class="tab-paneel" data-tab="werkwijze">
+            <h2 class="form-section-title">Werkwijze</h2>
+            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 4. Stappen gegroepeerd in categorieën (bv. Voorbereiding, Uitvoering, Afronding), per stap een keuze uit 4 layouts met foto-preview.</p>
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="veiligheid">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="achtergrond">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 5: ACHTERGROND (placeholder fase 5) ---------------- #}
+        <div class="tab-paneel" data-tab="achtergrond">
+            <h2 class="form-section-title">Achtergrondinformatie</h2>
+            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 5. Koppel andere kaarten en kies QR-codes uit de QR-bank.</p>
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="werkwijze">← Vorige</button>
+                <span class="tab-nav-spacer"></span>
+            </div>
+        </div>
+
     {% else %}
         {# ============================================================ #}
-        {# NORMALE VARIANT — instructie / opdracht: generieke rendering #}
+        {# NORMALE VARIANT — opdracht: generieke rendering              #}
         {# ============================================================ #}
         <h2 class="form-section-title">Algemeen</h2>
         {{ render_algemeen() }}
@@ -1067,6 +1167,42 @@
 </script>
 
 <script>
+/* === Banner-helper: client-side fouten in dezelfde rode banner bovenaan === */
+function bannerFoutToevoegen(label, boodschap) {
+    var samenvatting = document.getElementById('form-fouten-samenvatting');
+    if (!samenvatting) {
+        samenvatting = document.createElement('div');
+        samenvatting.id = 'form-fouten-samenvatting';
+        samenvatting.className = 'tab-fout-melding form-fouten-samenvatting';
+        samenvatting.setAttribute('role', 'alert');
+        samenvatting.innerHTML = '<strong>⚠ Er zijn nog dingen niet correct ingevuld:</strong><ul></ul>';
+        var formCard = document.querySelector('.form-card');
+        if (formCard) formCard.insertBefore(samenvatting, formCard.firstChild);
+    }
+    var ul = samenvatting.querySelector('ul');
+    if (!ul) return;
+    // Vervang eerdere versie van dezelfde fout (zelfde data-client-fout label)
+    Array.prototype.forEach.call(ul.querySelectorAll('li[data-client-fout="' + label + '"]'), function(el) {
+        el.remove();
+    });
+    var li = document.createElement('li');
+    li.setAttribute('data-client-fout', label);
+    li.innerHTML = '<strong>' + label + '</strong> — ' + boodschap;
+    ul.appendChild(li);
+    try { samenvatting.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+}
+function bannerFoutVerwijderen(label) {
+    var samenvatting = document.getElementById('form-fouten-samenvatting');
+    if (!samenvatting) return;
+    var ul = samenvatting.querySelector('ul');
+    if (!ul) return;
+    Array.prototype.forEach.call(ul.querySelectorAll('li[data-client-fout="' + label + '"]'), function(el) {
+        el.remove();
+    });
+    // Als de banner leeg is na verwijderen, weghalen
+    if (ul.children.length === 0) samenvatting.remove();
+}
+
 /* === Gedeelde cropper-hulpfuncties === */
 function setupCropper(config) {
     var fileInput = document.getElementById(config.inputId);
@@ -1194,7 +1330,12 @@ function setupCropper(config) {
         var actie = btn.getAttribute(config.dataAttr);
         if (actie === 'zoom-in')  cropper.zoom(0.1);
         if (actie === 'zoom-uit') cropper.zoom(-0.1);
-        if (actie === 'reset')  { cropper.reset(); isBevestigd = false; if (statusEl) statusEl.style.display = 'none'; }
+        if (actie === 'reset')  {
+            cropper.enable();
+            cropper.reset();
+            isBevestigd = false;
+            if (statusEl) statusEl.style.display = 'none';
+        }
         if (actie === 'links')    cropper.rotate(-90);
         if (actie === 'rechts')   cropper.rotate(90);
     });
@@ -1204,6 +1345,11 @@ function setupCropper(config) {
             if (!cropper) return;
             isBevestigd = true;
             if (statusEl) statusEl.style.display = 'block';
+            // Lock de cropper zodat scrollen/klikken de crop niet meer verandert
+            cropper.disable();
+            var fotoLabel = (config.label || 'foto');
+            fotoLabel = fotoLabel.charAt(0).toUpperCase() + fotoLabel.slice(1);
+            bannerFoutVerwijderen(fotoLabel + ' bijsnijden');
         });
     }
 
@@ -1217,11 +1363,10 @@ function setupCropper(config) {
 
         // Waarschuw als niet bevestigd (alleen bij echte opslag, niet auto-save)
         if (!isBevestigd && !isAutoSave) {
-            var foutenEl = document.getElementById('form-fouten-onderaan');
-            if (foutenEl) {
-                foutenEl.innerHTML = '<div class="flash-bericht flash-warning" style="margin-bottom: 1rem;">Bevestig eerst het bijsnijden van de ' + config.label + ' voordat je opslaat.</div>';
-                foutenEl.scrollIntoView({ behavior: 'smooth' });
-            }
+            var fotoLabel = (config.label || 'foto');
+            fotoLabel = fotoLabel.charAt(0).toUpperCase() + fotoLabel.slice(1);
+            bannerFoutToevoegen(fotoLabel + ' bijsnijden',
+                'Klik op "Bevestig bijsnijden" voordat je opslaat. Anders wordt de foto niet meegenomen.');
             e.preventDefault();
             return;
         }
@@ -1308,6 +1453,36 @@ setupCropper({
     label: 'ensceneringstips foto',
     processedKey: 'tipsProcessed'
 });
+
+/* === Foto-verwijderen-vinkjes: bevestig + direct opslaan === */
+(function() {
+    var koppelingen = [
+        { name: 'verwijder_header_foto', omschrijving: 'header-foto' },
+        { name: 'verwijder_ensceneringstips_foto', omschrijving: 'ensceneringstips-foto' }
+    ];
+    koppelingen.forEach(function(k) {
+        var cb = document.querySelector('input[name="' + k.name + '"]');
+        if (!cb) return;
+        cb.addEventListener('change', function() {
+            if (!this.checked) return;
+            var ok = confirm('Weet je zeker dat je de ' + k.omschrijving + ' wilt verwijderen?\n\nDe foto wordt direct verwijderd uit de kaart.');
+            if (!ok) {
+                this.checked = false;
+                return;
+            }
+            var form = this.closest('form');
+            if (!form) return;
+            // Auto-save flow: server slaat op, foto verdwijnt, we keren terug op huidige tab
+            var autoSaveInput = document.getElementById('auto-save-tab');
+            if (autoSaveInput) {
+                var actieveTab = document.querySelector('.tab-paneel.actief');
+                autoSaveInput.value = actieveTab ? (actieveTab.dataset.tab || 'algemeen') : 'algemeen';
+            }
+            // Native submit (form.submit kan overschaduwd zijn door <input name="submit">)
+            HTMLFormElement.prototype.submit.call(form);
+        });
+    });
+})();
 </script>
 
 {% if form.kenmerken_kerntaak is defined %}
@@ -1724,6 +1899,16 @@ setupCropper({
     if (eersteFoutTab && !hash) {
         zetActief(eersteFoutTab);
     }
+})();
+
+/* === Server-side foutsamenvatting: scroll naar boven zodat ze altijd zichtbaar is === */
+(function() {
+    var samenvatting = document.getElementById('form-fouten-samenvatting');
+    if (!samenvatting) return;
+    // Wacht even tot eventuele tab-activering en hash-scroll klaar zijn
+    setTimeout(function() {
+        samenvatting.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
 })();
 
 /* === Themakaart: progressive disclosure van sectie 2 en 3 === */
