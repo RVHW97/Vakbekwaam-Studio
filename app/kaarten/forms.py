@@ -1,6 +1,13 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, IntegerField, RadioField
+from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, SelectMultipleField, IntegerField, RadioField
+from wtforms.widgets import ListWidget, CheckboxInput
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
+
+
+class MultiCheckboxField(SelectMultipleField):
+    """SelectMultipleField die rendert als een lijst grote checkboxes i.p.v. een multi-select dropdown."""
+    widget = ListWidget(prefix_label=False)
+    option_widget = CheckboxInput()
 
 NAAM_MAX = 40
 NAAM_VALIDATORS = [
@@ -103,6 +110,18 @@ INSTRUCTIE_TYPE_KEUZES = [
     ('procedure', 'Procedure / werkwijze'),
 ]
 
+# Standaard PBM-items (Persoonlijke Beschermingsmiddelen) voor de instructiekaart.
+PBM_KEUZES = [
+    ('helm',              'Helm'),
+    ('uitrukpak',         'Uitrukpak'),
+    ('handschoenen',      'Handschoenen'),
+    ('laarzen',           'Laarzen'),
+    ('ademlucht',         'Ademlucht'),
+    ('veiligheidsbril',   'Veiligheidsbril'),
+    ('gehoorbescherming', 'Gehoorbescherming'),
+    ('valbeveiliging',    'Valbeveiliging'),
+]
+
 
 class InstructiekaartForm(FlaskForm):
     # De logische naam is óók de titel op de PDF (HOOFDLETTERS bovenaan).
@@ -118,6 +137,11 @@ class InstructiekaartForm(FlaskForm):
     # Markers op de productfoto worden als JSON-string in een hidden veld meegestuurd.
     # Lijst van {nummer, x, y, label} — x/y zijn fracties (0..1) van foto-breedte/hoogte.
     productfoto_markers_json = StringField('Marker-legenda', validators=[Optional()])
+    # Veiligheid (fase 3) — LMRA wordt centraal beheerd, niet per kaart.
+    pbm_items = MultiCheckboxField('Persoonlijke beschermingsmiddelen',
+                                    choices=PBM_KEUZES, validators=[Optional()])
+    pbm_overige = StringField('Overige PBM',
+                              validators=[Optional(), Length(max=200, message='Maximaal 200 tekens.')])
     submit = SubmitField('Opslaan als concept')
 
 
@@ -201,7 +225,8 @@ FORMULIEREN = {
 INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
               'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
-    'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json'],
+    'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json',
+                   'pbm_overige'],
     'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',
@@ -221,4 +246,10 @@ INHOUD_VELDEN = {
     'opdracht': ['randvoorwaarden', 'doelen', 'opdrachten', 'uitdagende_variant',
                  'veiligheid', 'verdiepende_vragen', 'voorbereiding', 'evaluatie',
                  'achtergrondinformatie', 'verbeterpunten'],
+}
+
+# Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).
+# Vereisen request.form.getlist() bij opslaan en lijst-prefill bij bewerken.
+INHOUD_LIJST_VELDEN = {
+    'instructie': ['pbm_items'],
 }

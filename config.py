@@ -16,3 +16,6 @@ class Config:
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or \
         os.path.join(basedir, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
+    # Centrale LMRA-URL — verschijnt als vaste QR-code op elke instructiekaart.
+    # Leeg = nog niet ingesteld (PDF toont een lege QR-placeholder).
+    LMRA_QR_URL = os.environ.get('LMRA_QR_URL') or ''

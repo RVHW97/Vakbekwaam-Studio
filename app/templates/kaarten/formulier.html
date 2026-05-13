@@ -334,6 +334,98 @@
         border-color: var(--kleur-kerntaak, #C8102E) !important;
         background: #FEF2F2 !important;
     }
+
+    /* === Instructiekaart-veiligheid: PBM-vinklijst === */
+    .pbm-vinklijst {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 0.5rem;
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0;
+    }
+    .pbm-vinklijst li { list-style: none; }
+    .pbm-knop {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #ccc;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #fff;
+        transition: border-color 0.15s, background 0.15s;
+        min-height: 44px;
+    }
+    .pbm-knop:hover {
+        border-color: #888;
+        background: #f5f5f5;
+    }
+    .pbm-knop input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin: 0;
+        flex: 0 0 auto;
+        cursor: pointer;
+    }
+    .pbm-knop:has(input:checked) {
+        border-color: #C8102E;
+        background: #FEF2F2;
+    }
+    .pbm-knop:has(input:checked) span {
+        font-weight: 700;
+        color: #1B2A4A;
+    }
+
+    /* === LMRA-placeholder === */
+    .lmra-placeholder {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 0.75rem;
+        padding: 1rem;
+        background: #f8f8f8;
+        border: 1px dashed #aaa;
+        border-radius: 6px;
+    }
+    .lmra-qr-frame {
+        flex: 0 0 100px;
+        width: 100px;
+        height: 100px;
+        border: 3px solid #1B2A4A;
+        border-radius: 4px;
+        background: repeating-linear-gradient(45deg, #fff, #fff 6px, #f0f0f0 6px, #f0f0f0 12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .lmra-qr-frame.gekoppeld {
+        background: #fff;
+    }
+    .lmra-qr-leeg {
+        text-align: center;
+        color: #555;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        font-style: italic;
+        padding: 0.25rem;
+    }
+    .lmra-qr-gekoppeld {
+        font-size: 2rem;
+        color: #4C7F52;
+    }
+    .lmra-info strong {
+        display: block;
+        color: #1B2A4A;
+        font-size: 1.05rem;
+        margin-bottom: 0.25rem;
+    }
+    .lmra-info p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
 </style>
 {% endblock %}
 
@@ -1194,10 +1286,60 @@
             </div>
         </div>
 
-        {# ---------------- TAB 3: VEILIGHEID (placeholder fase 3) ---------------- #}
+        {# ---------------- TAB 3: VEILIGHEID ---------------- #}
         <div class="tab-paneel" data-tab="veiligheid">
             <h2 class="form-section-title">Veiligheid</h2>
-            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 3. PBM-vinklijst met standaardset (helm, uitrukpak, handschoenen, …) + vrij veld voor overige. LMRA-QR-code als placeholder.</p>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de PBM-vinklijst en LMRA-QR invullen.</p>
+            {% else %}
+
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Persoonlijke beschermingsmiddelen (PBM)</h3>
+            <p class="form-hint">Vink aan welke PBM vereist zijn voor deze instructiekaart.</p>
+
+            <ul class="pbm-vinklijst">
+                {% for sub in form.pbm_items %}
+                <li>
+                    <label class="pbm-knop">
+                        {{ sub }}
+                        <span>{{ sub.label.text }}</span>
+                    </label>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                {{ form.pbm_overige.label(class="form-label") }}
+                {{ form.pbm_overige(class="form-input", maxlength=200,
+                   placeholder="Bv. valharnas, beschermbril type X, …") }}
+                {% for error in form.pbm_overige.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                <p class="form-hint">Max 200 tekens. Vul hier PBM in die niet in de standaardlijst staan.</p>
+            </div>
+
+            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">LMRA — Last Minute Risk Analysis</h3>
+            {% set lmra_url = config.get('LMRA_QR_URL') or '' %}
+            <p class="form-hint">Op elke instructiekaart verschijnt automatisch dezelfde LMRA-QR die naar het centrale LMRA-formulier verwijst. Deze URL wordt door de admin centraal beheerd — niet per kaart in te stellen.</p>
+
+            <div class="lmra-placeholder">
+                <div class="lmra-qr-frame {% if lmra_url %}gekoppeld{% endif %}">
+                    {% if lmra_url %}
+                    <div class="lmra-qr-gekoppeld" title="LMRA-URL geconfigureerd">✓</div>
+                    {% else %}
+                    <div class="lmra-qr-leeg">QR-code<br>(nog leeg)</div>
+                    {% endif %}
+                </div>
+                <div class="lmra-info">
+                    <strong>LMRA</strong>
+                    {% if lmra_url %}
+                    <p>LMRA-URL is centraal ingesteld. De QR-code komt automatisch op deze kaart in de PDF.</p>
+                    {% else %}
+                    <p>LMRA-URL is nog niet geconfigureerd. Een admin kan de centrale URL instellen via een omgevingsvariabele (<code>LMRA_QR_URL</code>) — in een latere fase volgt een instellingenpagina in de app.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% endif %}
+
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="productinfo">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="werkwijze">Volgende →</button>

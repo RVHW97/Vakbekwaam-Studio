@@ -12,7 +12,7 @@ from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          THEMA_MAX_KAARTEN_TOTAAL, THEMA_MAX_QR_TOP, THEMA_MAX_QR_BOTTOM,
                          THEMA_QR_LABEL_MAX)
 from app.kaarten import bp
-from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN
+from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 5 * 1024 * 1024
@@ -242,6 +242,8 @@ def aanmaken(kaart_type):
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart_type]:
             inhoud[veld] = getattr(form, veld).data or ''
+        for veld in INHOUD_LIJST_VELDEN.get(kaart_type, []):
+            inhoud[veld] = getattr(form, veld).data or []
 
         kaart = Kaart(
             type=kaart_type,
@@ -295,6 +297,8 @@ def bewerken(kaart_id):
         data = {'naam': kaart.naam, 'kerntaak': kaart.kerntaak or ''}
         for veld in INHOUD_VELDEN[kaart.type]:
             data[veld] = huidige.get(veld, '')
+        for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
+            data[veld] = huidige.get(veld, []) or []
         form = form_class(data=data)
 
     wijziging_toelichting = (request.form.get('wijziging_toelichting') or '').strip()
@@ -309,6 +313,8 @@ def bewerken(kaart_id):
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = (request.form.get(veld) or '').strip()
+        for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
+            inhoud[veld] = request.form.getlist(veld)
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -399,6 +405,8 @@ def bewerken(kaart_id):
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = getattr(form, veld).data or ''
+        for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
+            inhoud[veld] = getattr(form, veld).data or []
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None
