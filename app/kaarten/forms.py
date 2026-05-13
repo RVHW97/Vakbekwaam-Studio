@@ -113,6 +113,11 @@ class InstructiekaartForm(FlaskForm):
                                   choices=INSTRUCTIE_TYPE_KEUZES,
                                   default='procedure',
                                   validators=[DataRequired(message='Kies of dit een materiaal- of procedurekaart is.')])
+    omschrijving = TextAreaField('Omschrijving',
+                                  validators=[Optional(), Length(max=2000, message='Maximaal 2000 tekens.')])
+    # Markers op de productfoto worden als JSON-string in een hidden veld meegestuurd.
+    # Lijst van {nummer, x, y, label} — x/y zijn fracties (0..1) van foto-breedte/hoogte.
+    productfoto_markers_json = StringField('Marker-legenda', validators=[Optional()])
     submit = SubmitField('Opslaan als concept')
 
 
@@ -196,7 +201,7 @@ FORMULIEREN = {
 INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
               'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
-    'instructie': ['instructie_type'],
+    'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json'],
     'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',

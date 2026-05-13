@@ -1,9 +1,10 @@
 import os
+import json
 import uuid
 import shutil
 from flask import render_template, redirect, url_for, flash, request, current_app, make_response, abort
 from flask_login import login_required, current_user
-from PIL import Image
+from PIL import Image, ImageOps
 from app import db
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          ThemaKaartLink, ThemaQRLink, QRCode,
@@ -55,6 +56,9 @@ def save_header_foto(file):
     if size > HEADER_FOTO_MAX_BYTES:
         return None, 'Bestand is te groot (max 5 MB).'
     img = Image.open(file)
+    # Pas EXIF-orientatie expliciet toe — anders bewaart PIL de fysieke pixels
+    # zonder de rotatie-metadata, waardoor de foto op zijn kant in de PDF kan komen.
+    img = ImageOps.exif_transpose(img)
     if img.width < HEADER_FOTO_MIN_W or img.height < HEADER_FOTO_MIN_H:
         return None, f'Afbeelding te klein (minimaal {HEADER_FOTO_MIN_W}×{HEADER_FOTO_MIN_H} px).'
     current_ratio = img.width / img.height
@@ -89,6 +93,9 @@ def save_foto(file, prefix='foto', ratio=None):
     if size > FOTO_MAX_BYTES:
         return None, 'Bestand is te groot (max 5 MB).'
     img = Image.open(file)
+    # Pas EXIF-orientatie expliciet toe — anders bewaart PIL de fysieke pixels
+    # zonder de rotatie-metadata, waardoor de foto op zijn kant in de PDF kan komen.
+    img = ImageOps.exif_transpose(img)
     if img.width < FOTO_MIN_PX or img.height < FOTO_MIN_PX:
         return None, f'Afbeelding te klein (minimaal {FOTO_MIN_PX}×{FOTO_MIN_PX} px).'
     if ratio:
@@ -336,6 +343,21 @@ def bewerken(kaart_id):
                     verwijder_bestand(kaart.ensceneringstips_foto)
                 kaart.ensceneringstips_foto = foto_naam
 
+        # Productfoto (instructiekaart-materiaal): geen vaste ratio, vrij formaat.
+        if request.form.get('verwijder_productfoto') and kaart.productfoto:
+            verwijder_bestand(kaart.productfoto)
+            kaart.productfoto = None
+
+        prod_foto = request.files.get('productfoto')
+        if prod_foto and prod_foto.filename:
+            foto_naam, foto_fout = save_foto(prod_foto, prefix='product', ratio=None)
+            if foto_fout:
+                flash(f'Productfoto: {foto_fout}', 'warning')
+            elif foto_naam:
+                if kaart.productfoto:
+                    verwijder_bestand(kaart.productfoto)
+                kaart.productfoto = foto_naam
+
         log_wijziging(kaart, 'Auto-save (tab-wissel)', '')
         db.session.commit()
         flash(f'Concept opgeslagen ({kaart.nummer}).', 'info')
@@ -358,7 +380,22 @@ def bewerken(kaart_id):
             foto_fout_label = 'Een header-foto is verplicht.'
             form.header_foto.errors = list(form.header_foto.errors) + [foto_fout_label]
 
-    if is_valid and not toelichting_fout and not foto_fout_label:
+    # Instructiekaart-materiaal: elke marker op de productfoto moet een beschrijving hebben.
+    markers_fout = None
+    if (request.method == 'POST' and not is_auto_save and kaart.type == 'instructie'
+            and (request.form.get('instructie_type') or '') == 'materiaal'):
+        try:
+            markers_data = json.loads(request.form.get('productfoto_markers_json') or '[]')
+        except (ValueError, TypeError):
+            markers_data = []
+        if isinstance(markers_data, list):
+            lege_nrs = [str(i + 1) for i, m in enumerate(markers_data)
+                        if not (isinstance(m, dict) and (m.get('label') or '').strip())]
+            if lege_nrs:
+                markers_fout = 'Marker ' + ', '.join(lege_nrs) + ' heeft nog geen beschrijving.'
+                form.productfoto_markers_json.errors = list(form.productfoto_markers_json.errors) + [markers_fout]
+
+    if is_valid and not toelichting_fout and not foto_fout_label and not markers_fout:
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = getattr(form, veld).data or ''
@@ -397,6 +434,22 @@ def bewerken(kaart_id):
                 if kaart.ensceneringstips_foto:
                     verwijder_bestand(kaart.ensceneringstips_foto)
                 kaart.ensceneringstips_foto = foto_naam
+
+        # Productfoto (instructiekaart-materiaal): geen vaste ratio, vrij formaat.
+        if request.form.get('verwijder_productfoto'):
+            if kaart.productfoto:
+                verwijder_bestand(kaart.productfoto)
+                kaart.productfoto = None
+
+        prod_foto = request.files.get('productfoto')
+        if prod_foto and prod_foto.filename:
+            foto_naam, foto_fout = save_foto(prod_foto, prefix='product', ratio=None)
+            if foto_fout:
+                flash(f'Productfoto: {foto_fout}', 'warning')
+            else:
+                if kaart.productfoto:
+                    verwijder_bestand(kaart.productfoto)
+                kaart.productfoto = foto_naam
 
         # Afbeeldingen verwijderen
         verwijder_ids = request.form.getlist('verwijder_afbeelding_ids')

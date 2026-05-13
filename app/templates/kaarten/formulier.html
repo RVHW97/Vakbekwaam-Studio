@@ -238,6 +238,102 @@
         letter-spacing: 0.4px;
         margin: 0.3rem 0 0.25rem 0;
     }
+
+    /* === Instructiekaart-productfoto met markers === */
+    .productfoto-canvas {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        margin: 0.5rem 0;
+        border: 1px solid var(--kleur-rand);
+        border-radius: 6px;
+        overflow: hidden;
+        background: #f5f5f5;
+        cursor: crosshair;
+        user-select: none;
+    }
+    .productfoto-img {
+        display: block;
+        max-width: 100%;
+        max-height: 480px;
+        height: auto;
+        pointer-events: none;  /* clicks gaan naar de canvas */
+    }
+    .productfoto-marker {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        margin-left: -15px;
+        margin-top: -15px;
+        background: #C8102E;
+        color: #fff;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: grab;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 2;
+        transition: transform 0.1s;
+    }
+    .productfoto-marker:hover {
+        transform: scale(1.1);
+    }
+    .productfoto-marker.slepen {
+        cursor: grabbing;
+        z-index: 3;
+    }
+    .productfoto-legenda-lijst {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+    .productfoto-legenda-rij {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.5rem;
+        background: #f8f8f8;
+        border-radius: 4px;
+    }
+    .productfoto-legenda-nummer {
+        flex: 0 0 32px;
+        height: 32px;
+        background: #C8102E;
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+    .productfoto-legenda-rij input.form-input {
+        flex: 1;
+        min-width: 0;
+    }
+    .productfoto-legenda-verwijder {
+        flex: 0 0 auto;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: #888;
+        cursor: pointer;
+        padding: 0 0.4rem;
+    }
+    .productfoto-legenda-verwijder:hover {
+        color: #C8102E;
+    }
+    /* Type-radio knoppen visueel actief maken */
+    .instructie-type-knop:has(input:checked) {
+        border-color: var(--kleur-kerntaak, #C8102E) !important;
+        background: #FEF2F2 !important;
+    }
 </style>
 {% endblock %}
 
@@ -1032,10 +1128,66 @@
             </div>
         </div>
 
-        {# ---------------- TAB 2: PRODUCTINFO / OMSCHRIJVING (placeholder fase 2) ---------------- #}
+        {# ---------------- TAB 2: PRODUCTINFO / OMSCHRIJVING ---------------- #}
         <div class="tab-paneel" data-tab="productinfo">
-            <h2 class="form-section-title">{{ productinfo_label }}</h2>
-            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 2. Bij <strong>materiaal</strong>: omschrijving + geannoteerde productfoto met legenda. Bij <strong>procedure</strong>: vrije omschrijving.</p>
+            <h2 class="form-section-title"><span id="productinfo-titel">{{ productinfo_label }}</span></h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de omschrijving invullen en (bij materiaal) een productfoto met markers toevoegen.</p>
+            {% else %}
+
+            <div class="form-group">
+                {{ form.omschrijving.label(class="form-label") }}
+                {{ form.omschrijving(class="form-input form-textarea", rows=5,
+                   placeholder="Korte uitleg over het materiaal of de procedure...") }}
+                {% for error in form.omschrijving.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                <p class="form-hint">Max 2000 tekens. Bij <strong>materiaal</strong>: korte beschrijving van het apparaat. Bij <strong>procedure</strong>: korte uitleg van de werkwijze.</p>
+            </div>
+
+            {# Alleen bij materiaal: productfoto + markers #}
+            <div id="materiaal-productfoto-blok" {% if not is_materiaal %}style="display:none;"{% endif %}>
+                <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Productfoto met markers</h3>
+                <p class="form-hint">Upload een foto van het apparaat. Klik op de foto om genummerde markers te plaatsen (max 10) — voor elke marker vul je een korte beschrijving in. Deze worden samen de legenda.</p>
+
+                {% if kaart.productfoto %}
+                <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
+                    <label class="bestaande-afbeelding">
+                        <img src="{{ url_for('static', filename='uploads/' + kaart.productfoto) }}"
+                             alt="Productfoto" style="max-height: 140px;">
+                        <span class="verwijder-checkbox">
+                            <input type="checkbox" name="verwijder_productfoto" value="1">
+                            Verwijderen
+                        </span>
+                    </label>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label class="form-label" for="productfoto-input">{{ 'Nieuwe foto uploaden (vervangt huidige)' if kaart.productfoto else 'Foto uploaden' }}</label>
+                    <input type="file" name="productfoto" id="productfoto-input" class="form-file"
+                           accept="image/jpeg,image/png,image/webp">
+                    <p class="form-hint">Vrij formaat (staand of liggend). Min 200×200 px, max 5 MB. JPG/PNG/WebP.</p>
+                </div>
+
+                <div class="productfoto-marker-zone" id="productfoto-marker-zone"
+                     {% if not kaart.productfoto %}style="display:none;"{% endif %}>
+                    <h4 class="form-subgroep-titel" style="margin-top: 1rem;">Plaats markers</h4>
+                    <p class="form-hint">Klik ergens op de foto om een marker toe te voegen. Sleep om bij te stellen. Klik op het kruisje (×) in de legenda om een marker te verwijderen.</p>
+                    <div class="productfoto-canvas" id="productfoto-canvas">
+                        <img alt="Productfoto" class="productfoto-img" id="productfoto-img"
+                             {% if kaart.productfoto %}src="{{ url_for('static', filename='uploads/' + kaart.productfoto) }}"{% endif %}>
+                        {# Markers worden door JS in deze container getekend #}
+                    </div>
+
+                    <h4 class="form-subgroep-titel" style="margin-top: 1.25rem;">Legenda</h4>
+                    <div class="productfoto-legenda-lijst" id="productfoto-legenda-lijst"></div>
+                    <p class="form-hint" id="productfoto-marker-teller" style="margin-top: 0.5rem;"></p>
+                </div>
+
+                {{ form.productfoto_markers_json(type="hidden", id="productfoto-markers-json") }}
+            </div>
+            {% endif %}
+
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="veiligheid">Volgende →</button>
@@ -1458,7 +1610,8 @@ setupCropper({
 (function() {
     var koppelingen = [
         { name: 'verwijder_header_foto', omschrijving: 'header-foto' },
-        { name: 'verwijder_ensceneringstips_foto', omschrijving: 'ensceneringstips-foto' }
+        { name: 'verwijder_ensceneringstips_foto', omschrijving: 'ensceneringstips-foto' },
+        { name: 'verwijder_productfoto', omschrijving: 'productfoto' }
     ];
     koppelingen.forEach(function(k) {
         var cb = document.querySelector('input[name="' + k.name + '"]');
@@ -2002,4 +2155,214 @@ setupCropper({
     });
 })();
 </script>
+
+{# ============================================================ #}
+{# Instructiekaart-specifieke scripts                            #}
+{# ============================================================ #}
+{% if kaart_type == 'instructie' %}
+<script>
+/* === Type-radio: wisselt live de Productinfo-tabnaam + toont/verbergt het materiaal-blok === */
+(function() {
+    var radios = document.querySelectorAll('input[name="instructie_type"]');
+    if (!radios.length) return;
+    var tabKnop = document.getElementById('tab-knop-productinfo');
+    var tabTitel = document.getElementById('productinfo-titel');
+    var materiaalBlok = document.getElementById('materiaal-productfoto-blok');
+
+    function update() {
+        var gekozen = document.querySelector('input[name="instructie_type"]:checked');
+        var isMateriaal = gekozen && gekozen.value === 'materiaal';
+        var label = isMateriaal ? 'Productinformatie' : 'Omschrijving';
+        if (tabKnop) tabKnop.textContent = label;
+        if (tabTitel) tabTitel.textContent = label;
+        if (materiaalBlok) materiaalBlok.style.display = isMateriaal ? '' : 'none';
+    }
+    radios.forEach(function(r) { r.addEventListener('change', update); });
+    update();
+})();
+
+/* === Productfoto-upload: direct preview tonen zodat markers meteen geplaatst kunnen worden === */
+(function() {
+    var fileInput = document.getElementById('productfoto-input');
+    var img = document.getElementById('productfoto-img');
+    var markerZone = document.getElementById('productfoto-marker-zone');
+    if (!fileInput || !img || !markerZone) return;
+
+    fileInput.addEventListener('change', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        // Snel client-side check op type/grootte
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) === -1) return;
+        if (file.size > 5 * 1024 * 1024) return;
+
+        // Preview via object URL
+        var url = URL.createObjectURL(file);
+        // Revoke vorige URL als die door deze functie was gezet
+        if (img.dataset.objectUrl) {
+            try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (_) {}
+        }
+        img.src = url;
+        img.dataset.objectUrl = url;
+
+        // Toon marker-zone — gebruiker kan direct beginnen met klikken
+        markerZone.style.display = '';
+        // Scroll zodat de canvas in beeld komt
+        try { markerZone.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    });
+})();
+
+/* === Productfoto-markers: klik om toe te voegen, slepen, verwijderen, hernummeren === */
+(function() {
+    var canvas = document.getElementById('productfoto-canvas');
+    var legendaLijst = document.getElementById('productfoto-legenda-lijst');
+    var hiddenJson = document.getElementById('productfoto-markers-json');
+    var teller = document.getElementById('productfoto-marker-teller');
+    if (!canvas || !legendaLijst || !hiddenJson) return;
+
+    var MAX_MARKERS = 10;
+    var MAX_LABEL_TEKENS = 60;
+
+    // markers: [{x: 0..1, y: 0..1, label: ''}, ...]  (nummer = index+1)
+    var markers = [];
+    try {
+        var initial = JSON.parse(hiddenJson.value || '[]');
+        if (Array.isArray(initial)) {
+            markers = initial.filter(function(m) {
+                return typeof m === 'object' && typeof m.x === 'number' && typeof m.y === 'number';
+            }).slice(0, MAX_MARKERS).map(function(m) {
+                return { x: m.x, y: m.y, label: (m.label || '').toString().slice(0, MAX_LABEL_TEKENS) };
+            });
+        }
+    } catch (_) { markers = []; }
+
+    function syncJson() {
+        hiddenJson.value = JSON.stringify(markers);
+    }
+    function updateTeller() {
+        if (!teller) return;
+        teller.textContent = markers.length + ' / ' + MAX_MARKERS + ' markers';
+    }
+
+    function renderMarkers() {
+        // Wis bestaande
+        canvas.querySelectorAll('.productfoto-marker').forEach(function(el) { el.remove(); });
+        // Voeg opnieuw toe
+        markers.forEach(function(m, idx) {
+            var el = document.createElement('div');
+            el.className = 'productfoto-marker';
+            el.style.left = (m.x * 100) + '%';
+            el.style.top = (m.y * 100) + '%';
+            el.textContent = (idx + 1).toString();
+            el.dataset.idx = idx;
+            canvas.appendChild(el);
+        });
+    }
+
+    function renderLegenda() {
+        legendaLijst.innerHTML = '';
+        markers.forEach(function(m, idx) {
+            var rij = document.createElement('div');
+            rij.className = 'productfoto-legenda-rij';
+
+            var nr = document.createElement('span');
+            nr.className = 'productfoto-legenda-nummer';
+            nr.textContent = (idx + 1).toString();
+            rij.appendChild(nr);
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-input';
+            input.maxLength = MAX_LABEL_TEKENS;
+            input.value = m.label || '';
+            input.placeholder = 'Beschrijving van onderdeel ' + (idx + 1);
+            input.addEventListener('input', function() {
+                markers[idx].label = this.value.slice(0, MAX_LABEL_TEKENS);
+                syncJson();
+            });
+            rij.appendChild(input);
+
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'productfoto-legenda-verwijder';
+            del.title = 'Verwijder marker ' + (idx + 1);
+            del.textContent = '×';
+            del.addEventListener('click', function() {
+                markers.splice(idx, 1);
+                syncJson();
+                renderMarkers();
+                renderLegenda();
+                updateTeller();
+            });
+            rij.appendChild(del);
+
+            legendaLijst.appendChild(rij);
+        });
+    }
+
+    // Klik op canvas → nieuwe marker. Klik op marker zelf: niets (sleep-handler vangt drag op).
+    canvas.addEventListener('mousedown', function(e) {
+        var markerEl = e.target.closest('.productfoto-marker');
+        if (markerEl) return;  // sleep wordt apart afgehandeld
+        if (markers.length >= MAX_MARKERS) {
+            alert('Maximum van ' + MAX_MARKERS + ' markers bereikt.');
+            return;
+        }
+        var rect = canvas.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width;
+        var y = (e.clientY - rect.top) / rect.height;
+        // Houd binnen 0..1
+        x = Math.max(0, Math.min(1, x));
+        y = Math.max(0, Math.min(1, y));
+        markers.push({ x: x, y: y, label: '' });
+        syncJson();
+        renderMarkers();
+        renderLegenda();
+        updateTeller();
+        // Focus het nieuwe legenda-veld
+        var velden = legendaLijst.querySelectorAll('input[type="text"]');
+        if (velden.length) velden[velden.length - 1].focus();
+    });
+
+    // Slepen van marker
+    var sleepIdx = null;
+    canvas.addEventListener('mousedown', function(e) {
+        var markerEl = e.target.closest('.productfoto-marker');
+        if (!markerEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        sleepIdx = parseInt(markerEl.dataset.idx, 10);
+        markerEl.classList.add('slepen');
+    }, true);
+    document.addEventListener('mousemove', function(e) {
+        if (sleepIdx === null) return;
+        var rect = canvas.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width;
+        var y = (e.clientY - rect.top) / rect.height;
+        x = Math.max(0, Math.min(1, x));
+        y = Math.max(0, Math.min(1, y));
+        markers[sleepIdx].x = x;
+        markers[sleepIdx].y = y;
+        // Update direct visueel
+        var el = canvas.querySelector('.productfoto-marker[data-idx="' + sleepIdx + '"]');
+        if (el) {
+            el.style.left = (x * 100) + '%';
+            el.style.top = (y * 100) + '%';
+        }
+    });
+    document.addEventListener('mouseup', function() {
+        if (sleepIdx === null) return;
+        var el = canvas.querySelector('.productfoto-marker[data-idx="' + sleepIdx + '"]');
+        if (el) el.classList.remove('slepen');
+        sleepIdx = null;
+        syncJson();
+    });
+
+    // Initiële render
+    renderMarkers();
+    renderLegenda();
+    updateTeller();
+})();
+</script>
+{% endif %}
 {% endblock %}
