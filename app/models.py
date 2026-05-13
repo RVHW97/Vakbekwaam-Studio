@@ -199,6 +199,12 @@ class Kaart(db.Model):
     def get_thema_aantal_kaarten(self):
         return ThemaKaartLink.query.filter_by(kaart_id=self.id).count()
 
+    def get_instructie_qr_links(self):
+        """Lijst van QR-koppelingen voor een instructiekaart, op volgorde."""
+        return InstructieQRLink.query.filter_by(kaart_id=self.id).order_by(
+            InstructieQRLink.volgorde, InstructieQRLink.id
+        ).all()
+
     def get_gekoppelde_kaarten(self):
         """Bidirectionele koppelingen: alle kaarten waaraan deze kaart gekoppeld is."""
         bron = db.session.query(KaartKoppeling.gekoppelde_kaart_id).filter(
@@ -288,6 +294,29 @@ class ThemaKaartLink(db.Model):
         return f'<ThemaKaartLink {self.kaart_id}->{self.gekoppelde_kaart_id} g{self.groep_index}>'
 
 
+class InstructieQRLink(db.Model):
+    """Koppeling van een instructiekaart aan een QR-code (achtergrondinformatie).
+
+    Eenvoudig: geen rij/positie zoals bij themakaart — gewoon een lijst op volgorde.
+    """
+    __tablename__ = 'instructie_qr_links'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kaart_id = db.Column(db.Integer, db.ForeignKey('kaarten.id'), nullable=False, index=True)
+    qr_code_id = db.Column(db.Integer, db.ForeignKey('qr_codes.id'), nullable=False)
+    volgorde = db.Column(db.Integer, default=0, nullable=False)
+    aangemaakt_op = db.Column(db.DateTime, default=datetime.utcnow)
+
+    qr_code = db.relationship('QRCode')
+
+    __table_args__ = (
+        db.UniqueConstraint('kaart_id', 'qr_code_id', name='uq_instructie_qr_link'),
+    )
+
+    def __repr__(self):
+        return f'<InstructieQRLink kaart={self.kaart_id} qr={self.qr_code_id}>'
+
+
 class ThemaQRLink(db.Model):
     """Koppeling van een themakaart aan een QR-code, in 'top' of 'bottom' rij."""
     __tablename__ = 'thema_qr_links'
@@ -312,6 +341,10 @@ THEMA_MAX_QR_TOP = 5
 THEMA_MAX_QR_BOTTOM = 10
 THEMA_MAX_GROEPEN = 3
 THEMA_QR_LABEL_MAX = 25
+
+# Limieten voor de instructiekaart-achtergrondinformatie
+INSTRUCTIE_MAX_KAART_KOPPELINGEN = 10
+INSTRUCTIE_MAX_QR_KOPPELINGEN = 6
 
 
 class KaartWijziging(db.Model):

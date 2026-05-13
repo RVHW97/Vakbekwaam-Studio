@@ -1567,10 +1567,102 @@
             </div>
         </div>
 
-        {# ---------------- TAB 5: ACHTERGROND (placeholder fase 5) ---------------- #}
+        {# ---------------- TAB 5: ACHTERGROND ---------------- #}
         <div class="tab-paneel" data-tab="achtergrond">
             <h2 class="form-section-title">Achtergrondinformatie</h2>
-            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 5. Koppel andere kaarten en kies QR-codes uit de QR-bank.</p>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier kaarten en QR-codes koppelen.</p>
+            {% else %}
+
+            {# === Gekoppelde kaarten === #}
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Gekoppelde kaarten</h3>
+            <p class="form-hint">Koppel andere kaarten (thema, scenario, opdracht of andere instructie) die bij deze kaart horen. Maximaal {{ INSTRUCTIE_MAX_KAART_KOPPELINGEN }} koppelingen.</p>
+
+            {% if gekoppelde_kaarten %}
+            <div class="gekoppelde-lijst" style="margin-bottom: 0.75rem;">
+                {% for k in gekoppelde_kaarten %}
+                <div class="gekoppelde-kaart-rij">
+                    <span class="badge badge-type">{{ k.type_naam }}</span>
+                    <strong>{{ k.nummer }}</strong>
+                    <span class="gekoppelde-kaart-naam">{{ k.naam }}</span>
+                    <button type="button" class="btn-verwijder instructie-actie-knop" title="Loskoppelen"
+                            data-instructie-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
+                            data-instructie-payload='actie=verwijderen&doel_id={{ k.id }}'>✕</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="form-hint" style="font-style: italic; margin-bottom: 0.75rem;">Nog geen gekoppelde kaarten.</p>
+            {% endif %}
+
+            {% if beschikbaar_per_type and gekoppelde_kaarten|length < INSTRUCTIE_MAX_KAART_KOPPELINGEN %}
+            <div class="instructie-koppel-blok koppel-form"
+                 data-instructie-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
+                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <input type="hidden" name="actie" value="toevoegen">
+                <select name="doel_id" class="form-input form-select" style="flex:1; min-width:220px;">
+                    <option value="">— kies een kaart om te koppelen —</option>
+                    {% for type_key, blok in beschikbaar_per_type.items() %}
+                    <optgroup label="{{ blok.naam }}">
+                        {% for k in blok.kaarten %}
+                        <option value="{{ k.id }}">{{ k.nummer }} — {{ k.naam }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm instructie-actie-knop" data-instructie-veld-blok>+ Koppelen</button>
+            </div>
+            {% elif gekoppelde_kaarten|length >= INSTRUCTIE_MAX_KAART_KOPPELINGEN %}
+            <p class="form-hint" style="color:#b6463d;">Maximum van {{ INSTRUCTIE_MAX_KAART_KOPPELINGEN }} kaart-koppelingen bereikt.</p>
+            {% else %}
+            <p class="form-hint">Geen beschikbare kaarten meer om te koppelen.</p>
+            {% endif %}
+
+            {# === QR-codes uit de bank === #}
+            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">QR-codes</h3>
+            <p class="form-hint">Koppel QR-codes uit de QR-bank. Op de PDF verschijnen ze onderaan in de achtergrondinformatie. Maximaal {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} koppelingen.</p>
+
+            {% if instructie_qr_links %}
+            <ul style="list-style:none; padding:0; margin: 0 0 0.75rem 0;">
+                {% for link in instructie_qr_links %}
+                <li class="dynamische-lijst-item" style="background: #f8f8f8; padding: 0.4rem 0.6rem; border-radius: 4px; margin-bottom: 0.3rem;">
+                    <span class="badge" style="background:#1B2A4A; color:#fff;">{{ link.qr_code.categorie_naam }}</span>
+                    <strong>{{ link.qr_code.slug }}</strong>
+                    <span style="flex:1;">{{ link.qr_code.naam }}</span>
+                    <button type="button" class="btn-verwijder instructie-actie-knop" title="QR-koppeling verwijderen"
+                            data-instructie-url="{{ url_for('kaarten.instructie_qr_link_verwijderen', kaart_id=kaart.id, link_id=link.id) }}">✕</button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="form-hint" style="font-style:italic; margin-bottom: 0.75rem;">Nog geen QR-codes gekoppeld.</p>
+            {% endif %}
+
+            {% if instructie_beschikbare_qrs_per_categorie and instructie_qr_links|length < INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <div class="instructie-koppel-blok koppel-form"
+                 data-instructie-url="{{ url_for('kaarten.instructie_qr_link_toevoegen', kaart_id=kaart.id) }}"
+                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;">
+                    <option value="">— kies een QR-code uit de bank —</option>
+                    {% for cat_key, blok in instructie_beschikbare_qrs_per_categorie.items() %}
+                    <optgroup label="{{ blok.naam }}">
+                        {% for q in blok.qrs %}
+                        <option value="{{ q.id }}">{{ q.slug }} — {{ q.naam }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm instructie-actie-knop" data-instructie-veld-blok>+ Koppelen</button>
+            </div>
+            {% elif instructie_qr_links|length >= INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <p class="form-hint" style="color:#b6463d;">Maximum van {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} QR-koppelingen bereikt.</p>
+            {% else %}
+            <p class="form-hint">Geen beschikbare QR-codes meer (of maak er eerst een aan via het QR-codes-menu).</p>
+            {% endif %}
+
+            {% endif %}
+
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="werkwijze">← Vorige</button>
                 <span class="tab-nav-spacer"></span>
@@ -3143,6 +3235,53 @@ setupCropper({
     renderMarkers();
     renderLegenda();
     updateTeller();
+})();
+
+/* === Instructiekaart-achtergrond: koppel-knoppen (fetch + reload, geen nested form) === */
+(function() {
+    var knoppen = document.querySelectorAll('.instructie-actie-knop');
+    if (!knoppen.length) return;
+    var csrfMeta = document.querySelector('input[name="csrf_token"]');
+    var csrfToken = csrfMeta ? csrfMeta.value : '';
+
+    knoppen.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (btn.disabled) return;
+            var url = btn.dataset.instructieUrl;
+            var blok = btn.hasAttribute('data-instructie-veld-blok')
+                       ? btn.closest('.instructie-koppel-blok') : null;
+            if (!url && blok) url = blok.dataset.instructieUrl;
+            if (!url) return;
+
+            var fd = new FormData();
+            // Velden uit het blok (bij toevoegen)
+            if (blok) {
+                blok.querySelectorAll('input[name], select[name]').forEach(function(el) {
+                    fd.append(el.name, el.value);
+                });
+            }
+            // Inline payload (bij verwijderen)
+            var payload = btn.dataset.instructiePayload;
+            if (payload) {
+                payload.split('&').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) fd.append(decodeURIComponent(kv[0]), decodeURIComponent(kv[1]));
+                });
+            }
+            fd.append('csrf_token', csrfToken);
+
+            btn.disabled = true;
+            var origTekst = btn.textContent;
+            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function() { window.location.reload(); })
+                .catch(function(err) {
+                    console.error('Instructie-koppel-actie fout:', err);
+                    btn.disabled = false;
+                    btn.textContent = origTekst;
+                });
+        });
+    });
 })();
 </script>
 {% endif %}

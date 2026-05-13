@@ -7,10 +7,11 @@ from flask_login import login_required, current_user
 from PIL import Image, ImageOps
 from app import db
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
-                         ThemaKaartLink, ThemaQRLink, QRCode,
+                         ThemaKaartLink, ThemaQRLink, InstructieQRLink, QRCode,
                          KAART_TYPES, KERNTAKEN, QR_CATEGORIEEN, kenmerken_kerntaak_label,
                          THEMA_MAX_KAARTEN_TOTAAL, THEMA_MAX_QR_TOP, THEMA_MAX_QR_BOTTOM,
-                         THEMA_QR_LABEL_MAX)
+                         THEMA_QR_LABEL_MAX,
+                         INSTRUCTIE_MAX_KAART_KOPPELINGEN, INSTRUCTIE_MAX_QR_KOPPELINGEN)
 from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
@@ -541,10 +542,10 @@ def bewerken(kaart_id):
         form.kenmerken_kerntaak.label.text = kenmerken_kerntaak_label(form.kerntaak.data or kaart.kerntaak)
     type_info = KAART_TYPES[kaart.type]
 
-    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (alleen scenariokaart)
+    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (scenariokaart + instructiekaart)
     gekoppelde_kaarten = []
     beschikbaar_per_type = {}
-    if kaart.type == 'scenario':
+    if kaart.type in ('scenario', 'instructie'):
         gekoppelde_kaarten = kaart.get_gekoppelde_kaarten()
         huidige_ids = {k.id for k in gekoppelde_kaarten}
         huidige_ids.add(kaart.id)
@@ -556,6 +557,24 @@ def bewerken(kaart_id):
             ).order_by(Kaart.nummer).all()
             if rijen:
                 beschikbaar_per_type[type_key] = {'naam': t_info['naam'], 'kaarten': rijen}
+
+    # Instructiekaart-achtergrond: QR-koppelingen + beschikbare QR-codes uit de bank
+    instructie_qr_links = []
+    instructie_beschikbare_qrs_per_categorie = {}
+    if kaart.type == 'instructie':
+        instructie_qr_links = kaart.get_instructie_qr_links()
+        gekoppelde_qr_ids = {r.qr_code_id for r in instructie_qr_links}
+        beschikbare_qrs = QRCode.query.filter(
+            QRCode.actief == True,  # noqa: E712
+            ~QRCode.id.in_(gekoppelde_qr_ids),
+        ).order_by(QRCode.naam).all()
+        for cat_key, cat_naam in QR_CATEGORIEEN.items():
+            qrs = [q for q in beschikbare_qrs if q.categorie == cat_key]
+            if qrs:
+                instructie_beschikbare_qrs_per_categorie[cat_key] = {
+                    'naam': cat_naam,
+                    'qrs': qrs,
+                }
 
     # Themakaart: koppelingen aan andere kaarten (per tussentitel) + QR-codes (één lijst)
     thema_kaart_links = {0: [], 1: [], 2: []}
@@ -612,7 +631,11 @@ def bewerken(kaart_id):
                            THEMA_QR_LABEL_MAX=THEMA_QR_LABEL_MAX,
                            WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
                            WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
-                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
+                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
+                           instructie_qr_links=instructie_qr_links,
+                           instructie_beschikbare_qrs_per_categorie=instructie_beschikbare_qrs_per_categorie,
+                           INSTRUCTIE_MAX_KAART_KOPPELINGEN=INSTRUCTIE_MAX_KAART_KOPPELINGEN,
+                           INSTRUCTIE_MAX_QR_KOPPELINGEN=INSTRUCTIE_MAX_QR_KOPPELINGEN)
 
 
 @bp.route('/<int:kaart_id>/koppel-actie', methods=['POST'])
@@ -820,6 +843,54 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
     db.session.commit()
     flash('QR-koppeling verwijderd.', 'info')
     return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+
+# ====================== INSTRUCTIEKAART QR-KOPPELINGEN ======================
+
+@bp.route('/<int:kaart_id>/instructie/qr-link/toevoegen', methods=['POST'])
+@login_required
+def instructie_qr_link_toevoegen(kaart_id):
+    kaart = Kaart.query.get_or_404(kaart_id)
+    if kaart.type != 'instructie':
+        abort(404)
+    qr_id = request.form.get('qr_id', type=int)
+    if not qr_id:
+        flash('Geen QR-code geselecteerd.', 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
+    qr = QRCode.query.get(qr_id)
+    if not qr:
+        flash('QR-code niet gevonden.', 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
+    if InstructieQRLink.query.filter_by(kaart_id=kaart.id).count() >= INSTRUCTIE_MAX_QR_KOPPELINGEN:
+        flash(f'Maximaal {INSTRUCTIE_MAX_QR_KOPPELINGEN} QR-koppelingen op een instructiekaart.', 'warning')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
+    if InstructieQRLink.query.filter_by(kaart_id=kaart.id, qr_code_id=qr_id).first():
+        flash('Deze QR-code is al gekoppeld.', 'info')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
+    laatste = InstructieQRLink.query.filter_by(kaart_id=kaart.id).order_by(InstructieQRLink.volgorde.desc()).first()
+    volgorde = (laatste.volgorde + 1) if laatste else 0
+    db.session.add(InstructieQRLink(kaart_id=kaart.id, qr_code_id=qr_id, volgorde=volgorde))
+    log_wijziging(kaart, 'QR-koppeling toegevoegd', qr.naam)
+    db.session.commit()
+    flash(f'QR-code "{qr.naam}" toegevoegd.', 'success')
+    return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
+
+
+@bp.route('/<int:kaart_id>/instructie/qr-link/<int:link_id>/verwijderen', methods=['POST'])
+@login_required
+def instructie_qr_link_verwijderen(kaart_id, link_id):
+    kaart = Kaart.query.get_or_404(kaart_id)
+    if kaart.type != 'instructie':
+        abort(404)
+    link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
+    if not link:
+        abort(404)
+    qr_naam = link.qr_code.naam if link.qr_code else 'onbekend'
+    db.session.delete(link)
+    log_wijziging(kaart, 'QR-koppeling verwijderd', qr_naam)
+    db.session.commit()
+    flash('QR-koppeling verwijderd.', 'info')
+    return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
 
 
 @bp.route('/<int:kaart_id>/thema/qr-link/<int:link_id>/label', methods=['POST'])
