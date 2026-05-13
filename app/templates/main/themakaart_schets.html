@@ -353,27 +353,29 @@
     white-space: nowrap;
 }
 
-/* Bovenste QR-rij: 5 stuks links, exact uitgelijnd met onderste rij (zelfde 10-koloms grid) */
+/* Bovenste QR-rij: 10-koloms grid op volle breedte, cellen vullen vanaf links
+   + lege cellen rechts → top-rij cel 1 staat boven bottom-rij cel 1. */
 .thema-qr-rij-top {
     position: absolute;
     z-index: 2;
-    top: 64%;
+    top: 66%;
     left: 3%;
     right: 3%;
-    bottom: 26%;
+    bottom: 25%;
     display: grid;
     grid-template-columns: repeat(10, 1fr);
     gap: 0.4rem;
     align-items: start;
 }
-/* Onderste QR-rij: 10 stuks volle breedte, net boven de rode footer */
+/* Onderste QR-rij: 10-koloms grid op volle breedte, cellen vullen vanaf links
+   + lege padding-cellen rechts → bottom cel 1 staat onder top cel 1. */
 .thema-qr-strip {
     position: absolute;
     z-index: 2;
-    top: 78%;
+    top: 80%;
     left: 3%;
     right: 3%;
-    bottom: 12%;
+    bottom: 11%;
     display: grid;
     grid-template-columns: repeat(10, 1fr);
     gap: 0.4rem;

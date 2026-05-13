@@ -1109,12 +1109,9 @@
                         <span class="badge badge-type">{{ k.type_naam }}</span>
                         <strong>{{ k.nummer }}</strong>
                         <span class="gekoppelde-kaart-naam">{{ k.naam }}</span>
-                        <form method="POST" action="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}" style="margin: 0;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="actie" value="verwijderen">
-                            <input type="hidden" name="doel_id" value="{{ k.id }}">
-                            <button type="submit" class="btn-verwijder" title="Loskoppelen">✕</button>
-                        </form>
+                        <button type="button" class="btn-verwijder scenario-actie-knop" title="Loskoppelen"
+                                data-scenario-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
+                                data-scenario-payload="actie=verwijderen&doel_id={{ k.id }}">✕</button>
                     </div>
                     {% endfor %}
                 </div>
@@ -1123,14 +1120,14 @@
                 {% endif %}
 
                 {% if beschikbaar_per_type %}
-                <form method="POST" action="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}" class="koppel-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="scenario-koppel-blok"
+                     data-scenario-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}">
                     <input type="hidden" name="actie" value="toevoegen">
                     <div class="form-groep-rij" style="align-items: flex-end; gap: 0.5rem;">
                         <div class="form-groep-kolom" style="flex: 3;">
                             <div class="form-group" style="margin: 0;">
-                                <label class="form-label" for="doel_id">Kaart koppelen</label>
-                                <select name="doel_id" id="doel_id" class="form-input form-select">
+                                <label class="form-label" for="scenario_doel_id">Kaart koppelen</label>
+                                <select name="doel_id" id="scenario_doel_id" class="form-input form-select">
                                     <option value="">— Kies een kaart —</option>
                                     {% for type_key, blok in beschikbaar_per_type.items() %}
                                     <optgroup label="{{ blok.naam }}">
@@ -1143,10 +1140,10 @@
                             </div>
                         </div>
                         <div class="form-groep-kolom" style="flex: 0 0 auto;">
-                            <button type="submit" class="btn btn-secondary">+ Koppelen</button>
+                            <button type="button" class="btn btn-secondary scenario-actie-knop" data-scenario-veld-blok>+ Koppelen</button>
                         </div>
                     </div>
-                </form>
+                </div>
                 {% else %}
                 <p class="form-hint" style="font-style: italic;">Er zijn geen andere kaarten beschikbaar om te koppelen.</p>
                 {% endif %}
@@ -2600,6 +2597,57 @@ setupCropper({
     });
 })();
 </script>
+
+{# ============================================================ #}
+{# Scenariokaart: koppel-knoppen (fetch + reload, geen nested form) #}
+{# ============================================================ #}
+{% if kaart_type == 'scenario' %}
+<script>
+(function() {
+    var knoppen = document.querySelectorAll('.scenario-actie-knop');
+    if (!knoppen.length) return;
+    var csrfMeta = document.querySelector('input[name="csrf_token"]');
+    var csrfToken = csrfMeta ? csrfMeta.value : '';
+
+    knoppen.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (btn.disabled) return;
+            var url = btn.dataset.scenarioUrl;
+            var blok = btn.hasAttribute('data-scenario-veld-blok')
+                       ? btn.closest('.scenario-koppel-blok') : null;
+            if (!url && blok) url = blok.dataset.scenarioUrl;
+            if (!url) return;
+
+            var fd = new FormData();
+            if (blok) {
+                blok.querySelectorAll('input[name], select[name]').forEach(function(el) {
+                    fd.append(el.name, el.value);
+                });
+            }
+            var payload = btn.dataset.scenarioPayload;
+            if (payload) {
+                payload.split('&').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) fd.append(decodeURIComponent(kv[0]), decodeURIComponent(kv[1]));
+                });
+            }
+            fd.append('csrf_token', csrfToken);
+
+            btn.disabled = true;
+            var origTekst = btn.textContent;
+            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function() { window.location.reload(); })
+                .catch(function(err) {
+                    console.error('Scenario-koppel-actie fout:', err);
+                    btn.disabled = false;
+                    btn.textContent = origTekst;
+                });
+        });
+    });
+})();
+</script>
+{% endif %}
 
 {# ============================================================ #}
 {# Instructiekaart-specifieke scripts                            #}

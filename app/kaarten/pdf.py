@@ -15,6 +15,22 @@ def _qr_data_uri(qr, met_tekst=False):
     return f'data:image/png;base64,{b64}'
 
 
+def _url_qr_data_uri(url):
+    """Render een QR voor een losse URL-string (geen QRCode-model nodig).
+    Gebruikt voor de LMRA-QR die als app-brede config-waarde staat."""
+    import io
+    import qrcode
+    from qrcode.constants import ERROR_CORRECT_H
+    qr = qrcode.QRCode(version=None, error_correction=ERROR_CORRECT_H, box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='#1B2A4A', back_color='white')
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    return f'data:image/png;base64,{b64}'
+
+
 def genereer_pdf(kaart):
     """Genereer een professionele PDF voor een kaart."""
     inhoud = kaart.get_inhoud()
@@ -185,8 +201,9 @@ def genereer_pdf(kaart):
         pbm_gekozen = inhoud.get('pbm_items') or []
         pbm_lijst = [{'key': k, 'naam': pbm_dict.get(k, k)} for k in pbm_gekozen if k in pbm_dict]
 
-        # LMRA-URL (centrale config) en optioneel QR daarvoor (later in 6b)
+        # LMRA-URL (centrale config) → echte QR genereren als URL gezet is.
         lmra_url = current_app.config.get('LMRA_QR_URL') or ''
+        lmra_qr_data_uri = _url_qr_data_uri(lmra_url) if lmra_url else None
 
         # Gekoppelde QR-codes uit de bank
         instructie_qrs = []
@@ -207,6 +224,7 @@ def genereer_pdf(kaart):
                                       productfoto_pad=productfoto_pad,
                                       pbm_lijst=pbm_lijst,
                                       lmra_url=lmra_url,
+                                      lmra_qr_data_uri=lmra_qr_data_uri,
                                       instructie_qrs=instructie_qrs,
                                       gekoppelde=gekoppelde,
                                       header_foto_pad=header_foto_pad,

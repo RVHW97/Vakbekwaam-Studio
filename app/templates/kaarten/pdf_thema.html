@@ -165,35 +165,38 @@
     }
 
     /* === QR-RIJEN (links onder, naast het navy paneel) === */
-    /* Tabel met 10 kolommen voor strakke uitlijning */
+    /* Tabel met 10 kolommen voor strakke uitlijning. Bottom-rij staat onder de
+       navy-paneel onderkant met duidelijke gap (foto + overlay ertussen). */
     .thema-qr-rij-top {
         position: absolute;
         z-index: 2;
-        top: 64%;
+        top: 66%;
         left: 3%;
         right: 3%;
-        height: 10%;
+        height: 9%;
     }
     .thema-qr-strip {
         position: absolute;
         z-index: 2;
-        top: 78%;
+        top: 80%;
         left: 3%;
         right: 3%;
-        height: 10%;
+        height: 9%;
     }
-    .thema-qr-tabel {
+    /* Beide rijen: CSS Grid van 10 gelijke kolommen op volle strip-breedte.
+       Cellen vullen vanaf links + lege padding-cellen rechts → top-rij cel 1
+       staat perfect boven bottom-rij cel 1. Symmetrische marges links/rechts. */
+    .thema-qr-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 1.4mm;
         width: 100%;
         height: 100%;
-        border-collapse: separate;
-        border-spacing: 1.4mm 0;
-        table-layout: fixed;
     }
     .thema-qr-cel {
-        width: 10%;
         text-align: center;
-        vertical-align: top;
-        padding: 0;
+        min-width: 0;
+        overflow: hidden;
     }
     .thema-qr-img {
         width: 14mm;
@@ -308,38 +311,37 @@
         {% endfor %}
     </div>
 
-    <!-- BOVENSTE QR-RIJ (max 5, links uitgelijnd in 10-koloms tabel) -->
+    <!-- BOVENSTE QR-RIJ (verschijnt bij 11+ codes; CSS-grid 10-koloms, links uitgelijnd) -->
     {% if qr_top %}
     <div class="thema-qr-rij-top">
-        <table class="thema-qr-tabel"><tr>
+        <div class="thema-qr-grid">
             {% for q in qr_top %}
-            <td class="thema-qr-cel">
+            <div class="thema-qr-cel">
                 <img class="thema-qr-img" src="{{ q.data_uri }}" alt="">
                 <span class="thema-qr-label">{{ q.label }}</span>
-            </td>
+            </div>
             {% endfor %}
-            {# vul de overige cellen leeg op zodat top-rij aansluit met bottom-rij #}
             {% for _ in range(10 - qr_top|length) %}
-            <td class="thema-qr-cel"></td>
+            <div class="thema-qr-cel"></div>
             {% endfor %}
-        </tr></table>
+        </div>
     </div>
     {% endif %}
 
-    <!-- ONDERSTE QR-RIJ (max 10, volle breedte) -->
+    <!-- ONDERSTE QR-RIJ (max 10; CSS-grid 10-koloms, cellen vanaf links + lege padding rechts) -->
     {% if qr_bottom %}
     <div class="thema-qr-strip">
-        <table class="thema-qr-tabel"><tr>
+        <div class="thema-qr-grid">
             {% for q in qr_bottom %}
-            <td class="thema-qr-cel">
+            <div class="thema-qr-cel">
                 <img class="thema-qr-img" src="{{ q.data_uri }}" alt="">
                 <span class="thema-qr-label">{{ q.label }}</span>
-            </td>
+            </div>
             {% endfor %}
             {% for _ in range(10 - qr_bottom|length) %}
-            <td class="thema-qr-cel"></td>
+            <div class="thema-qr-cel"></div>
             {% endfor %}
-        </tr></table>
+        </div>
     </div>
     {% endif %}
 

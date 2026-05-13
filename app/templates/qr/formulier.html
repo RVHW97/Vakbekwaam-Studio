@@ -141,12 +141,9 @@
             {{ form.submit(class="btn btn-primary") }}
             <a href="{{ url_for('qr.overzicht') }}" class="btn btn-secondary">Sluiten</a>
             {% if qr %}
-            <form method="POST" action="{{ url_for('qr.verwijderen', qr_id=qr.id) }}"
-                  onsubmit="return confirm('Weet je zeker dat je deze QR-code wil verwijderen? Dit is niet ongedaan te maken.');"
-                  style="display:inline; margin-left:auto">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-danger">Verwijderen</button>
-            </form>
+            <button type="button" class="btn btn-danger qr-verwijder-knop"
+                    data-verwijder-url="{{ url_for('qr.verwijderen', qr_id=qr.id) }}"
+                    style="margin-left:auto">Verwijderen</button>
             {% endif %}
         </div>
     </form>
@@ -221,6 +218,25 @@
 
     stijlRadios.forEach(function(r) { r.addEventListener('change', updatePreview); });
     updatePreview();
+
+    // Verwijder-knop: POST via fetch i.p.v. nested <form>, met confirm.
+    var verwijderKnop = document.querySelector('.qr-verwijder-knop');
+    if (verwijderKnop) {
+        verwijderKnop.addEventListener('click', function() {
+            if (!confirm('Weet je zeker dat je deze QR-code wil verwijderen? Dit is niet ongedaan te maken.')) return;
+            var url = verwijderKnop.dataset.verwijderUrl;
+            var csrfEl = document.querySelector('input[name="csrf_token"]');
+            var fd = new FormData();
+            fd.append('csrf_token', csrfEl ? csrfEl.value : '');
+            verwijderKnop.disabled = true;
+            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function(resp) {
+                    if (resp.redirected) window.location.href = resp.url;
+                    else window.location.href = '{{ url_for("qr.overzicht") }}';
+                })
+                .catch(function() { verwijderKnop.disabled = false; });
+        });
+    }
 })();
 </script>
 {% endblock %}

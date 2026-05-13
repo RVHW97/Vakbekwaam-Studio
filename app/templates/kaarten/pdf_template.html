@@ -248,15 +248,15 @@
         page-break-inside: avoid;
         margin-bottom: 5mm;
     }
+    /* Flex i.p.v. display: table — WeasyPrint table-layout: fixed comprimeert
+       cellen verkeerd bij langere content (zoals eigen doelgroep tot 40 chars). */
     .pdf-infostrip-rij {
-        display: table;
+        display: flex;
         width: 100%;
-        table-layout: fixed;
-        border-collapse: collapse;
     }
     .pdf-infostrip-kolom {
-        display: table-cell;
-        vertical-align: top;
+        flex: 1;
+        min-width: 0;
         padding: 3mm 4mm;
         background-color: #F0EFEC;
         border-left: 1.5mm solid {{ kerntaak_kleur }};
@@ -608,16 +608,18 @@
         color: #999;
         margin-bottom: 3mm;
     }
+    /* Flex i.p.v. display: table — WeasyPrint table-layout: fixed comprimeert
+       cellen onzichtbaar bij lange URL-labels of kaart-namen. Flex met min-width: 0
+       verdeelt breedte gelijk en laat cellen krimpen zonder layout-bug. */
     .pdf-verwijzingen-lijst {
-        display: table;
+        display: flex;
         width: 100%;
-        table-layout: fixed;
         page-break-inside: avoid;
     }
     .pdf-verwijzing-item {
-        display: table-cell;
+        flex: 1;
+        min-width: 0;
         text-align: center;
-        vertical-align: top;
         padding: 0 1.5mm;
         page-break-inside: avoid;
     }
