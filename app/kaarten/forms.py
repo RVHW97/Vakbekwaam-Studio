@@ -110,6 +110,11 @@ INSTRUCTIE_TYPE_KEUZES = [
     ('procedure', 'Procedure / werkwijze'),
 ]
 
+# Werkwijze: maximaal aantal stappen op één instructiekaart (platte lijst).
+WERKWIJZE_MAX_STAPPEN = 20
+WERKWIJZE_TITEL_MAX = 40
+WERKWIJZE_TEKST_MAX = 500
+
 # Standaard PBM-items (Persoonlijke Beschermingsmiddelen) voor de instructiekaart.
 PBM_KEUZES = [
     ('helm',              'Helm'),
@@ -142,6 +147,11 @@ class InstructiekaartForm(FlaskForm):
                                     choices=PBM_KEUZES, validators=[Optional()])
     pbm_overige = StringField('Overige PBM',
                               validators=[Optional(), Length(max=200, message='Maximaal 200 tekens.')])
+    # Werkwijze (fase 4) — platte lijst van stappen.
+    # JSON-structuur: [{"id": "<uuid>", "layout": "A|B|C|D",
+    #                   "titel": "<kort>", "tekst": "<uitleg>",
+    #                   "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...]}]
+    werkwijze_stappen_json = StringField('Werkwijze', validators=[Optional()])
     submit = SubmitField('Opslaan als concept')
 
 
@@ -226,7 +236,7 @@ INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
               'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
     'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json',
-                   'pbm_overige'],
+                   'pbm_overige', 'werkwijze_stappen_json'],
     'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',

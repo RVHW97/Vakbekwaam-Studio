@@ -12,7 +12,9 @@ from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          THEMA_MAX_KAARTEN_TOTAAL, THEMA_MAX_QR_TOP, THEMA_MAX_QR_BOTTOM,
                          THEMA_QR_LABEL_MAX)
 from app.kaarten import bp
-from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN
+from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
+                                WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
+                                WERKWIJZE_TEKST_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 5 * 1024 * 1024
@@ -132,6 +134,46 @@ def _kaart_naam_uit_request(request_form, kaart_type, fallback=''):
     if kaart_type == 'thema':
         return (request_form.get('titel') or '').strip() or fallback or 'Themakaart'
     return (request_form.get('naam') or fallback).strip() or fallback
+
+
+def verwerk_werkwijze_fotos(json_string):
+    """Parse werkwijze-JSON (platte lijst van stappen), upload nieuwe foto's per slot-id,
+    return bijgewerkte JSON.
+
+    Per stap.fotos[i] = {'slot': '<uuid>', 'bestand': '<filename>'}.
+    Bij een geüploade file in request.files['werkwijze_foto_<slot>'] wordt deze opgeslagen
+    en de bestandsnaam vervangen in de JSON. Oude bestanden bij vervangen worden opgeruimd.
+    """
+    try:
+        stappen = json.loads(json_string or '[]')
+    except (ValueError, TypeError):
+        return json_string or '[]'
+    if not isinstance(stappen, list):
+        return json_string or '[]'
+
+    for stap in stappen:
+        if not isinstance(stap, dict):
+            continue
+        fotos = stap.get('fotos') or []
+        nieuwe_fotos = []
+        for foto in fotos:
+            if not isinstance(foto, dict):
+                continue
+            slot = (foto.get('slot') or '').strip()
+            bestand = (foto.get('bestand') or '').strip()
+            if slot:
+                upload = request.files.get('werkwijze_foto_' + slot)
+                if upload and upload.filename:
+                    foto_naam, foto_fout = save_foto(upload, prefix='werkwijze', ratio=None)
+                    if foto_naam:
+                        if bestand:
+                            verwijder_bestand(bestand)
+                        bestand = foto_naam
+                    elif foto_fout:
+                        flash(f'Werkwijze-foto: {foto_fout}', 'warning')
+            nieuwe_fotos.append({'slot': slot, 'bestand': bestand})
+        stap['fotos'] = nieuwe_fotos
+    return json.dumps(stappen, ensure_ascii=False)
 
 
 def log_wijziging(kaart, actie, omschrijving=''):
@@ -315,6 +357,9 @@ def bewerken(kaart_id):
             inhoud[veld] = (request.form.get(veld) or '').strip()
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
             inhoud[veld] = request.form.getlist(veld)
+        # Werkwijze-foto's per slot uploaden + JSON updaten met nieuwe bestandsnamen
+        if kaart.type == 'instructie' and 'werkwijze_stappen_json' in inhoud:
+            inhoud['werkwijze_stappen_json'] = verwerk_werkwijze_fotos(inhoud['werkwijze_stappen_json'])
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -386,6 +431,19 @@ def bewerken(kaart_id):
             foto_fout_label = 'Een header-foto is verplicht.'
             form.header_foto.errors = list(form.header_foto.errors) + [foto_fout_label]
 
+    # Instructiekaart: werkwijze mag niet meer dan WERKWIJZE_MAX_STAPPEN stappen bevatten.
+    werkwijze_fout = None
+    if request.method == 'POST' and not is_auto_save and kaart.type == 'instructie':
+        try:
+            werkwijze_data = json.loads(request.form.get('werkwijze_stappen_json') or '[]')
+        except (ValueError, TypeError):
+            werkwijze_data = []
+        if isinstance(werkwijze_data, list):
+            totaal_stappen = len([s for s in werkwijze_data if isinstance(s, dict)])
+            if totaal_stappen > WERKWIJZE_MAX_STAPPEN:
+                werkwijze_fout = f'Maximaal {WERKWIJZE_MAX_STAPPEN} stappen toegestaan ({totaal_stappen} geteld).'
+                form.werkwijze_stappen_json.errors = list(form.werkwijze_stappen_json.errors) + [werkwijze_fout]
+
     # Instructiekaart-materiaal: elke marker op de productfoto moet een beschrijving hebben.
     markers_fout = None
     if (request.method == 'POST' and not is_auto_save and kaart.type == 'instructie'
@@ -401,12 +459,15 @@ def bewerken(kaart_id):
                 markers_fout = 'Marker ' + ', '.join(lege_nrs) + ' heeft nog geen beschrijving.'
                 form.productfoto_markers_json.errors = list(form.productfoto_markers_json.errors) + [markers_fout]
 
-    if is_valid and not toelichting_fout and not foto_fout_label and not markers_fout:
+    if is_valid and not toelichting_fout and not foto_fout_label and not markers_fout and not werkwijze_fout:
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = getattr(form, veld).data or ''
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
             inhoud[veld] = getattr(form, veld).data or []
+        # Werkwijze-foto's per slot uploaden + JSON updaten met nieuwe bestandsnamen
+        if kaart.type == 'instructie' and 'werkwijze_stappen_json' in inhoud:
+            inhoud['werkwijze_stappen_json'] = verwerk_werkwijze_fotos(inhoud['werkwijze_stappen_json'])
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None
@@ -548,7 +609,10 @@ def bewerken(kaart_id):
                            THEMA_MAX_KAARTEN_TOTAAL=THEMA_MAX_KAARTEN_TOTAAL,
                            THEMA_MAX_QR_TOP=THEMA_MAX_QR_TOP,
                            THEMA_MAX_QR_BOTTOM=THEMA_MAX_QR_BOTTOM,
-                           THEMA_QR_LABEL_MAX=THEMA_QR_LABEL_MAX)
+                           THEMA_QR_LABEL_MAX=THEMA_QR_LABEL_MAX,
+                           WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
+                           WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
+                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
 
 
 @bp.route('/<int:kaart_id>/koppel-actie', methods=['POST'])

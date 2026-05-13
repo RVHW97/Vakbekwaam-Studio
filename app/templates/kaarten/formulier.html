@@ -426,6 +426,196 @@
         font-size: 0.9rem;
         line-height: 1.4;
     }
+
+    /* === Instructiekaart-werkwijze: platte stappen-lijst === */
+    #werkwijze-teller {
+        font-weight: 700;
+        color: #1B2A4A;
+    }
+    .werkwijze-stap-blok {
+        border: 2px solid var(--kleur-rand);
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.85rem;
+        background: #fbfbfb;
+    }
+    .werkwijze-stap-header {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        margin-bottom: 0.6rem;
+    }
+    .werkwijze-stap-nummer {
+        flex: 1;
+        font-weight: 700;
+        color: #1B2A4A;
+        font-size: 1rem;
+    }
+    .werkwijze-stap-body { display: block; }
+
+    /* Layout-keuze (eerste actie bij nieuwe stap): 4 grote knoppen met SVG-iconen */
+    .werkwijze-layout-keuze-groot {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    .werkwijze-layout-keuze-knop {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.75rem 0.5rem;
+        background: #fff;
+        border: 2px solid #ccc;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: border-color 0.15s, background 0.15s;
+        min-height: 90px;
+    }
+    .werkwijze-layout-keuze-knop:hover {
+        border-color: #1B2A4A;
+        background: #f3f6fb;
+    }
+    .werkwijze-layout-keuze-knop svg {
+        display: block;
+    }
+
+    /* Huidige layout-aanduiding + wijzig-knop */
+    .werkwijze-huidige-layout {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.4rem;
+    }
+    .werkwijze-huidige-layout .form-hint { margin: 0; flex: 1; }
+
+    /* Foto-slots per stap */
+    .werkwijze-foto-rij {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.3rem 0;
+    }
+    .werkwijze-foto-slot {
+        flex: 0 0 auto;
+        width: 180px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 0.4rem;
+        border: 1px solid var(--kleur-rand);
+        border-radius: 4px;
+        background: #fafafa;
+    }
+    .werkwijze-foto-preview {
+        width: 100%;
+        height: 110px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .werkwijze-foto-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .werkwijze-foto-placeholder {
+        color: #999;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+
+    /* === Mini-preview per stap (live PDF-voorbeeld) === */
+    .werkwijze-preview-wrap {
+        margin-top: 0.8rem;
+        padding-top: 0.6rem;
+        border-top: 1px dashed var(--kleur-rand);
+    }
+    .werkwijze-preview {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 0.75rem;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        line-height: 1.35;
+        color: #222;
+        min-height: 120px;
+    }
+    .werkwijze-preview-titel {
+        display: block;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #1B2A4A;
+        margin-bottom: 0.2rem;
+    }
+    .werkwijze-preview-tekst {
+        white-space: pre-wrap;
+        color: #444;
+    }
+    .werkwijze-preview-foto {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .werkwijze-preview-foto img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .werkwijze-preview-foto.leeg {
+        color: #999;
+        font-style: italic;
+        font-size: 0.78rem;
+        min-height: 60px;
+    }
+    .werkwijze-preview-tekst-blok { flex: 1; min-width: 0; }
+    .werkwijze-preview-fotostrip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+    .werkwijze-preview-fotostrip .werkwijze-preview-foto { aspect-ratio: 4/3; }
+
+    /* Layout-specifieke flex/grid */
+    .werkwijze-preview-a {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        align-items: start;
+    }
+    .werkwijze-preview-a .werkwijze-preview-foto { aspect-ratio: 4/3; height: auto; }
+
+    .werkwijze-preview-b {
+        display: grid;
+        grid-template-columns: 1fr 130px;
+        align-items: start;
+    }
+    .werkwijze-preview-b .werkwijze-preview-foto { aspect-ratio: 4/3; height: auto; }
+
+    .werkwijze-preview-c {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .werkwijze-preview-d {
+        display: flex;
+        flex-direction: column;
+    }
+    .werkwijze-preview-d > .werkwijze-preview-foto {
+        width: 100%;
+        height: 160px;
+    }
 </style>
 {% endblock %}
 
@@ -1346,10 +1536,31 @@
             </div>
         </div>
 
-        {# ---------------- TAB 4: WERKWIJZE (placeholder fase 4) ---------------- #}
+        {# ---------------- TAB 4: WERKWIJZE ---------------- #}
         <div class="tab-paneel" data-tab="werkwijze">
             <h2 class="form-section-title">Werkwijze</h2>
-            <p class="form-hint" style="font-style:italic;">Deze sectie krijg je in fase 4. Stappen gegroepeerd in categorieën (bv. Voorbereiding, Uitvoering, Afronding), per stap een keuze uit 4 layouts met foto-preview.</p>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de werkwijze-stappen invullen.</p>
+            {% else %}
+
+            <p class="form-hint">
+                Voeg stappen toe in de volgorde waarop ze op de PDF komen. Per stap kies je
+                eerst een opmaak (foto-positie), daarna vul je titel, uitleg en foto's in.
+                Onderaan elke stap zie je een voorbeeld hoe het op de PDF komt.
+                Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> stappen — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
+            </p>
+
+            <div id="werkwijze-stappen-lijst"></div>
+
+            <button type="button" id="werkwijze-nieuwe-stap-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                + Stap toevoegen
+            </button>
+
+            {{ form.werkwijze_stappen_json(type="hidden", id="werkwijze-stappen-json") }}
+
+            {% endif %}
+
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="veiligheid">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="achtergrond">Volgende →</button>
@@ -2351,6 +2562,434 @@ setupCropper({
         markerZone.style.display = '';
         // Scroll zodat de canvas in beeld komt
         try { markerZone.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    });
+})();
+
+/* === Werkwijze (fase 4 herontwerp): platte stappen-lijst, layout-eerst, mini-preview === */
+(function() {
+    var hiddenJson    = document.getElementById('werkwijze-stappen-json');
+    var lijst         = document.getElementById('werkwijze-stappen-lijst');
+    var nieuweStapBtn = document.getElementById('werkwijze-nieuwe-stap-knop');
+    var teller        = document.getElementById('werkwijze-teller');
+    if (!hiddenJson || !lijst || !nieuweStapBtn) return;
+
+    var MAX_STAPPEN = {{ WERKWIJZE_MAX_STAPPEN|default(20) }};
+    var TITEL_MAX   = {{ WERKWIJZE_TITEL_MAX|default(40) }};
+    var TEKST_MAX   = {{ WERKWIJZE_TEKST_MAX|default(500) }};
+
+    var LAYOUT_LABELS = {
+        'A': 'Foto links',
+        'B': 'Foto rechts',
+        'C': 'Foto-strip onder',
+        'D': 'Grote foto boven'
+    };
+    var LAYOUT_ICONEN = {
+        'A': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="2" width="16" height="26" rx="2" fill="#bbb"/><rect x="22" y="6"  width="16" height="3" fill="#888"/><rect x="22" y="12" width="16" height="3" fill="#bbb"/><rect x="22" y="18" width="16" height="3" fill="#bbb"/></svg>',
+        'B': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2"  y="6"  width="16" height="3" fill="#888"/><rect x="2"  y="12" width="16" height="3" fill="#bbb"/><rect x="2"  y="18" width="16" height="3" fill="#bbb"/><rect x="22" y="2" width="16" height="26" rx="2" fill="#bbb"/></svg>',
+        'C': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="3"  width="36" height="3" fill="#888"/><rect x="2" y="9"  width="36" height="3" fill="#bbb"/><rect x="2"  y="16" width="11" height="11" rx="1" fill="#bbb"/><rect x="14" y="16" width="11" height="11" rx="1" fill="#bbb"/><rect x="27" y="16" width="11" height="11" rx="1" fill="#bbb"/></svg>',
+        'D': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="2" width="36" height="14" rx="2" fill="#bbb"/><rect x="2" y="19" width="36" height="3" fill="#888"/><rect x="2" y="24" width="36" height="3" fill="#bbb"/></svg>'
+    };
+
+    function genId(prefix) {
+        if (window.crypto && window.crypto.randomUUID) return prefix + '-' + window.crypto.randomUUID();
+        return prefix + '-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    var stappen = [];
+    try {
+        var initial = JSON.parse(hiddenJson.value || '[]');
+        if (Array.isArray(initial)) stappen = initial;
+    } catch (_) {}
+    stappen.forEach(function(s) {
+        if (!s.id) s.id = genId('st');
+        if (!Array.isArray(s.fotos)) s.fotos = [];
+    });
+
+    function syncJson() { hiddenJson.value = JSON.stringify(stappen); }
+    function vindIndex(id) {
+        for (var i = 0; i < stappen.length; i++) if (stappen[i].id === id) return i;
+        return -1;
+    }
+    function updateTeller() {
+        if (teller) teller.textContent = stappen.length + ' / ' + MAX_STAPPEN;
+        nieuweStapBtn.disabled = stappen.length >= MAX_STAPPEN;
+    }
+    function updateStapNummers() {
+        var blokken = lijst.querySelectorAll('.werkwijze-stap-blok');
+        blokken.forEach(function(b, i) {
+            var nr = b.querySelector('.werkwijze-stap-nummer');
+            if (nr) nr.textContent = 'Stap ' + (i + 1);
+            var btnUp = b.querySelector('[data-rol="stap-up"]');
+            var btnDn = b.querySelector('[data-rol="stap-down"]');
+            if (btnUp) btnUp.disabled = (i === 0);
+            if (btnDn) btnDn.disabled = (i === blokken.length - 1);
+        });
+    }
+
+    function mkKnop(tekst, titel, klasse, dis, onClick) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = klasse;
+        b.textContent = tekst;
+        if (titel) b.title = titel;
+        if (dis) b.disabled = true;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    function maakStapDOM(s) {
+        var blok = document.createElement('div');
+        blok.className = 'werkwijze-stap-blok';
+        blok.dataset.stapId = s.id;
+
+        // Header
+        var hdr = document.createElement('div');
+        hdr.className = 'werkwijze-stap-header';
+        var nrSpan = document.createElement('span');
+        nrSpan.className = 'werkwijze-stap-nummer';
+        hdr.appendChild(nrSpan);
+
+        var up = mkKnop('↑', 'Stap omhoog', 'btn btn-secondary btn-sm', false, function() {
+            var idx = vindIndex(s.id);
+            if (idx <= 0) return;
+            var t = stappen[idx]; stappen[idx] = stappen[idx-1]; stappen[idx-1] = t;
+            if (blok.previousElementSibling) lijst.insertBefore(blok, blok.previousElementSibling);
+            syncJson(); updateStapNummers();
+        });
+        up.dataset.rol = 'stap-up';
+        hdr.appendChild(up);
+
+        var dn = mkKnop('↓', 'Stap omlaag', 'btn btn-secondary btn-sm', false, function() {
+            var idx = vindIndex(s.id);
+            if (idx < 0 || idx >= stappen.length - 1) return;
+            var t = stappen[idx]; stappen[idx] = stappen[idx+1]; stappen[idx+1] = t;
+            if (blok.nextElementSibling) lijst.insertBefore(blok.nextElementSibling, blok);
+            syncJson(); updateStapNummers();
+        });
+        dn.dataset.rol = 'stap-down';
+        hdr.appendChild(dn);
+
+        var del = mkKnop('×', 'Stap verwijderen', 'btn-verwijder', false, function() {
+            var stapNr = Array.prototype.indexOf.call(lijst.children, blok) + 1;
+            var bericht = 'Stap ' + stapNr + ' verwijderen?';
+            if (s.titel) bericht += '\n\n' + s.titel;
+            else if (s.tekst) bericht += '\n\n' + s.tekst.slice(0, 60);
+            if (!confirm(bericht)) return;
+            var idx = vindIndex(s.id);
+            if (idx >= 0) stappen.splice(idx, 1);
+            blok.remove();
+            syncJson(); updateTeller(); updateStapNummers();
+        });
+        hdr.appendChild(del);
+        blok.appendChild(hdr);
+
+        // Body
+        var body = document.createElement('div');
+        body.className = 'werkwijze-stap-body';
+        blok.appendChild(body);
+        renderStapBody(s, body);
+
+        return blok;
+    }
+
+    function renderStapBody(s, body) {
+        body.innerHTML = '';
+
+        if (!s.layout) {
+            // Fase 1: layout-keuze
+            var hint = document.createElement('p');
+            hint.className = 'form-hint';
+            hint.innerHTML = '<strong>Kies eerst de opmaak van deze stap:</strong>';
+            body.appendChild(hint);
+
+            var keuze = document.createElement('div');
+            keuze.className = 'werkwijze-layout-keuze-groot';
+            ['A','B','C','D'].forEach(function(L) {
+                var knop = document.createElement('button');
+                knop.type = 'button';
+                knop.className = 'werkwijze-layout-keuze-knop';
+                knop.innerHTML = LAYOUT_ICONEN[L] + '<span>' + LAYOUT_LABELS[L] + '</span>';
+                knop.addEventListener('click', function() {
+                    s.layout = L;
+                    syncJson();
+                    renderStapBody(s, body);
+                });
+                keuze.appendChild(knop);
+            });
+            body.appendChild(keuze);
+            return;
+        }
+
+        // Fase 2: invul-velden + preview
+        var layoutRij = document.createElement('div');
+        layoutRij.className = 'werkwijze-huidige-layout';
+        var hl = document.createElement('span');
+        hl.className = 'form-hint';
+        hl.innerHTML = 'Opmaak: <strong>' + LAYOUT_LABELS[s.layout] + '</strong>';
+        layoutRij.appendChild(hl);
+        layoutRij.appendChild(mkKnop('Andere opmaak…', '', 'btn btn-secondary btn-sm', false, function() {
+            if (!confirm('Andere opmaak kiezen? De ingevulde titel, tekst en foto\'s blijven behouden.')) return;
+            s.layout = '';
+            syncJson();
+            renderStapBody(s, body);
+        }));
+        body.appendChild(layoutRij);
+
+        // Titel
+        var titelGroup = document.createElement('div');
+        titelGroup.className = 'form-group';
+        var titelLabel = document.createElement('label');
+        titelLabel.className = 'form-label';
+        titelLabel.textContent = 'Titel van de stap';
+        titelGroup.appendChild(titelLabel);
+        var titelInput = document.createElement('input');
+        titelInput.type = 'text';
+        titelInput.className = 'form-input';
+        titelInput.value = s.titel || '';
+        titelInput.maxLength = TITEL_MAX;
+        titelInput.placeholder = 'Bv. Slang aansluiten';
+        titelInput.addEventListener('input', function() {
+            s.titel = this.value;
+            syncJson();
+            var pT = body.querySelector('.werkwijze-preview-titel');
+            if (pT) pT.textContent = this.value || '(titel)';
+        });
+        titelGroup.appendChild(titelInput);
+        body.appendChild(titelGroup);
+
+        // Uitleg-tekst
+        var tekstGroup = document.createElement('div');
+        tekstGroup.className = 'form-group';
+        var tekstLabel = document.createElement('label');
+        tekstLabel.className = 'form-label';
+        tekstLabel.textContent = 'Uitleg';
+        tekstGroup.appendChild(tekstLabel);
+        var tekstArea = document.createElement('textarea');
+        tekstArea.className = 'form-input form-textarea';
+        tekstArea.rows = 3;
+        tekstArea.maxLength = TEKST_MAX;
+        tekstArea.placeholder = 'Wat moet er bij deze stap gebeuren?';
+        tekstArea.value = s.tekst || '';
+        tekstArea.addEventListener('input', function() {
+            s.tekst = this.value;
+            syncJson();
+            var pT = body.querySelector('.werkwijze-preview-tekst');
+            if (pT) pT.textContent = this.value || '(uitleg)';
+        });
+        tekstGroup.appendChild(tekstArea);
+        body.appendChild(tekstGroup);
+
+        // Foto's
+        var maxFotos = (s.layout === 'C') ? 3 : 1;
+        var fotoLabel = document.createElement('label');
+        fotoLabel.className = 'form-label';
+        fotoLabel.textContent = (s.layout === 'C') ? 'Foto\'s (2 of 3)' : 'Foto';
+        body.appendChild(fotoLabel);
+
+        var fotoRij = document.createElement('div');
+        fotoRij.className = 'werkwijze-foto-rij';
+        body.appendChild(fotoRij);
+        if (!Array.isArray(s.fotos)) s.fotos = [];
+        s.fotos.forEach(function(f) {
+            if (!f.slot) f.slot = genId('wfslot');
+            fotoRij.appendChild(maakFotoSlotDOM(s, f, fotoRij, body));
+        });
+
+        var addBtn = mkKnop(s.fotos.length === 0 ? '+ Foto kiezen' : '+ Foto toevoegen',
+            '', 'btn btn-secondary btn-sm', s.fotos.length >= maxFotos, function() {
+                if (s.fotos.length >= maxFotos) return;
+                var f = { slot: genId('wfslot'), bestand: '' };
+                s.fotos.push(f);
+                syncJson();
+                fotoRij.appendChild(maakFotoSlotDOM(s, f, fotoRij, body));
+                refreshAddFotoBtn(s, body);
+                updatePreview(s, body);
+            });
+        addBtn.dataset.rol = 'add-foto';
+        body.appendChild(addBtn);
+
+        // Preview-blok
+        body.appendChild(maakPreviewDOM(s));
+    }
+
+    function refreshAddFotoBtn(s, body) {
+        var btn = body.querySelector('[data-rol="add-foto"]');
+        if (!btn) return;
+        var maxFotos = (s.layout === 'C') ? 3 : 1;
+        btn.disabled = (s.fotos.length >= maxFotos);
+        btn.textContent = s.fotos.length === 0 ? '+ Foto kiezen' : '+ Foto toevoegen';
+    }
+
+    function maakFotoSlotDOM(s, f, fotoRij, body) {
+        var slot = document.createElement('div');
+        slot.className = 'werkwijze-foto-slot';
+
+        var preview = document.createElement('div');
+        preview.className = 'werkwijze-foto-preview';
+        if (f.bestand) {
+            var img = document.createElement('img');
+            img.src = '/static/uploads/' + f.bestand;
+            img.alt = 'Foto';
+            preview.appendChild(img);
+        } else {
+            var ph = document.createElement('span');
+            ph.className = 'werkwijze-foto-placeholder';
+            ph.textContent = 'Nog geen foto';
+            preview.appendChild(ph);
+        }
+        slot.appendChild(preview);
+
+        var inp = document.createElement('input');
+        inp.type = 'file';
+        inp.name = 'werkwijze_foto_' + f.slot;
+        inp.accept = 'image/jpeg,image/png,image/webp';
+        inp.className = 'form-file';
+        inp.style.fontSize = '0.85rem';
+        inp.addEventListener('change', function() {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            var ext = (file.name.split('.').pop() || '').toLowerCase();
+            if (['jpg','jpeg','png','webp'].indexOf(ext) === -1) {
+                alert('Alleen JPG, PNG of WebP.');
+                this.value = '';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Bestand te groot (max 5 MB).');
+                this.value = '';
+                return;
+            }
+            preview.innerHTML = '';
+            var img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.dataset.preview = 'nieuw';
+            preview.appendChild(img);
+            updatePreview(s, body);
+        });
+        slot.appendChild(inp);
+
+        slot.appendChild(mkKnop('× Verwijderen', 'Foto verwijderen', 'btn btn-secondary btn-sm', false, function() {
+            if (!confirm('Foto verwijderen?')) return;
+            var idx = s.fotos.indexOf(f);
+            if (idx >= 0) s.fotos.splice(idx, 1);
+            syncJson();
+            slot.remove();
+            refreshAddFotoBtn(s, body);
+            updatePreview(s, body);
+        }));
+
+        return slot;
+    }
+
+    // ====== Mini-preview ======
+    function maakPreviewDOM(s) {
+        var wrap = document.createElement('div');
+        wrap.className = 'werkwijze-preview-wrap';
+        var hint = document.createElement('p');
+        hint.className = 'form-hint';
+        hint.style.margin = '0 0 0.3rem 0';
+        hint.innerHTML = '<strong>Voorbeeld op de PDF:</strong>';
+        wrap.appendChild(hint);
+
+        var prev = document.createElement('div');
+        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'a').toLowerCase();
+        wrap.appendChild(prev);
+        renderPreviewInhoud(s, prev);
+        return wrap;
+    }
+
+    function updatePreview(s, body) {
+        var prev = body.querySelector('.werkwijze-preview');
+        if (!prev) return;
+        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'a').toLowerCase();
+        renderPreviewInhoud(s, prev);
+    }
+
+    function fotoBronnen(s) {
+        return (s.fotos || []).map(function(f) {
+            if (f.bestand) return '/static/uploads/' + f.bestand;
+            var inp = document.querySelector('input[name="werkwijze_foto_' + f.slot + '"]');
+            if (inp && inp.files && inp.files[0]) {
+                return URL.createObjectURL(inp.files[0]);
+            }
+            return null;
+        });
+    }
+
+    function maakPreviewFoto(src) {
+        var f = document.createElement('div');
+        f.className = 'werkwijze-preview-foto';
+        if (src) {
+            var img = document.createElement('img');
+            img.src = src;
+            f.appendChild(img);
+        } else {
+            f.classList.add('leeg');
+            f.textContent = '(foto)';
+        }
+        return f;
+    }
+    function maakPreviewTekst(s) {
+        var t = document.createElement('div');
+        t.className = 'werkwijze-preview-tekst-blok';
+        var tt = document.createElement('strong');
+        tt.className = 'werkwijze-preview-titel';
+        tt.textContent = s.titel || '(titel)';
+        t.appendChild(tt);
+        var bt = document.createElement('div');
+        bt.className = 'werkwijze-preview-tekst';
+        bt.textContent = s.tekst || '(uitleg)';
+        t.appendChild(bt);
+        return t;
+    }
+
+    function renderPreviewInhoud(s, prev) {
+        prev.innerHTML = '';
+        var bronnen = fotoBronnen(s);
+        if (s.layout === 'A') {
+            prev.appendChild(maakPreviewFoto(bronnen[0]));
+            prev.appendChild(maakPreviewTekst(s));
+        } else if (s.layout === 'B') {
+            prev.appendChild(maakPreviewTekst(s));
+            prev.appendChild(maakPreviewFoto(bronnen[0]));
+        } else if (s.layout === 'C') {
+            prev.appendChild(maakPreviewTekst(s));
+            var strip = document.createElement('div');
+            strip.className = 'werkwijze-preview-fotostrip';
+            var aantal = Math.max(bronnen.length, 2);
+            for (var i = 0; i < aantal; i++) {
+                strip.appendChild(maakPreviewFoto(bronnen[i] || null));
+            }
+            prev.appendChild(strip);
+        } else if (s.layout === 'D') {
+            prev.appendChild(maakPreviewFoto(bronnen[0]));
+            prev.appendChild(maakPreviewTekst(s));
+        }
+    }
+
+    // ====== Init ======
+    stappen.forEach(function(s) {
+        lijst.appendChild(maakStapDOM(s));
+    });
+    updateTeller();
+    updateStapNummers();
+
+    nieuweStapBtn.addEventListener('click', function() {
+        if (stappen.length >= MAX_STAPPEN) {
+            alert('Maximum ' + MAX_STAPPEN + ' stappen bereikt.');
+            return;
+        }
+        var s = { id: genId('st'), layout: '', titel: '', tekst: '', fotos: [] };
+        stappen.push(s);
+        syncJson();
+        lijst.appendChild(maakStapDOM(s));
+        updateTeller();
+        updateStapNummers();
+        // Scroll naar de nieuwe stap
+        var blokken = lijst.querySelectorAll('.werkwijze-stap-blok');
+        if (blokken.length) {
+            try { blokken[blokken.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+        }
     });
 })();
 
