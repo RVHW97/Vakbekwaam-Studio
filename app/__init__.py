@@ -6,7 +6,7 @@ from config import Config
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.1.14'
+__version__ = '0.1.15'
 __version_date__ = '13 mei 2026'
 
 db = SQLAlchemy()

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>{{ kaart.nummer }} — {{ kaart.naam }}</title>
+<style>
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.regular }}") format("truetype"); font-weight: 400; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.italic }}") format("truetype"); font-weight: 400; font-style: italic; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.bold }}") format("truetype"); font-weight: 700; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.black }}") format("truetype"); font-weight: 900; }
+
+    @page {
+        size: A4 portrait;
+        margin: 8mm 14mm 16mm 14mm;
+        @bottom-left {
+            content: "{{ kaart.nummer }} · {{ kaart.naam }}";
+            font-family: "Frutiger", sans-serif;
+            font-size: 8pt;
+            color: #888;
+            padding-bottom: 4mm;
+        }
+        @bottom-right {
+            content: "p. " counter(page) " / " counter(pages) "  ·  {{ versie_tekst }} · {{ versie_datum_tekst }}";
+            font-family: "Frutiger", sans-serif;
+            font-size: 8pt;
+            color: #888;
+            padding-bottom: 4mm;
+        }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        color: #222;
+        font-size: 10pt;
+        line-height: 1.35;
+    }
+
+    /* === Kop op pagina 1 === */
+    .ik-header {
+        background: {{ kerntaak_kleur }};
+        color: #FFF;
+        padding: 7mm 8mm 6mm 8mm;
+        margin: 0 -14mm 0 -14mm;
+        position: relative;
+    }
+    .ik-header-rij {
+        display: flex;
+        gap: 6mm;
+        align-items: flex-end;
+    }
+    .ik-titel {
+        font-weight: 900;
+        font-size: 22pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        line-height: 1.05;
+        flex: 1;
+    }
+    .ik-kerntaak-badge {
+        flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1.5px solid rgba(255, 255, 255, 0.85);
+        border-radius: 4px;
+        padding: 2mm 3mm;
+        font-weight: 700;
+        font-size: 9pt;
+        letter-spacing: 1px;
+    }
+    .ik-subkop {
+        margin-top: 1.5mm;
+        font-size: 9pt;
+        font-weight: 400;
+        opacity: 0.95;
+    }
+    .ik-header-foto-strip {
+        width: calc(100% + 28mm);
+        margin: 0 -14mm 4mm -14mm;
+        height: 36mm;
+        overflow: hidden;
+    }
+    .ik-header-foto-strip img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* === Sectie === */
+    .ik-sectie {
+        margin-top: 4mm;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .ik-sectie-titel {
+        background: #1B2A4A;
+        color: #fff;
+        font-weight: 700;
+        font-size: 11pt;
+        padding: 1.5mm 4mm;
+        border-radius: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2mm;
+    }
+    .ik-sectie-titel.kerntaak {
+        background: {{ kerntaak_kleur }};
+    }
+
+    /* === Productinformatie === */
+    .ik-omschrijving {
+        white-space: pre-wrap;
+        padding: 1mm 0 2mm 0;
+    }
+    .ik-productfoto-blok {
+        margin-top: 3mm;
+        display: flex;
+        gap: 5mm;
+        align-items: flex-start;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .ik-productfoto-wrap {
+        flex: 1;
+        position: relative;
+    }
+    .ik-productfoto-wrap img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border: 1px solid #ddd;
+    }
+    .ik-marker {
+        position: absolute;
+        width: 7mm;
+        height: 7mm;
+        margin-left: -3.5mm;
+        margin-top: -3.5mm;
+        border-radius: 50%;
+        background: #C8102E;
+        color: #fff;
+        border: 1.5px solid #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 8.5pt;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .ik-legenda {
+        flex: 0 0 60mm;
+        font-size: 9pt;
+    }
+    .ik-legenda-rij {
+        display: flex;
+        gap: 2mm;
+        align-items: flex-start;
+        padding: 1mm 0;
+        border-bottom: 0.5px solid #eee;
+    }
+    .ik-legenda-nr {
+        flex: 0 0 auto;
+        width: 5mm;
+        height: 5mm;
+        border-radius: 50%;
+        background: #C8102E;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 7.5pt;
+    }
+    .ik-legenda-tekst { flex: 1; }
+
+    /* Productfoto met legenda onder (bij liggende foto) */
+    .ik-productfoto-blok.legenda-onder {
+        flex-direction: column;
+    }
+    .ik-productfoto-blok.legenda-onder .ik-legenda {
+        flex: 1;
+        width: 100%;
+    }
+
+    /* === Veiligheid === */
+    .ik-pbm-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2mm;
+        margin-bottom: 3mm;
+    }
+    .ik-pbm-item {
+        background: #f4f4f4;
+        border-left: 3px solid {{ kerntaak_kleur }};
+        padding: 1.5mm 3mm;
+        font-size: 9pt;
+        font-weight: 700;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .ik-pbm-overige {
+        font-size: 9pt;
+        padding: 1mm 0;
+    }
+    .ik-pbm-overige-label {
+        font-weight: 700;
+        color: #1B2A4A;
+        margin-right: 1mm;
+    }
+    .ik-lmra {
+        margin-top: 3mm;
+        display: flex;
+        gap: 4mm;
+        align-items: center;
+        padding: 2mm 3mm;
+        background: #f8f8f8;
+        border: 1px dashed #aaa;
+        border-radius: 3px;
+    }
+    .ik-lmra-qr-frame {
+        flex: 0 0 22mm;
+        width: 22mm;
+        height: 22mm;
+        border: 1.5px solid #1B2A4A;
+        background: repeating-linear-gradient(45deg, #fff, #fff 1.5mm, #f0f0f0 1.5mm, #f0f0f0 3mm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7pt;
+        color: #888;
+        text-align: center;
+        font-style: italic;
+    }
+    .ik-lmra-info { flex: 1; font-size: 9pt; }
+    .ik-lmra-info strong { display: block; color: #1B2A4A; font-size: 10pt; margin-bottom: 1mm; }
+
+    /* === Werkwijze === */
+    .ik-stap {
+        margin-top: 3mm;
+        padding: 2mm 3mm;
+        background: #fafafa;
+        border-left: 4px solid {{ kerntaak_kleur }};
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .ik-stap-kop {
+        display: flex;
+        gap: 2mm;
+        align-items: baseline;
+        margin-bottom: 1mm;
+    }
+    .ik-stap-nr {
+        background: {{ kerntaak_kleur }};
+        color: #fff;
+        font-weight: 900;
+        font-size: 9pt;
+        padding: 0.5mm 2.5mm;
+        border-radius: 2px;
+        flex: 0 0 auto;
+    }
+    .ik-stap-titel {
+        font-weight: 700;
+        font-size: 11pt;
+        color: #1B2A4A;
+        flex: 1;
+    }
+    .ik-stap-tekst {
+        white-space: pre-wrap;
+        font-size: 9.5pt;
+        margin-top: 1mm;
+    }
+    .ik-stap-foto {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .ik-stap-foto.leeg {
+        font-style: italic;
+        color: #aaa;
+        font-size: 8pt;
+    }
+    .ik-stap-foto img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Layout A: foto links, tekst rechts */
+    .ik-stap-layout-A {
+        display: grid;
+        grid-template-columns: 55mm 1fr;
+        gap: 4mm;
+        margin-top: 2mm;
+    }
+    .ik-stap-layout-A .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
+
+    /* Layout B: tekst links, foto rechts */
+    .ik-stap-layout-B {
+        display: grid;
+        grid-template-columns: 1fr 55mm;
+        gap: 4mm;
+        margin-top: 2mm;
+    }
+    .ik-stap-layout-B .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
+
+    /* Layout C: tekst boven, foto-strip onder */
+    .ik-stap-layout-C { margin-top: 2mm; }
+    .ik-stap-layout-C .ik-stap-fotostrip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3mm;
+        margin-top: 2mm;
+    }
+    .ik-stap-layout-C .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
+
+    /* Layout D: grote foto boven, tekst onder */
+    .ik-stap-layout-D { margin-top: 2mm; }
+    .ik-stap-layout-D .ik-stap-foto {
+        width: 100%;
+        height: 60mm;
+    }
+    .ik-stap-layout-D .ik-stap-tekst { margin-top: 2mm; }
+
+    /* === Achtergrondinformatie === */
+    .ik-gekoppeld-lijst {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2mm 4mm;
+        font-size: 9pt;
+    }
+    .ik-gekoppeld-rij {
+        padding: 1mm 0;
+        border-bottom: 0.5px solid #eee;
+    }
+    .ik-gekoppeld-nummer { font-weight: 700; color: #1B2A4A; }
+
+    .ik-qr-rij {
+        display: flex;
+        gap: 4mm;
+        flex-wrap: wrap;
+        margin-top: 2mm;
+    }
+    .ik-qr-blok {
+        flex: 0 0 auto;
+        width: 32mm;
+        text-align: center;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .ik-qr-blok img {
+        width: 28mm;
+        height: 28mm;
+        background: #fff;
+        border: 1px solid #ddd;
+        padding: 1mm;
+    }
+    .ik-qr-label {
+        font-size: 8pt;
+        margin-top: 1mm;
+        color: #1B2A4A;
+        font-weight: 700;
+        word-break: break-word;
+    }
+    .ik-qr-cat {
+        font-size: 7pt;
+        color: #888;
+    }
+</style>
+</head>
+<body>
+
+<header class="ik-header">
+    <div class="ik-header-rij">
+        <div class="ik-titel">{{ kaart.naam }}</div>
+        {% if kerntaak_afk %}
+        <div class="ik-kerntaak-badge">{{ kerntaak_afk }}</div>
+        {% endif %}
+    </div>
+    {% if inhoud.instructie_type %}
+    <div class="ik-subkop">
+        {% if inhoud.instructie_type == 'materiaal' %}Materiaalkaart{% else %}Procedurekaart{% endif %}
+        · {{ kaart.nummer }}
+    </div>
+    {% else %}
+    <div class="ik-subkop">Instructiekaart · {{ kaart.nummer }}</div>
+    {% endif %}
+</header>
+
+{% if header_foto_pad %}
+<div class="ik-header-foto-strip">
+    <img src="{{ header_foto_pad }}" alt="">
+</div>
+{% endif %}
+
+{# ==================== PRODUCTINFORMATIE / OMSCHRIJVING ==================== #}
+{% set is_materiaal = (inhoud.instructie_type == 'materiaal') %}
+{% if inhoud.omschrijving or (is_materiaal and productfoto_pad) %}
+<section class="ik-sectie">
+    <div class="ik-sectie-titel kerntaak">{% if is_materiaal %}Productinformatie{% else %}Omschrijving{% endif %}</div>
+    {% if inhoud.omschrijving %}
+    <div class="ik-omschrijving">{{ inhoud.omschrijving }}</div>
+    {% endif %}
+
+    {% if is_materiaal and productfoto_pad %}
+    {# Markers + legenda — milestone 6a toont alleen de foto + (cijfer-)legenda als JSON beschikbaar #}
+    <div class="ik-productfoto-blok">
+        <div class="ik-productfoto-wrap">
+            <img src="{{ productfoto_pad }}" alt="Productfoto">
+            {% for m in productfoto_markers %}
+            <div class="ik-marker"
+                 style="left: {{ (m.x * 100)|round(2) }}%; top: {{ (m.y * 100)|round(2) }}%;">{{ loop.index }}</div>
+            {% endfor %}
+        </div>
+        {% if productfoto_markers %}
+        <div class="ik-legenda">
+            {% for m in productfoto_markers %}
+            <div class="ik-legenda-rij">
+                <div class="ik-legenda-nr">{{ loop.index }}</div>
+                <div class="ik-legenda-tekst">{{ m.label or '' }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+{# ==================== VEILIGHEID ==================== #}
+{% if pbm_lijst or inhoud.pbm_overige or lmra_url %}
+<section class="ik-sectie">
+    <div class="ik-sectie-titel">Veiligheid</div>
+
+    {% if pbm_lijst %}
+    <div class="ik-pbm-grid">
+        {% for p in pbm_lijst %}
+        <div class="ik-pbm-item">{{ p.naam }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if inhoud.pbm_overige %}
+    <div class="ik-pbm-overige">
+        <span class="ik-pbm-overige-label">Overige PBM:</span>{{ inhoud.pbm_overige }}
+    </div>
+    {% endif %}
+
+    <div class="ik-lmra">
+        <div class="ik-lmra-qr-frame">
+            {% if lmra_url %}<span>QR<br>volgt</span>{% else %}<span>nog<br>leeg</span>{% endif %}
+        </div>
+        <div class="ik-lmra-info">
+            <strong>LMRA</strong>
+            Scan vóór inzet het LMRA-formulier (Last Minute Risk Analysis).
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== WERKWIJZE ==================== #}
+{% if werkwijze_stappen %}
+<section class="ik-sectie">
+    <div class="ik-sectie-titel">Werkwijze</div>
+    {% for stap in werkwijze_stappen %}
+    {% set layout = stap.layout or 'A' %}
+    {% set fotos = stap.fotos or [] %}
+    <div class="ik-stap">
+        <div class="ik-stap-kop">
+            <div class="ik-stap-nr">{{ loop.index }}</div>
+            <div class="ik-stap-titel">{{ stap.titel or '' }}</div>
+        </div>
+
+        {% if layout == 'A' %}
+        <div class="ik-stap-layout-A">
+            <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
+                {% if fotos and fotos[0].pad %}<img src="{{ fotos[0].pad }}" alt="">{% else %}(geen foto){% endif %}
+            </div>
+            <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
+        </div>
+        {% elif layout == 'B' %}
+        <div class="ik-stap-layout-B">
+            <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
+            <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
+                {% if fotos and fotos[0].pad %}<img src="{{ fotos[0].pad }}" alt="">{% else %}(geen foto){% endif %}
+            </div>
+        </div>
+        {% elif layout == 'C' %}
+        <div class="ik-stap-layout-C">
+            <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
+            <div class="ik-stap-fotostrip">
+                {% for f in fotos[:3] %}
+                <div class="ik-stap-foto {% if not f.pad %}leeg{% endif %}">
+                    {% if f.pad %}<img src="{{ f.pad }}" alt="">{% else %}(geen foto){% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% elif layout == 'D' %}
+        <div class="ik-stap-layout-D">
+            <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
+                {% if fotos and fotos[0].pad %}<img src="{{ fotos[0].pad }}" alt="">{% else %}(geen foto){% endif %}
+            </div>
+            <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+
+{# ==================== ACHTERGRONDINFORMATIE ==================== #}
+{% if gekoppelde or instructie_qrs %}
+<section class="ik-sectie">
+    <div class="ik-sectie-titel">Achtergrondinformatie</div>
+
+    {% if gekoppelde %}
+    <p style="font-size: 9pt; color: #888; margin-bottom: 1mm; font-weight: 700;">Gekoppelde kaarten</p>
+    <div class="ik-gekoppeld-lijst">
+        {% for k in gekoppelde %}
+        <div class="ik-gekoppeld-rij">
+            <span class="ik-gekoppeld-nummer">{{ k.nummer }}</span> — {{ k.naam }}
+            <span style="color:#888; font-size:8pt;">({{ k.type_naam }})</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if instructie_qrs %}
+    <p style="font-size: 9pt; color: #888; margin: 3mm 0 1mm 0; font-weight: 700;">QR-codes</p>
+    <div class="ik-qr-rij">
+        {% for q in instructie_qrs %}
+        <div class="ik-qr-blok">
+            <img src="{{ q.data_uri }}" alt="QR">
+            <div class="ik-qr-label">{{ q.naam }}</div>
+            <div class="ik-qr-cat">{{ q.categorie }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+</body>
+</html>

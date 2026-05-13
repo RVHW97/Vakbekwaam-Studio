@@ -1,9 +1,10 @@
 import base64
+import json
 import os
 from flask import current_app, render_template
 from weasyprint import HTML
 from app.models import KAART_TYPES, KERNTAKEN, kenmerken_kerntaak_label
-from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN
+from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, PBM_KEUZES
 
 
 def _qr_data_uri(qr, met_tekst=False):
@@ -136,6 +137,83 @@ def genereer_pdf(kaart):
                                       header_foto_pad=header_foto_pad,
                                       logo_wit_pad=logo_wit_pad,
                                       kerntaak_kleur=kerntaak_kleur,
+                                      versie_tekst=versie_tekst,
+                                      versie_datum_tekst=versie_datum_tekst,
+                                      font_paden=font_paden)
+        return HTML(string=html_string).write_pdf()
+
+    # === INSTRUCTIEKAART: A4-staand multi-page layout ===
+    if kaart.type == 'instructie':
+        # Parse JSON-velden (zijn opgeslagen als JSON-strings binnen inhoud-dict)
+        try:
+            werkwijze_stappen = json.loads(inhoud.get('werkwijze_stappen_json') or '[]')
+            if not isinstance(werkwijze_stappen, list):
+                werkwijze_stappen = []
+        except (ValueError, TypeError):
+            werkwijze_stappen = []
+        try:
+            productfoto_markers = json.loads(inhoud.get('productfoto_markers_json') or '[]')
+            if not isinstance(productfoto_markers, list):
+                productfoto_markers = []
+        except (ValueError, TypeError):
+            productfoto_markers = []
+
+        # Productfoto pad
+        productfoto_pad = None
+        if kaart.productfoto:
+            pad = os.path.join(upload_folder, kaart.productfoto)
+            if os.path.exists(pad):
+                productfoto_pad = 'file://' + pad
+
+        # Foto-paden in werkwijze-stappen vervangen door file://
+        for stap in werkwijze_stappen:
+            if not isinstance(stap, dict):
+                continue
+            fotos = stap.get('fotos') or []
+            for foto in fotos:
+                if not isinstance(foto, dict):
+                    continue
+                bestand = (foto.get('bestand') or '').strip()
+                if bestand:
+                    pad = os.path.join(upload_folder, bestand)
+                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+                else:
+                    foto['pad'] = None
+
+        # PBM-labels uit de keuzes-constante
+        pbm_dict = dict(PBM_KEUZES)
+        pbm_gekozen = inhoud.get('pbm_items') or []
+        pbm_lijst = [{'key': k, 'naam': pbm_dict.get(k, k)} for k in pbm_gekozen if k in pbm_dict]
+
+        # LMRA-URL (centrale config) en optioneel QR daarvoor (later in 6b)
+        lmra_url = current_app.config.get('LMRA_QR_URL') or ''
+
+        # Gekoppelde QR-codes uit de bank
+        instructie_qrs = []
+        for link in kaart.get_instructie_qr_links():
+            if link.qr_code is None:
+                continue
+            instructie_qrs.append({
+                'data_uri': _qr_data_uri(link.qr_code),
+                'naam': link.qr_code.naam,
+                'categorie': link.qr_code.categorie_naam,
+            })
+
+        html_string = render_template('kaarten/pdf_instructie.html',
+                                      kaart=kaart,
+                                      inhoud=inhoud,
+                                      werkwijze_stappen=werkwijze_stappen,
+                                      productfoto_markers=productfoto_markers,
+                                      productfoto_pad=productfoto_pad,
+                                      pbm_lijst=pbm_lijst,
+                                      lmra_url=lmra_url,
+                                      instructie_qrs=instructie_qrs,
+                                      gekoppelde=gekoppelde,
+                                      header_foto_pad=header_foto_pad,
+                                      logo_pad=logo_pad,
+                                      logo_wit_pad=logo_wit_pad,
+                                      kerntaak_kleur=kerntaak_kleur,
+                                      kerntaak_afk=kerntaak_afk,
                                       versie_tekst=versie_tekst,
                                       versie_datum_tekst=versie_datum_tekst,
                                       font_paden=font_paden)
