@@ -112,8 +112,15 @@ INSTRUCTIE_TYPE_KEUZES = [
 
 # Werkwijze: maximaal aantal stappen op één instructiekaart (platte lijst).
 WERKWIJZE_MAX_STAPPEN = 20
-WERKWIJZE_TITEL_MAX = 40
-WERKWIJZE_TEKST_MAX = 500
+WERKWIJZE_TITEL_MAX = 35
+# Per-layout max tekens voor de stap-uitleg. Vaste kaart-hoogte in de PDF
+# vereist een voorspelbare hoeveelheid tekst — A/B hebben halve breedte
+# (foto + tekst naast elkaar), C de volle breedte, D ook volledig (onder de foto).
+WERKWIJZE_TEKST_MAX = {
+    'B': 420,
+    'C': 560,
+    'D': 480,
+}
 
 # Standaard PBM-items (Persoonlijke Beschermingsmiddelen) voor de instructiekaart.
 PBM_KEUZES = [

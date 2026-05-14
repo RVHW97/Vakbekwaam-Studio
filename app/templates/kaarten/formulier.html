@@ -537,84 +537,190 @@
         padding-top: 0.6rem;
         border-top: 1px dashed var(--kleur-rand);
     }
-    .werkwijze-preview {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 0.75rem;
-        gap: 0.75rem;
-        font-size: 0.85rem;
-        line-height: 1.35;
-        color: #222;
-        min-height: 120px;
-    }
-    .werkwijze-preview-titel {
-        display: block;
-        font-weight: 700;
-        font-size: 0.95rem;
-        color: #1B2A4A;
-        margin-bottom: 0.2rem;
-    }
-    .werkwijze-preview-tekst {
-        white-space: pre-wrap;
-        color: #444;
-    }
-    .werkwijze-preview-foto {
-        background: #f0f0f0;
-        border: 1px solid #ddd;
-        border-radius: 3px;
+    /* === Werkwijze-foto cropper modal (fase 6e) === */
+    .werkwijze-cropper-modal {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 9999;
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    .werkwijze-cropper-modal-content {
+        background: #fff;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        max-width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        width: 720px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .werkwijze-cropper-canvas-wrap {
+        max-height: 60vh;
         overflow: hidden;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
+    .werkwijze-cropper-canvas-wrap img {
+        display: block;
+        max-width: 100%;
+    }
+    .werkwijze-foto-bijsnijden-knop {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 0.8rem;
+        color: #1B2A4A;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+
+    /* === Werkwijze accordion (fase 6d): één stap tegelijk open === */
+    .werkwijze-stap-header { cursor: pointer; user-select: none; }
+    .werkwijze-stap-toggle {
+        width: 1.4rem;
+        height: 1.4rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        flex: 0 0 auto;
+        font-size: 0.75rem;
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
+    .werkwijze-stap-blok.is-ingeklapt .werkwijze-stap-toggle::before { content: '▶'; }
+    .werkwijze-stap-blok:not(.is-ingeklapt) .werkwijze-stap-toggle::before { content: '▼'; }
+    .werkwijze-stap-blok.is-ingeklapt .werkwijze-stap-body { display: none; }
+    .werkwijze-stap-samenvatting {
+        display: none;
+        flex: 1;
+        min-width: 0;
+        color: #444;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 0.5rem;
+    }
+    .werkwijze-stap-blok.is-ingeklapt .werkwijze-stap-samenvatting { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .werkwijze-stap-blok.is-ingeklapt .werkwijze-stap-nummer { flex: 0 0 auto; }
+    .werkwijze-stap-samenvatting-titel {
+        font-weight: 600;
+        color: #1B2A4A;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .werkwijze-stap-samenvatting-meta {
+        flex: 0 0 auto;
+        color: #888;
+        font-size: 0.8rem;
+    }
+    .werkwijze-stap-samenvatting-meta svg { vertical-align: middle; margin-right: 0.15rem; }
+
+    /* === PDF-look preview (fase 6d): mini-versie van wat in de PDF komt === */
+    .werkwijze-preview-wrap {
+        margin-top: 0.5rem;
+    }
+    .werkwijze-preview {
+        --kerntaak: var(--preview-kerntaak, #4C7F52);
+        background: #FAFAF8;
+        padding: 0 5mm 4mm 5mm;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1A1A1A;
+        display: block;
+        width: 100%;
+    }
+    /* Geen vaste hoogte — kaart schaalt met inhoud (foto-hoogtes blijven vast). */
+    .werkwijze-preview-kop {
+        margin: 0 0 0.5mm -8mm;
+        line-height: 0;
+    }
+    .werkwijze-preview-chevron {
+        display: inline-flex;
+        align-items: stretch;
+        width: 78mm;
+        height: 7mm;
+        font-weight: 700;
+        font-size: 10pt;
+        letter-spacing: 0.3px;
+        line-height: 1;
+    }
+    .werkwijze-preview-chevron-tekst {
+        background: var(--kerntaak);
+        color: #fff;
+        padding: 0 1mm 0 4mm;
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        margin-right: -0.25mm;
+    }
+    .werkwijze-preview-chevron-slant {
+        width: 2mm;
+        height: 7mm;
+        flex: 0 0 auto;
+        display: block;
+    }
+    .werkwijze-preview-layout {
+        width: 100%;
+    }
+    .werkwijze-preview-foto {
+        background: #F0EFEC;
+        border: 0.3mm solid #ddd;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .werkwijze-preview-foto.leeg {
+        font-style: italic;
+        color: #aaa;
+        font-size: 8pt;
     }
     .werkwijze-preview-foto img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    .werkwijze-preview-foto.leeg {
-        color: #999;
-        font-style: italic;
-        font-size: 0.78rem;
-        min-height: 60px;
+    .werkwijze-preview-tekst {
+        white-space: pre-wrap;
+        font-size: 9.5pt;
+        margin-top: 0;
+        color: #1A1A1A;
     }
-    .werkwijze-preview-tekst-blok { flex: 1; min-width: 0; }
+    /* Layout B: 1fr 1fr met foto 50mm hoog */
+    .werkwijze-preview-layout-B {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+        align-items: center;
+    }
+    .werkwijze-preview-layout-B .werkwijze-preview-foto { height: 60mm; }
+    /* Layout C: tekst + fotostrip 45mm — tekst over de volle kaart-breedte */
+    .werkwijze-preview-layout-C { display: block; width: 100%; }
+    .werkwijze-preview-layout-C .werkwijze-preview-tekst { width: 100%; display: block; }
     .werkwijze-preview-fotostrip {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.4rem;
-        margin-top: 0.5rem;
-    }
-    .werkwijze-preview-fotostrip .werkwijze-preview-foto { aspect-ratio: 4/3; }
-
-    /* Layout-specifieke flex/grid */
-    .werkwijze-preview-a {
-        display: grid;
-        grid-template-columns: 130px 1fr;
-        align-items: start;
-    }
-    .werkwijze-preview-a .werkwijze-preview-foto { aspect-ratio: 4/3; height: auto; }
-
-    .werkwijze-preview-b {
-        display: grid;
-        grid-template-columns: 1fr 130px;
-        align-items: start;
-    }
-    .werkwijze-preview-b .werkwijze-preview-foto { aspect-ratio: 4/3; height: auto; }
-
-    .werkwijze-preview-c {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .werkwijze-preview-d {
-        display: flex;
-        flex-direction: column;
-    }
-    .werkwijze-preview-d > .werkwijze-preview-foto {
+        gap: 3mm;
+        margin-top: 2mm;
         width: 100%;
-        height: 160px;
+    }
+    .werkwijze-preview-fotostrip .werkwijze-preview-foto { height: 45mm; }
+    /* Layout D: tekst + grote foto 60mm */
+    .werkwijze-preview-layout-D { display: block; }
+    .werkwijze-preview-layout-D .werkwijze-preview-foto {
+        width: 100%;
+        height: 60mm;
+        margin-top: 2mm;
     }
 </style>
 {% endblock %}
@@ -1555,6 +1661,31 @@
             </button>
 
             {{ form.werkwijze_stappen_json(type="hidden", id="werkwijze-stappen-json") }}
+
+            {# Cropper-modal voor werkwijze-foto's — één modal die hergebruikt wordt voor elk foto-slot. #}
+            <div id="werkwijze-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
+                <div class="werkwijze-cropper-modal-content">
+                    <h3 style="margin-top:0;">Foto bijsnijden</h3>
+                    <p class="form-hint" id="werkwijze-cropper-uitleg" style="margin-top:0;">
+                        Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
+                    </p>
+                    <div class="werkwijze-cropper-canvas-wrap">
+                        <img id="werkwijze-cropper-img" alt="">
+                    </div>
+                    <div class="cropper-knoppen" style="margin-top: 0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-in">Inzoomen +</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-uit">Uitzoomen −</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="reset">Reset</button>
+                        <span style="flex: 1;"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="links">↺ Linksom</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="rechts">↻ Rechtsom</button>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" data-werkwijze-cropper-actie="annuleer">Annuleren</button>
+                        <button type="button" class="btn btn-primary" data-werkwijze-cropper-actie="bevestig">Bijsnijden &amp; gebruiken</button>
+                    </div>
+                </div>
+            </div>
 
             {% endif %}
 
@@ -2715,19 +2846,41 @@ setupCropper({
 
     var MAX_STAPPEN = {{ WERKWIJZE_MAX_STAPPEN|default(20) }};
     var TITEL_MAX   = {{ WERKWIJZE_TITEL_MAX|default(40) }};
-    var TEKST_MAX   = {{ WERKWIJZE_TEKST_MAX|default(500) }};
+    var TEKST_MAX_PER_LAYOUT = {{ WERKWIJZE_TEKST_MAX|default({})|tojson }};
+    function tekstMaxVoor(layout) {
+        return TEKST_MAX_PER_LAYOUT[layout] || 220;
+    }
+
+    var KERNTAAK_KLEUREN = {
+        'algemeen': '#CC9933',
+        'brand':    '#B6463D',
+        'thv':      '#4C7F52',
+        'ibgs':     '#DAB94F',
+        'water':    '#4B70A6'
+    };
+    function huidigeKerntaakKleur() {
+        var sel = document.getElementById('kerntaak');
+        var key = sel ? sel.value : '';
+        return KERNTAAK_KLEUREN[key] || '#B8B2A4';
+    }
 
     var LAYOUT_LABELS = {
-        'A': 'Foto links',
-        'B': 'Foto rechts',
-        'C': 'Foto-strip onder',
-        'D': 'Grote foto boven'
+        'B': 'Tekst links + foto rechts',
+        'C': 'Tekst boven + 2 of 3 foto’s onder',
+        'D': 'Tekst boven + grote foto onder'
     };
+    function fotoCountVoor(s) {
+        var n = (s.fotos || []).filter(function(f) {
+            if (f.bestand) return true;
+            var inp = document.querySelector('input[name="werkwijze_foto_' + f.slot + '"]');
+            return !!(inp && inp.files && inp.files[0]);
+        }).length;
+        return n;
+    }
     var LAYOUT_ICONEN = {
-        'A': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="2" width="16" height="26" rx="2" fill="#bbb"/><rect x="22" y="6"  width="16" height="3" fill="#888"/><rect x="22" y="12" width="16" height="3" fill="#bbb"/><rect x="22" y="18" width="16" height="3" fill="#bbb"/></svg>',
         'B': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2"  y="6"  width="16" height="3" fill="#888"/><rect x="2"  y="12" width="16" height="3" fill="#bbb"/><rect x="2"  y="18" width="16" height="3" fill="#bbb"/><rect x="22" y="2" width="16" height="26" rx="2" fill="#bbb"/></svg>',
         'C': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="3"  width="36" height="3" fill="#888"/><rect x="2" y="9"  width="36" height="3" fill="#bbb"/><rect x="2"  y="16" width="11" height="11" rx="1" fill="#bbb"/><rect x="14" y="16" width="11" height="11" rx="1" fill="#bbb"/><rect x="27" y="16" width="11" height="11" rx="1" fill="#bbb"/></svg>',
-        'D': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="2" width="36" height="14" rx="2" fill="#bbb"/><rect x="2" y="19" width="36" height="3" fill="#888"/><rect x="2" y="24" width="36" height="3" fill="#bbb"/></svg>'
+        'D': '<svg viewBox="0 0 40 30" width="56" height="42"><rect x="2" y="3"  width="36" height="3" fill="#888"/><rect x="2" y="9"  width="36" height="3" fill="#bbb"/><rect x="2" y="14" width="36" height="14" rx="2" fill="#bbb"/></svg>'
     };
 
     function genId(prefix) {
@@ -2743,9 +2896,18 @@ setupCropper({
     stappen.forEach(function(s) {
         if (!s.id) s.id = genId('st');
         if (!Array.isArray(s.fotos)) s.fotos = [];
+        // Layout 'A' (foto links + tekst rechts) is verwijderd → tonen als 'B'.
+        if (s.layout === 'A') s.layout = 'B';
     });
 
-    function syncJson() { hiddenJson.value = JSON.stringify(stappen); }
+    function syncJson() {
+        hiddenJson.value = JSON.stringify(stappen);
+        // Samenvatting van elke ingeklapte stap up-to-date houden.
+        stappen.forEach(function(s) {
+            var b = lijst.querySelector('.werkwijze-stap-blok[data-stap-id="' + s.id + '"]');
+            if (b) updateSamenvatting(s, b);
+        });
+    }
     function vindIndex(id) {
         for (var i = 0; i < stappen.length; i++) if (stappen[i].id === id) return i;
         return -1;
@@ -2777,6 +2939,31 @@ setupCropper({
         return b;
     }
 
+    function klapAlleStappenDicht(behalveId) {
+        var blokken = lijst.querySelectorAll('.werkwijze-stap-blok');
+        blokken.forEach(function(b) {
+            if (b.dataset.stapId !== behalveId) {
+                b.classList.add('is-ingeklapt');
+                var sid = b.dataset.stapId;
+                var idx = vindIndex(sid);
+                if (idx >= 0) updateSamenvatting(stappen[idx], b);
+            }
+        });
+    }
+    function updateSamenvatting(s, blok) {
+        var samenv = blok.querySelector('.werkwijze-stap-samenvatting');
+        if (!samenv) return;
+        var titel = (s.titel || '').trim();
+        var titelTxt = titel || '(geen titel)';
+        var layout = s.layout || '';
+        var layoutTxt = layout ? LAYOUT_LABELS[layout] : 'opmaak nog niet gekozen';
+        var fotoCount = fotoCountVoor(s);
+        var ico = layout ? '<span style="font-family:monospace;background:#eee;padding:0 0.35rem;border-radius:3px;font-size:0.75rem">' + layout + '</span>' : '';
+        samenv.innerHTML =
+            '<span class="werkwijze-stap-samenvatting-titel">' + (titelTxt.replace(/</g,'&lt;')) + '</span>' +
+            '<span class="werkwijze-stap-samenvatting-meta">' + ico + ' ' + layoutTxt + (layout ? ' · ' + fotoCount + ' foto' + (fotoCount===1?'':'\'s') : '') + '</span>';
+    }
+
     function maakStapDOM(s) {
         var blok = document.createElement('div');
         blok.className = 'werkwijze-stap-blok';
@@ -2785,9 +2972,21 @@ setupCropper({
         // Header
         var hdr = document.createElement('div');
         hdr.className = 'werkwijze-stap-header';
+
+        var toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'werkwijze-stap-toggle';
+        toggleBtn.setAttribute('aria-label', 'In-/uitklappen');
+        toggleBtn.dataset.rol = 'stap-toggle';
+        hdr.appendChild(toggleBtn);
+
         var nrSpan = document.createElement('span');
         nrSpan.className = 'werkwijze-stap-nummer';
         hdr.appendChild(nrSpan);
+
+        var samenv = document.createElement('span');
+        samenv.className = 'werkwijze-stap-samenvatting';
+        hdr.appendChild(samenv);
 
         var up = mkKnop('↑', 'Stap omhoog', 'btn btn-secondary btn-sm', false, function() {
             var idx = vindIndex(s.id);
@@ -2823,11 +3022,27 @@ setupCropper({
         hdr.appendChild(del);
         blok.appendChild(hdr);
 
+        // Accordion: klik op header (behalve op de actie-knoppen) klapt in/uit.
+        hdr.addEventListener('click', function(ev) {
+            var t = ev.target.closest('button, [data-rol]');
+            if (t && t !== toggleBtn) return; // actie-knoppen niet onderscheppen
+            ev.preventDefault();
+            var wasOpen = !blok.classList.contains('is-ingeklapt');
+            if (wasOpen) {
+                blok.classList.add('is-ingeklapt');
+                updateSamenvatting(s, blok);
+            } else {
+                klapAlleStappenDicht(s.id);
+                blok.classList.remove('is-ingeklapt');
+            }
+        });
+
         // Body
         var body = document.createElement('div');
         body.className = 'werkwijze-stap-body';
         blok.appendChild(body);
         renderStapBody(s, body);
+        updateSamenvatting(s, blok);
 
         return blok;
     }
@@ -2844,7 +3059,7 @@ setupCropper({
 
             var keuze = document.createElement('div');
             keuze.className = 'werkwijze-layout-keuze-groot';
-            ['A','B','C','D'].forEach(function(L) {
+            ['B','C','D'].forEach(function(L) {
                 var knop = document.createElement('button');
                 knop.type = 'button';
                 knop.className = 'werkwijze-layout-keuze-knop';
@@ -2897,7 +3112,8 @@ setupCropper({
         titelGroup.appendChild(titelInput);
         body.appendChild(titelGroup);
 
-        // Uitleg-tekst
+        // Uitleg-tekst — maxlength hangt af van de gekozen layout (vaste kaart-hoogte in PDF).
+        var tekstMax = tekstMaxVoor(s.layout);
         var tekstGroup = document.createElement('div');
         tekstGroup.className = 'form-group';
         var tekstLabel = document.createElement('label');
@@ -2906,17 +3122,31 @@ setupCropper({
         tekstGroup.appendChild(tekstLabel);
         var tekstArea = document.createElement('textarea');
         tekstArea.className = 'form-input form-textarea';
-        tekstArea.rows = 3;
-        tekstArea.maxLength = TEKST_MAX;
+        // Aantal zichtbare regels meeschalen met tekens-limiet zodat 560 tekens niet in 3 regeltjes proppen.
+        tekstArea.rows = Math.max(3, Math.min(10, Math.ceil(tekstMax / 80)));
+        tekstArea.cols = 100;  // intrinsieke breedte hint — width:100% via form-input klasse blijft leidend.
+        tekstArea.style.width = '100%';
+        tekstArea.style.boxSizing = 'border-box';
+        tekstArea.maxLength = tekstMax;
         tekstArea.placeholder = 'Wat moet er bij deze stap gebeuren?';
         tekstArea.value = s.tekst || '';
+        var tellerSpan = document.createElement('span');
+        tellerSpan.className = 'form-hint';
+        tellerSpan.style.display = 'block';
+        tellerSpan.style.textAlign = 'right';
+        function vernieuwTeller() {
+            tellerSpan.textContent = tekstArea.value.length + ' / ' + tekstMax + ' tekens';
+        }
+        vernieuwTeller();
         tekstArea.addEventListener('input', function() {
             s.tekst = this.value;
             syncJson();
+            vernieuwTeller();
             var pT = body.querySelector('.werkwijze-preview-tekst');
             if (pT) pT.textContent = this.value || '(uitleg)';
         });
         tekstGroup.appendChild(tekstArea);
+        tekstGroup.appendChild(tellerSpan);
         body.appendChild(tekstGroup);
 
         // Foto's
@@ -2999,12 +3229,18 @@ setupCropper({
                 this.value = '';
                 return;
             }
-            preview.innerHTML = '';
-            var img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            img.dataset.preview = 'nieuw';
-            preview.appendChild(img);
-            updatePreview(s, body);
+            // Open de cropper-modal — bij bevestigen wordt het bestand in de input vervangen
+            // door de gecropte versie + preview bijgewerkt.
+            if (WerkwijzeCropper && s.layout) {
+                WerkwijzeCropper.open(s, body, file, inp, preview);
+            } else {
+                preview.innerHTML = '';
+                var pimg = document.createElement('img');
+                pimg.src = URL.createObjectURL(file);
+                pimg.dataset.preview = 'nieuw';
+                preview.appendChild(pimg);
+                updatePreview(s, body);
+            }
         });
         slot.appendChild(inp);
 
@@ -3021,7 +3257,135 @@ setupCropper({
         return slot;
     }
 
-    // ====== Mini-preview ======
+    // ====== Foto-cropper modal (één gedeelde modal voor alle slots) ======
+    // Aspect-ratio per layout: matched aan de cel-afmetingen in de PDF.
+    //   B  : 81mm × 50mm ≈ 1.62
+    //   C  : compromis tussen 2-col (1.81) en 3-col (1.18) → 1.5
+    //   D  : 166mm × 60mm ≈ 2.77
+    var ASPECT_PER_LAYOUT = {
+        'B': 81 / 60,
+        'C': 1.5,
+        'D': 166 / 60
+    };
+    var WerkwijzeCropper = (function() {
+        var modal = document.getElementById('werkwijze-cropper-modal');
+        var img   = document.getElementById('werkwijze-cropper-img');
+        var uitleg = document.getElementById('werkwijze-cropper-uitleg');
+        if (!modal || !img) return null;
+
+        var cropper = null;
+        var huidigeInput = null;
+        var huidigePreview = null;
+        var huidigeStap = null;
+        var huidigeBody = null;
+        var origineleNaam = '';
+
+        function sluit() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            modal.style.display = 'none';
+            img.src = '';
+            huidigeInput = huidigePreview = huidigeStap = huidigeBody = null;
+        }
+
+        function annuleer() {
+            // Niets bevestigd → file-input leegmaken zodat de stap geen halve foto bewaart.
+            if (huidigeInput) huidigeInput.value = '';
+            if (huidigePreview) {
+                huidigePreview.innerHTML = '';
+                var ph = document.createElement('span');
+                ph.className = 'werkwijze-foto-placeholder';
+                ph.textContent = 'Nog geen foto';
+                huidigePreview.appendChild(ph);
+            }
+            var s = huidigeStap; var b = huidigeBody;
+            sluit();
+            if (s && b) updatePreview(s, b);
+        }
+
+        function bevestig() {
+            if (!cropper || !huidigeInput) return;
+            var canvas = cropper.getCroppedCanvas({
+                maxWidth: 1600,
+                maxHeight: 1600,
+                imageSmoothingQuality: 'high',
+                fillColor: '#fff'
+            });
+            if (!canvas) { sluit(); return; }
+            var inpRef = huidigeInput;
+            var prevRef = huidigePreview;
+            var sRef = huidigeStap;
+            var bRef = huidigeBody;
+            canvas.toBlob(function(blob) {
+                try {
+                    var naam = (origineleNaam || 'foto.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+                    var nieuw = new File([blob], naam, { type: 'image/jpeg' });
+                    var dt = new DataTransfer();
+                    dt.items.add(nieuw);
+                    inpRef.files = dt.files;
+                } catch (err) { console.error('werkwijze cropper fout:', err); }
+                if (prevRef) {
+                    prevRef.innerHTML = '';
+                    var pimg = document.createElement('img');
+                    pimg.src = URL.createObjectURL(blob);
+                    pimg.dataset.preview = 'gecropt';
+                    prevRef.appendChild(pimg);
+                }
+                if (sRef && bRef) updatePreview(sRef, bRef);
+                sluit();
+            }, 'image/jpeg', 0.92);
+        }
+
+        function open(s, body, file, inputEl, previewEl) {
+            huidigeInput   = inputEl;
+            huidigePreview = previewEl;
+            huidigeStap    = s;
+            huidigeBody    = body;
+            origineleNaam  = file.name || 'foto.jpg';
+
+            var ratio = ASPECT_PER_LAYOUT[s.layout] || 1.5;
+            if (uitleg) {
+                uitleg.textContent = 'Sleep om te kiezen welk deel zichtbaar wordt in de PDF. ' +
+                    'Verhouding: ' + Math.round(ratio * 100) / 100 + ' (vast op basis van layout ' + s.layout + ').';
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                img.src = ev.target.result;
+                modal.style.display = 'flex';
+                if (cropper) { cropper.destroy(); cropper = null; }
+                cropper = new Cropper(img, {
+                    aspectRatio: ratio,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false,
+                    responsive: true,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: true,
+                    scalable: false
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        modal.addEventListener('click', function(e) {
+            var btn = e.target.closest('[data-werkwijze-cropper-actie]');
+            if (!btn) return;
+            var actie = btn.getAttribute('data-werkwijze-cropper-actie');
+            if (actie === 'annuleer') { annuleer(); return; }
+            if (!cropper) return;
+            if (actie === 'zoom-in')  cropper.zoom(0.1);
+            if (actie === 'zoom-uit') cropper.zoom(-0.1);
+            if (actie === 'reset')    cropper.reset();
+            if (actie === 'links')    cropper.rotate(-90);
+            if (actie === 'rechts')   cropper.rotate(90);
+            if (actie === 'bevestig') bevestig();
+        });
+
+        return { open: open };
+    })();
+
+    // ====== Mini-preview (PDF-look) ======
     function maakPreviewDOM(s) {
         var wrap = document.createElement('div');
         wrap.className = 'werkwijze-preview-wrap';
@@ -3032,7 +3396,8 @@ setupCropper({
         wrap.appendChild(hint);
 
         var prev = document.createElement('div');
-        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'a').toLowerCase();
+        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'b').toLowerCase();
+        prev.style.setProperty('--preview-kerntaak', huidigeKerntaakKleur());
         wrap.appendChild(prev);
         renderPreviewInhoud(s, prev);
         return wrap;
@@ -3041,7 +3406,8 @@ setupCropper({
     function updatePreview(s, body) {
         var prev = body.querySelector('.werkwijze-preview');
         if (!prev) return;
-        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'a').toLowerCase();
+        prev.className = 'werkwijze-preview werkwijze-preview-' + (s.layout || 'b').toLowerCase();
+        prev.style.setProperty('--preview-kerntaak', huidigeKerntaakKleur());
         renderPreviewInhoud(s, prev);
     }
 
@@ -3065,46 +3431,67 @@ setupCropper({
             f.appendChild(img);
         } else {
             f.classList.add('leeg');
-            f.textContent = '(foto)';
+            f.textContent = '(geen foto)';
         }
         return f;
     }
     function maakPreviewTekst(s) {
         var t = document.createElement('div');
-        t.className = 'werkwijze-preview-tekst-blok';
-        var tt = document.createElement('strong');
-        tt.className = 'werkwijze-preview-titel';
-        tt.textContent = s.titel || '(titel)';
-        t.appendChild(tt);
-        var bt = document.createElement('div');
-        bt.className = 'werkwijze-preview-tekst';
-        bt.textContent = s.tekst || '(uitleg)';
-        t.appendChild(bt);
+        t.className = 'werkwijze-preview-tekst';
+        t.textContent = s.tekst || '(uitleg)';
         return t;
+    }
+    function maakPreviewChevron(s, kleur) {
+        var kop = document.createElement('div');
+        kop.className = 'werkwijze-preview-kop';
+        var chev = document.createElement('span');
+        chev.className = 'werkwijze-preview-chevron';
+        var tekst = document.createElement('span');
+        tekst.className = 'werkwijze-preview-chevron-tekst';
+        tekst.textContent = s.titel || '(titel)';
+        chev.appendChild(tekst);
+        // SVG-slant — zelfde polygon als de PDF (vertex 0.25,7 voorkomt dubbele hoek).
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'werkwijze-preview-chevron-slant');
+        svg.setAttribute('viewBox', '0 0 2 7');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', '0,0 2,0 0.25,7');
+        poly.setAttribute('fill', kleur);
+        svg.appendChild(poly);
+        chev.appendChild(svg);
+        kop.appendChild(chev);
+        return kop;
     }
 
     function renderPreviewInhoud(s, prev) {
         prev.innerHTML = '';
+        var kleur = huidigeKerntaakKleur();
         var bronnen = fotoBronnen(s);
-        if (s.layout === 'A') {
-            prev.appendChild(maakPreviewFoto(bronnen[0]));
-            prev.appendChild(maakPreviewTekst(s));
-        } else if (s.layout === 'B') {
-            prev.appendChild(maakPreviewTekst(s));
-            prev.appendChild(maakPreviewFoto(bronnen[0]));
-        } else if (s.layout === 'C') {
-            prev.appendChild(maakPreviewTekst(s));
+        prev.appendChild(maakPreviewChevron(s, kleur));
+
+        var layout = s.layout || 'B';
+        var inhoud = document.createElement('div');
+        inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-' + layout;
+
+        if (layout === 'B') {
+            inhoud.appendChild(maakPreviewTekst(s));
+            inhoud.appendChild(maakPreviewFoto(bronnen[0]));
+        } else if (layout === 'C') {
+            inhoud.appendChild(maakPreviewTekst(s));
             var strip = document.createElement('div');
             strip.className = 'werkwijze-preview-fotostrip';
-            var aantal = Math.max(bronnen.length, 2);
+            var aantal = (bronnen.length === 2) ? 2 : 3;
+            strip.style.gridTemplateColumns = 'repeat(' + aantal + ', 1fr)';
             for (var i = 0; i < aantal; i++) {
                 strip.appendChild(maakPreviewFoto(bronnen[i] || null));
             }
-            prev.appendChild(strip);
-        } else if (s.layout === 'D') {
-            prev.appendChild(maakPreviewFoto(bronnen[0]));
-            prev.appendChild(maakPreviewTekst(s));
+            inhoud.appendChild(strip);
+        } else if (layout === 'D') {
+            inhoud.appendChild(maakPreviewTekst(s));
+            inhoud.appendChild(maakPreviewFoto(bronnen[0]));
         }
+        prev.appendChild(inhoud);
     }
 
     // ====== Init ======
@@ -3113,6 +3500,12 @@ setupCropper({
     });
     updateTeller();
     updateStapNummers();
+    // Bij openen van een bestaande kaart: alle bestaande stappen ingeklapt tonen.
+    lijst.querySelectorAll('.werkwijze-stap-blok').forEach(function(b) {
+        b.classList.add('is-ingeklapt');
+        var idx = vindIndex(b.dataset.stapId);
+        if (idx >= 0) updateSamenvatting(stappen[idx], b);
+    });
 
     nieuweStapBtn.addEventListener('click', function() {
         if (stappen.length >= MAX_STAPPEN) {
@@ -3121,16 +3514,30 @@ setupCropper({
         }
         var s = { id: genId('st'), layout: '', titel: '', tekst: '', fotos: [] };
         stappen.push(s);
+        // Klap eerst alle bestaande stappen dicht, dan toevoegen — de nieuwe blijft open.
+        klapAlleStappenDicht(s.id);
         syncJson();
         lijst.appendChild(maakStapDOM(s));
         updateTeller();
         updateStapNummers();
-        // Scroll naar de nieuwe stap
         var blokken = lijst.querySelectorAll('.werkwijze-stap-blok');
         if (blokken.length) {
             try { blokken[blokken.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
         }
     });
+
+    // Kerntaak-wijziging: alle preview-kaarten meekleuren.
+    var kerntaakSel = document.getElementById('kerntaak');
+    if (kerntaakSel) {
+        kerntaakSel.addEventListener('change', function() {
+            var kleur = huidigeKerntaakKleur();
+            lijst.querySelectorAll('.werkwijze-preview').forEach(function(p) {
+                p.style.setProperty('--preview-kerntaak', kleur);
+                var poly = p.querySelector('.werkwijze-preview-chevron-slant polygon');
+                if (poly) poly.setAttribute('fill', kleur);
+            });
+        });
+    }
 })();
 
 /* === Productfoto-markers: klik om toe te voegen, slepen, verwijderen, hernummeren === */

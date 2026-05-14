@@ -280,7 +280,10 @@ def aanmaken(kaart_type):
             form.header_foto.errors = list(form.header_foto.errors) + ['Een header-foto is verplicht.']
             type_info = KAART_TYPES[kaart_type]
             return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
-                                   type_info=type_info, bewerken=False, kaart=None)
+                                   type_info=type_info, bewerken=False, kaart=None,
+                                   WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
+                                   WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
+                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
 
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart_type]:
@@ -304,7 +307,10 @@ def aanmaken(kaart_type):
             form.header_foto.errors = list(form.header_foto.errors) + [foto_fout]
             type_info = KAART_TYPES[kaart_type]
             return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
-                                   type_info=type_info, bewerken=False, kaart=None)
+                                   type_info=type_info, bewerken=False, kaart=None,
+                                   WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
+                                   WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
+                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
         kaart.header_foto = foto_naam
 
         db.session.add(kaart)
@@ -323,7 +329,10 @@ def aanmaken(kaart_type):
         form.kenmerken_kerntaak.label.text = kenmerken_kerntaak_label(form.kerntaak.data)
     type_info = KAART_TYPES[kaart_type]
     return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
-                           type_info=type_info, bewerken=False, kaart=None)
+                           type_info=type_info, bewerken=False, kaart=None,
+                           WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
+                           WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
+                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
 
 
 @bp.route('/<int:kaart_id>/bewerken', methods=['GET', 'POST'])

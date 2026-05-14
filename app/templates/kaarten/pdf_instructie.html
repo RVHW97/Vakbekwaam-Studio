@@ -391,42 +391,58 @@
     .ik-lmra-info { flex: 1; font-size: 9pt; color: #1B2A4A; }
     .ik-lmra-info strong { display: block; font-size: 10.5pt; margin-bottom: 1mm; color: #1B2A4A; }
 
-    /* === IK: Werkwijze === */
+    /* === IK: Werkwijze (vaste kaart-hoogtes per layout, chevron-titel IN de kaart) === */
     .ik-stap {
-        margin-top: 3mm;
-        padding: 2.5mm 4mm;
         background: #FAFAF8;
-        border-left: 1.2mm solid {{ kerntaak_kleur }};
+        padding: 2mm 5mm 4mm 5mm;
+        margin: 3mm 0;
+        box-sizing: border-box;
         page-break-inside: avoid;
         break-inside: avoid;
+        /* display: block — block-level container houdt page-break-inside: avoid betrouwbaar */
+        display: block;
+        width: 100%;
     }
+    /* Geen vaste hoogte meer — kaart schaalt met de hoeveelheid tekst (foto-hoogtes blijven wel vast). */
     .ik-stap-kop {
-        display: flex;
-        gap: 3mm;
-        align-items: baseline;
-        margin-bottom: 1.5mm;
+        margin: 0 0 0.5mm -8mm;   /* chevron 3mm links naast de beige rand (kaart-padding-left=5mm) */
+        line-height: 0;
     }
-    .ik-stap-nr {
+    .ik-stap-titel-chevron {
+        display: inline-flex;
+        align-items: stretch;
+        width: 78mm;
+        height: 7mm;
+        font-weight: 700;
+        font-size: 10pt;
+        letter-spacing: 0.3px;
+        line-height: 1;
+    }
+    .ik-stap-titel-tekst {
         background: {{ kerntaak_kleur }};
         color: #fff;
-        font-weight: 900;
-        font-size: 9pt;
-        padding: 0.5mm 2.5mm;
-        border-radius: 1mm;
-        flex: 0 0 auto;
-        letter-spacing: 0.5px;
+        padding: 0 1mm 0 4mm;
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        margin-right: -0.25mm;        /* mini-overlap → geen witte naad bij subpixel-rendering */
     }
-    .ik-stap-titel {
-        font-weight: 700;
-        font-size: 11pt;
-        color: #1B2A4A;
-        flex: 1;
+    .ik-stap-titel-slant {
+        /* Slant 1.75mm op 7mm hoogte = 1:4 slope, exact zoals de page-2 chevron.
+           SVG 2mm breed; 0.25mm overlap met tekstvlak (zie polygon-vertex 0.25,7). */
+        width: 2mm;
+        height: 7mm;
+        flex: 0 0 auto;
+        display: block;
     }
     .ik-stap-tekst {
         white-space: pre-wrap;
         font-size: 9.5pt;
         margin-top: 1mm;
         color: #1A1A1A;
+        overflow: hidden;
     }
     .ik-stap-foto {
         background: #F0EFEC;
@@ -446,34 +462,31 @@
         height: 100%;
         object-fit: cover;
     }
-    .ik-stap-layout-A {
-        display: grid;
-        grid-template-columns: 55mm 1fr;
-        gap: 4mm;
-        margin-top: 2mm;
-    }
-    .ik-stap-layout-A .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
+    .ik-stap-layout-B,
+    .ik-stap-layout-C,
+    .ik-stap-layout-D { width: 100%; }
     .ik-stap-layout-B {
         display: grid;
-        grid-template-columns: 1fr 55mm;
+        grid-template-columns: 1fr 1fr;
         gap: 4mm;
-        margin-top: 2mm;
+        align-items: center;
     }
-    .ik-stap-layout-B .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
-    .ik-stap-layout-C { margin-top: 2mm; }
+    .ik-stap-layout-B .ik-stap-foto { height: 60mm; }
+    .ik-stap-layout-B .ik-stap-tekst { margin-top: 0; }
+    .ik-stap-layout-C { width: 100%; }
+    .ik-stap-layout-C .ik-stap-tekst { width: 100%; display: block; }
     .ik-stap-layout-C .ik-stap-fotostrip {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
         gap: 3mm;
         margin-top: 2mm;
+        width: 100%;
     }
-    .ik-stap-layout-C .ik-stap-foto { aspect-ratio: 4 / 3; height: auto; }
-    .ik-stap-layout-D { margin-top: 2mm; }
+    .ik-stap-layout-C .ik-stap-foto { height: 45mm; }
     .ik-stap-layout-D .ik-stap-foto {
         width: 100%;
         height: 60mm;
+        margin-top: 2mm;
     }
-    .ik-stap-layout-D .ik-stap-tekst { margin-top: 2mm; }
 
     /* === IK: Achtergrondinformatie === */
     .ik-achtergrond-subtitel {
@@ -668,21 +681,17 @@
     <div class="pdf-sectie-titel">Werkwijze</div>
     <div class="pdf-sectie-inhoud">
         {% for stap in werkwijze_stappen %}
-        {% set layout = stap.layout or 'A' %}
+        {# Layout 'A' uit fase 6 is verwijderd; oude data renderen als B (tekst links + foto rechts). #}
+        {% set layout = stap.layout or 'B' %}
+        {% if layout == 'A' %}{% set layout = 'B' %}{% endif %}
         {% set fotos = stap.fotos or [] %}
-        <div class="ik-stap">
+        {% set foto_count = fotos|length %}
+        {% set strip_cols = 2 if foto_count == 2 else 3 %}
+        <div class="ik-stap ik-stap--{{ layout }}">
             <div class="ik-stap-kop">
-                <div class="ik-stap-nr">{{ loop.index }}</div>
-                <div class="ik-stap-titel">{{ stap.titel or '' }}</div>
+                <span class="ik-stap-titel-chevron"><span class="ik-stap-titel-tekst">{{ stap.titel or '' }}</span><svg class="ik-stap-titel-slant" viewBox="0 0 2 7" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon fill="{{ kerntaak_kleur }}" points="0,0 2,0 0.25,7"/></svg></span>
             </div>
-            {% if layout == 'A' %}
-            <div class="ik-stap-layout-A">
-                <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
-                    {% if fotos and fotos[0].pad %}<img src="{{ fotos[0].pad }}" alt="">{% else %}(geen foto){% endif %}
-                </div>
-                <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
-            </div>
-            {% elif layout == 'B' %}
+            {% if layout == 'B' %}
             <div class="ik-stap-layout-B">
                 <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
                 <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
@@ -692,8 +701,8 @@
             {% elif layout == 'C' %}
             <div class="ik-stap-layout-C">
                 <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
-                <div class="ik-stap-fotostrip">
-                    {% for f in fotos[:3] %}
+                <div class="ik-stap-fotostrip" style="grid-template-columns: repeat({{ strip_cols }}, 1fr);">
+                    {% for f in fotos[:strip_cols] %}
                     <div class="ik-stap-foto {% if not f.pad %}leeg{% endif %}">
                         {% if f.pad %}<img src="{{ f.pad }}" alt="">{% else %}(geen foto){% endif %}
                     </div>
@@ -702,10 +711,10 @@
             </div>
             {% elif layout == 'D' %}
             <div class="ik-stap-layout-D">
+                <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
                 <div class="ik-stap-foto {% if not fotos or not fotos[0].pad %}leeg{% endif %}">
                     {% if fotos and fotos[0].pad %}<img src="{{ fotos[0].pad }}" alt="">{% else %}(geen foto){% endif %}
                 </div>
-                <div class="ik-stap-tekst">{{ stap.tekst or '' }}</div>
             </div>
             {% endif %}
         </div>
