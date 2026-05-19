@@ -335,46 +335,40 @@
         background: #FEF2F2 !important;
     }
 
-    /* === Instructiekaart-veiligheid: PBM-vinklijst === */
-    .pbm-vinklijst {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-        gap: 0.5rem;
-        list-style: none;
-        padding: 0;
-        margin: 0.5rem 0;
-    }
-    .pbm-vinklijst li { list-style: none; }
-    .pbm-knop {
+    /* === Instructiekaart-veiligheid: opsomming === */
+    .veiligheid-lijst {
         display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin: 0.5rem 0 0 0;
+    }
+    .veiligheid-rij {
+        display: grid;
+        grid-template-columns: 1.6rem 1fr 2.2rem;
+        gap: 0.5rem;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.75rem 1rem;
-        border: 2px solid #ccc;
-        border-radius: 6px;
-        cursor: pointer;
-        background: #fff;
-        transition: border-color 0.15s, background 0.15s;
-        min-height: 44px;
-    }
-    .pbm-knop:hover {
-        border-color: #888;
-        background: #f5f5f5;
-    }
-    .pbm-knop input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
         margin: 0;
-        flex: 0 0 auto;
-        cursor: pointer;
     }
-    .pbm-knop:has(input:checked) {
-        border-color: #C8102E;
-        background: #FEF2F2;
-    }
-    .pbm-knop:has(input:checked) span {
+    .veiligheid-rij.is-verborgen { display: none; }
+    .veiligheid-rij .form-label {
+        margin: 0;
         font-weight: 700;
         color: #1B2A4A;
+        text-align: right;
+    }
+    .veiligheid-rij-verwijder {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0.3rem 0.5rem;
+        border-radius: 4px;
+        min-height: 36px;
+    }
+    .veiligheid-rij-verwijder:hover {
+        background: #FEF2F2;
+        color: #C8102E;
     }
 
     /* === LMRA-placeholder === */
@@ -696,6 +690,98 @@
         font-size: 9.5pt;
         margin-top: 0;
         color: #1A1A1A;
+    }
+    .werkwijze-preview-bullets {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .werkwijze-preview-bullets li {
+        position: relative;
+        padding-left: 3.5mm;
+        margin-bottom: 0.8mm;
+        line-height: 1.3;
+    }
+    .werkwijze-preview-bullets li::before {
+        content: '●';
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--preview-kerntaak);
+        font-size: 1em;
+        line-height: 1.3;
+    }
+    /* Bullets-editor (opsomming-modus) */
+    .werkwijze-bullets-lijst {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .werkwijze-bullets-rij {
+        display: grid;
+        grid-template-columns: 1.4rem 1fr 2.2rem;
+        gap: 0.5rem;
+        align-items: start;
+    }
+    .werkwijze-bullets-bullet {
+        color: var(--brandweer-rood, #C8102E);
+        font-size: 1.1rem;
+        text-align: center;
+        line-height: 1.4;
+        padding-top: 0.45rem;
+    }
+    .werkwijze-bullets-input {
+        resize: none;
+        overflow: hidden;
+        line-height: 1.4;
+        min-height: 38px;
+    }
+    .werkwijze-bullets-rij-verwijder {
+        margin-top: 0.15rem;
+    }
+    .werkwijze-bullets-rij-verwijder {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0.3rem 0.5rem;
+        border-radius: 4px;
+        min-height: 36px;
+    }
+    .werkwijze-bullets-rij-verwijder:hover {
+        background: #FEF2F2;
+        color: #C8102E;
+    }
+    /* Opmaak-toggle (vrij / lijst) — knopjes-style */
+    .werkwijze-opmaak-keuze {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .werkwijze-opmaak-knop {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.8rem;
+        border: 2px solid #ccc;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #fff;
+        transition: border-color 0.15s, background 0.15s;
+        min-height: 36px;
+    }
+    .werkwijze-opmaak-knop input[type="radio"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        cursor: pointer;
+    }
+    .werkwijze-opmaak-knop:hover { border-color: #888; }
+    .werkwijze-opmaak-knop.is-actief {
+        border-color: #1B2A4A;
+        background: #F0F4FA;
+        font-weight: 700;
     }
     /* Layout B: 1fr 1fr met foto 50mm hoog */
     .werkwijze-preview-layout-B {
@@ -1584,30 +1670,33 @@
             <h2 class="form-section-title">Veiligheid</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de PBM-vinklijst en LMRA-QR invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de veiligheidspunten en LMRA-QR invullen.</p>
             {% else %}
 
-            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Persoonlijke beschermingsmiddelen (PBM)</h3>
-            <p class="form-hint">Vink aan welke PBM vereist zijn voor deze instructiekaart.</p>
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Veiligheidspunten</h3>
+            <p class="form-hint">Voeg aandachtspunten rondom veiligheid toe (maximaal {{ VEILIGHEID_MAX_ZINNEN }} punten, elk max {{ VEILIGHEID_ZIN_MAX }} tekens).</p>
 
-            <ul class="pbm-vinklijst">
-                {% for sub in form.pbm_items %}
-                <li>
-                    <label class="pbm-knop">
-                        {{ sub }}
-                        <span>{{ sub.label.text }}</span>
-                    </label>
-                </li>
+            <div class="veiligheid-lijst" id="veiligheid-lijst">
+                {% for i in range(1, VEILIGHEID_MAX_ZINNEN + 1) %}
+                {% set veld = form['veiligheid_zin_' ~ i] %}
+                {% set heeft_waarde = (veld.data or '')|trim %}
+                <div class="form-group veiligheid-rij {% if i > 1 and not heeft_waarde %}is-verborgen{% endif %}"
+                     data-veiligheid-rij="{{ i }}">
+                    <label class="form-label" for="veiligheid_zin_{{ i }}">{{ i }}.</label>
+                    {{ veld(class="form-input", maxlength=VEILIGHEID_ZIN_MAX,
+                       id="veiligheid_zin_" ~ i,
+                       placeholder="Bv. Werk altijd met minimaal twee personen, gebruik geen schuim bij een gasbrand, …") }}
+                    <button type="button" class="btn-verwijder veiligheid-rij-verwijder"
+                            data-veiligheid-rij-doel="{{ i }}"
+                            title="Veiligheidspunt verwijderen">✕</button>
+                    {% for error in veld.errors %}<span class="form-error" style="grid-column: 2 / -1;">{{ error }}</span>{% endfor %}
+                </div>
                 {% endfor %}
-            </ul>
-
-            <div class="form-group" style="margin-top: 1rem;">
-                {{ form.pbm_overige.label(class="form-label") }}
-                {{ form.pbm_overige(class="form-input", maxlength=200,
-                   placeholder="Bv. valharnas, beschermbril type X, …") }}
-                {% for error in form.pbm_overige.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                <p class="form-hint">Max 200 tekens. Vul hier PBM in die niet in de standaardlijst staan.</p>
             </div>
+
+            <button type="button" id="veiligheid-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                + Veiligheidspunt toevoegen
+            </button>
 
             <h3 class="form-groep-titel" style="margin-top: 1.5rem;">LMRA — Last Minute Risk Analysis</h3>
             {% set lmra_url = config.get('LMRA_QR_URL') or '' %}
@@ -1703,52 +1792,8 @@
             <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier kaarten en QR-codes koppelen.</p>
             {% else %}
 
-            {# === Gekoppelde kaarten === #}
-            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Gekoppelde kaarten</h3>
-            <p class="form-hint">Koppel andere kaarten (thema, scenario, opdracht of andere instructie) die bij deze kaart horen. Maximaal {{ INSTRUCTIE_MAX_KAART_KOPPELINGEN }} koppelingen.</p>
-
-            {% if gekoppelde_kaarten %}
-            <div class="gekoppelde-lijst" style="margin-bottom: 0.75rem;">
-                {% for k in gekoppelde_kaarten %}
-                <div class="gekoppelde-kaart-rij">
-                    <span class="badge badge-type">{{ k.type_naam }}</span>
-                    <strong>{{ k.nummer }}</strong>
-                    <span class="gekoppelde-kaart-naam">{{ k.naam }}</span>
-                    <button type="button" class="btn-verwijder instructie-actie-knop" title="Loskoppelen"
-                            data-instructie-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
-                            data-instructie-payload='actie=verwijderen&doel_id={{ k.id }}'>✕</button>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="form-hint" style="font-style: italic; margin-bottom: 0.75rem;">Nog geen gekoppelde kaarten.</p>
-            {% endif %}
-
-            {% if beschikbaar_per_type and gekoppelde_kaarten|length < INSTRUCTIE_MAX_KAART_KOPPELINGEN %}
-            <div class="instructie-koppel-blok koppel-form"
-                 data-instructie-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
-                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                <input type="hidden" name="actie" value="toevoegen">
-                <select name="doel_id" class="form-input form-select" style="flex:1; min-width:220px;">
-                    <option value="">— kies een kaart om te koppelen —</option>
-                    {% for type_key, blok in beschikbaar_per_type.items() %}
-                    <optgroup label="{{ blok.naam }}">
-                        {% for k in blok.kaarten %}
-                        <option value="{{ k.id }}">{{ k.nummer }} — {{ k.naam }}</option>
-                        {% endfor %}
-                    </optgroup>
-                    {% endfor %}
-                </select>
-                <button type="button" class="btn btn-secondary btn-sm instructie-actie-knop" data-instructie-veld-blok>+ Koppelen</button>
-            </div>
-            {% elif gekoppelde_kaarten|length >= INSTRUCTIE_MAX_KAART_KOPPELINGEN %}
-            <p class="form-hint" style="color:#b6463d;">Maximum van {{ INSTRUCTIE_MAX_KAART_KOPPELINGEN }} kaart-koppelingen bereikt.</p>
-            {% else %}
-            <p class="form-hint">Geen beschikbare kaarten meer om te koppelen.</p>
-            {% endif %}
-
             {# === QR-codes uit de bank === #}
-            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">QR-codes</h3>
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">QR-codes</h3>
             <p class="form-hint">Koppel QR-codes uit de QR-bank. Op de PDF verschijnen ze onderaan in de achtergrondinformatie. Maximaal {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} koppelingen.</p>
 
             {% if instructie_qr_links %}
@@ -1827,7 +1872,7 @@
     {% endif %}
 
     {# ==================== ALTIJD ZICHTBAAR ONDERAAN ==================== #}
-    {% if bewerken %}
+    {% if bewerken and kaart_heeft_wijzigingen %}
     <h2 class="form-section-title" style="margin-top: 2rem;">Toelichting wijziging</h2>
     <div class="form-group">
         <label class="form-label" for="wijziging_toelichting">
@@ -2785,6 +2830,43 @@ setupCropper({
 {# ============================================================ #}
 {% if kaart_type == 'instructie' %}
 <script>
+/* === Veiligheidspunten: één regel zichtbaar + "+ Toevoegen" + per-regel ✕ === */
+(function() {
+    var lijst = document.getElementById('veiligheid-lijst');
+    if (!lijst) return;
+    var toevoegKnop = document.getElementById('veiligheid-toevoegen');
+    var rijen = lijst.querySelectorAll('.veiligheid-rij');
+
+    function updateToevoegKnop() {
+        var verborgen = lijst.querySelector('.veiligheid-rij.is-verborgen');
+        if (toevoegKnop) toevoegKnop.style.display = verborgen ? '' : 'none';
+    }
+
+    rijen.forEach(function(rij) {
+        var knop = rij.querySelector('.veiligheid-rij-verwijder');
+        if (!knop) return;
+        knop.addEventListener('click', function() {
+            var input = rij.querySelector('input');
+            if (input) input.value = '';
+            rij.classList.add('is-verborgen');
+            updateToevoegKnop();
+        });
+    });
+
+    if (toevoegKnop) {
+        toevoegKnop.addEventListener('click', function() {
+            var volgende = lijst.querySelector('.veiligheid-rij.is-verborgen');
+            if (!volgende) return;
+            volgende.classList.remove('is-verborgen');
+            var input = volgende.querySelector('input');
+            if (input) input.focus();
+            updateToevoegKnop();
+        });
+    }
+
+    updateToevoegKnop();
+})();
+
 /* === Type-radio: wisselt live de Productinfo-tabnaam + toont/verbergt het materiaal-blok === */
 (function() {
     var radios = document.querySelectorAll('input[name="instructie_type"]');
@@ -2847,6 +2929,7 @@ setupCropper({
     var MAX_STAPPEN = {{ WERKWIJZE_MAX_STAPPEN|default(20) }};
     var TITEL_MAX   = {{ WERKWIJZE_TITEL_MAX|default(40) }};
     var TEKST_MAX_PER_LAYOUT = {{ WERKWIJZE_TEKST_MAX|default({})|tojson }};
+    var BULLETS_MAX = 6;
     function tekstMaxVoor(layout) {
         return TEKST_MAX_PER_LAYOUT[layout] || 220;
     }
@@ -3114,40 +3197,71 @@ setupCropper({
 
         // Uitleg-tekst — maxlength hangt af van de gekozen layout (vaste kaart-hoogte in PDF).
         var tekstMax = tekstMaxVoor(s.layout);
+        if (!s.tekst_opmaak) s.tekst_opmaak = 'vrij';
+
+        // Opmaak-toggle: vrije tekst of opsomming (bullets per regel)
+        var opmaakGroup = document.createElement('div');
+        opmaakGroup.className = 'form-group werkwijze-opmaak-toggle';
+        var opmaakLabel = document.createElement('label');
+        opmaakLabel.className = 'form-label';
+        opmaakLabel.textContent = 'Opmaak van de uitleg';
+        opmaakGroup.appendChild(opmaakLabel);
+        var opmaakRij = document.createElement('div');
+        opmaakRij.className = 'werkwijze-opmaak-keuze';
+        ['vrij','lijst'].forEach(function(modus) {
+            var labelEl = document.createElement('label');
+            labelEl.className = 'werkwijze-opmaak-knop' + (s.tekst_opmaak === modus ? ' is-actief' : '');
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'opmaak-' + s.id;
+            radio.value = modus;
+            radio.checked = (s.tekst_opmaak === modus);
+            radio.addEventListener('change', function() {
+                if (!this.checked) return;
+                s.tekst_opmaak = modus;
+                syncJson();
+                // Actief-klasse bijwerken
+                opmaakRij.querySelectorAll('.werkwijze-opmaak-knop').forEach(function(k) {
+                    k.classList.toggle('is-actief', k.contains(this));
+                }.bind(this));
+                vernieuwTekstEditor();
+                updatePreviewTekst(s, body);
+            });
+            var span = document.createElement('span');
+            span.textContent = (modus === 'vrij') ? 'Vrije tekst' : 'Opsomming (bullets)';
+            labelEl.appendChild(radio);
+            labelEl.appendChild(span);
+            opmaakRij.appendChild(labelEl);
+        });
+        opmaakGroup.appendChild(opmaakRij);
+        body.appendChild(opmaakGroup);
+
         var tekstGroup = document.createElement('div');
         tekstGroup.className = 'form-group';
         var tekstLabel = document.createElement('label');
         tekstLabel.className = 'form-label';
         tekstLabel.textContent = 'Uitleg';
         tekstGroup.appendChild(tekstLabel);
-        var tekstArea = document.createElement('textarea');
-        tekstArea.className = 'form-input form-textarea';
-        // Aantal zichtbare regels meeschalen met tekens-limiet zodat 560 tekens niet in 3 regeltjes proppen.
-        tekstArea.rows = Math.max(3, Math.min(10, Math.ceil(tekstMax / 80)));
-        tekstArea.cols = 100;  // intrinsieke breedte hint — width:100% via form-input klasse blijft leidend.
-        tekstArea.style.width = '100%';
-        tekstArea.style.boxSizing = 'border-box';
-        tekstArea.maxLength = tekstMax;
-        tekstArea.placeholder = 'Wat moet er bij deze stap gebeuren?';
-        tekstArea.value = s.tekst || '';
-        var tellerSpan = document.createElement('span');
-        tellerSpan.className = 'form-hint';
-        tellerSpan.style.display = 'block';
-        tellerSpan.style.textAlign = 'right';
-        function vernieuwTeller() {
-            tellerSpan.textContent = tekstArea.value.length + ' / ' + tekstMax + ' tekens';
-        }
-        vernieuwTeller();
-        tekstArea.addEventListener('input', function() {
-            s.tekst = this.value;
-            syncJson();
-            vernieuwTeller();
-            var pT = body.querySelector('.werkwijze-preview-tekst');
-            if (pT) pT.textContent = this.value || '(uitleg)';
-        });
-        tekstGroup.appendChild(tekstArea);
-        tekstGroup.appendChild(tellerSpan);
+        var tekstHint = document.createElement('span');
+        tekstHint.className = 'form-hint';
+        tekstHint.style.display = 'block';
+        tekstGroup.appendChild(tekstHint);
+        var tekstEditorWrap = document.createElement('div');
+        tekstEditorWrap.className = 'werkwijze-tekst-editor';
+        tekstGroup.appendChild(tekstEditorWrap);
         body.appendChild(tekstGroup);
+
+        function vernieuwTekstEditor() {
+            tekstEditorWrap.innerHTML = '';
+            if (s.tekst_opmaak === 'lijst') {
+                tekstHint.textContent = 'Voeg per regel één bulletpunt toe (max ' + BULLETS_MAX + ' regels).';
+                bouwBulletsEditor(s, body, tekstEditorWrap);
+            } else {
+                tekstHint.textContent = '';
+                bouwVrijeTekstEditor(s, body, tekstEditorWrap, tekstMax);
+            }
+        }
+        vernieuwTekstEditor();
 
         // Foto's
         var maxFotos = (s.layout === 'C') ? 3 : 1;
@@ -3180,6 +3294,133 @@ setupCropper({
 
         // Preview-blok
         body.appendChild(maakPreviewDOM(s));
+    }
+
+    function bouwVrijeTekstEditor(s, body, container, tekstMax) {
+        var tekstArea = document.createElement('textarea');
+        tekstArea.className = 'form-input form-textarea';
+        tekstArea.rows = Math.max(3, Math.min(10, Math.ceil(tekstMax / 80)));
+        tekstArea.cols = 100;
+        tekstArea.style.width = '100%';
+        tekstArea.style.boxSizing = 'border-box';
+        tekstArea.maxLength = tekstMax;
+        tekstArea.placeholder = 'Wat moet er bij deze stap gebeuren?';
+        tekstArea.value = s.tekst || '';
+        var teller = document.createElement('span');
+        teller.className = 'form-hint';
+        teller.style.display = 'block';
+        teller.style.textAlign = 'right';
+        function vernieuwTeller() {
+            teller.textContent = tekstArea.value.length + ' / ' + tekstMax + ' tekens';
+        }
+        vernieuwTeller();
+        tekstArea.addEventListener('input', function() {
+            s.tekst = this.value;
+            syncJson();
+            vernieuwTeller();
+            updatePreviewTekst(s, body);
+        });
+        container.appendChild(tekstArea);
+        container.appendChild(teller);
+    }
+
+    function bouwBulletsEditor(s, body, container) {
+        // Bestaande tekst splitsen op regels — lege regels worden niet behouden.
+        var regels = (s.tekst || '').split('\n').map(function(r) { return r.replace(/\s+$/,''); })
+                                                .filter(function(r) { return r.length > 0; });
+        if (regels.length === 0) regels = [''];
+
+        var lijst = document.createElement('div');
+        lijst.className = 'werkwijze-bullets-lijst';
+        container.appendChild(lijst);
+
+        var toevoegKnop = document.createElement('button');
+        toevoegKnop.type = 'button';
+        toevoegKnop.className = 'btn btn-secondary btn-sm';
+        toevoegKnop.style.marginTop = '0.4rem';
+        toevoegKnop.textContent = '+ Regel toevoegen';
+        container.appendChild(toevoegKnop);
+
+        function syncTekst() {
+            var waardes = [];
+            lijst.querySelectorAll('textarea').forEach(function(ta) {
+                // Multi-regel-input platslaan: vervang interne newlines door spaties zodat 1 bullet 1 regel blijft.
+                var w = (ta.value || '').replace(/\s*\n+\s*/g, ' ').trim();
+                if (w) waardes.push(w);
+            });
+            s.tekst = waardes.join('\n');
+            syncJson();
+            updatePreviewTekst(s, body);
+        }
+
+        function updateToevoegKnop() {
+            var aantal = lijst.querySelectorAll('.werkwijze-bullets-rij').length;
+            toevoegKnop.disabled = aantal >= BULLETS_MAX;
+        }
+
+        function autoGrow(ta) {
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+        }
+
+        function maakRij(waarde) {
+            var rij = document.createElement('div');
+            rij.className = 'werkwijze-bullets-rij';
+
+            var bul = document.createElement('span');
+            bul.className = 'werkwijze-bullets-bullet';
+            bul.textContent = '●';
+            rij.appendChild(bul);
+
+            var ta = document.createElement('textarea');
+            ta.className = 'form-input werkwijze-bullets-input';
+            ta.rows = 1;
+            ta.placeholder = 'Bv. Sluit de slang aan op de hydrant';
+            ta.value = waarde || '';
+            ta.addEventListener('input', function() {
+                autoGrow(this);
+                syncTekst();
+            });
+            rij.appendChild(ta);
+
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn-verwijder werkwijze-bullets-rij-verwijder';
+            del.title = 'Regel verwijderen';
+            del.textContent = '✕';
+            del.addEventListener('click', function() {
+                if (lijst.querySelectorAll('.werkwijze-bullets-rij').length <= 1) {
+                    // Laatste rij niet verwijderen — alleen leegmaken
+                    ta.value = '';
+                    autoGrow(ta);
+                    syncTekst();
+                    return;
+                }
+                rij.remove();
+                syncTekst();
+                updateToevoegKnop();
+            });
+            rij.appendChild(del);
+
+            // Initiele hoogte op de juiste maat. Doe het nadat de rij in de DOM zit
+            // — scrollHeight is 0 voor losse elementen.
+            setTimeout(function() { autoGrow(ta); }, 0);
+
+            return rij;
+        }
+
+        regels.forEach(function(r) { lijst.appendChild(maakRij(r)); });
+        updateToevoegKnop();
+
+        toevoegKnop.addEventListener('click', function() {
+            if (lijst.querySelectorAll('.werkwijze-bullets-rij').length >= BULLETS_MAX) return;
+            var rij = maakRij('');
+            lijst.appendChild(rij);
+            var ta = rij.querySelector('textarea');
+            if (ta) ta.focus();
+            updateToevoegKnop();
+            syncTekst();
+        });
     }
 
     function refreshAddFotoBtn(s, body) {
@@ -3438,8 +3679,29 @@ setupCropper({
     function maakPreviewTekst(s) {
         var t = document.createElement('div');
         t.className = 'werkwijze-preview-tekst';
-        t.textContent = s.tekst || '(uitleg)';
+        var ruwe = s.tekst || '';
+        if (s.tekst_opmaak === 'lijst' && ruwe.trim()) {
+            var ul = document.createElement('ul');
+            ul.className = 'werkwijze-preview-bullets';
+            ruwe.split('\n').forEach(function(regel) {
+                var r = regel.trim();
+                if (!r) return;
+                var li = document.createElement('li');
+                li.textContent = r;
+                ul.appendChild(li);
+            });
+            t.appendChild(ul);
+        } else {
+            t.textContent = ruwe || '(uitleg)';
+        }
         return t;
+    }
+    function updatePreviewTekst(s, body) {
+        var prev = body.querySelector('.werkwijze-preview');
+        if (!prev) return;
+        var oudT = prev.querySelector('.werkwijze-preview-tekst');
+        if (!oudT) return;
+        oudT.parentNode.replaceChild(maakPreviewTekst(s), oudT);
     }
     function maakPreviewChevron(s, kleur) {
         var kop = document.createElement('div');

@@ -15,7 +15,8 @@ from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
 from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
-                                WERKWIJZE_TEKST_MAX)
+                                WERKWIJZE_TEKST_MAX,
+                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 5 * 1024 * 1024
@@ -357,6 +358,12 @@ def bewerken(kaart_id):
     auto_save_tab = (request.form.get('auto_save_tab') or '').strip()
     is_auto_save = bool(auto_save_tab)
     toelichting_fout = None
+    # Toelichting is alleen vereist vanaf de tweede échte wijziging.
+    # Telt het aantal 'Bewerkt'-records — als 0, dan slaat de gebruiker voor het eerst
+    # echt op (na auto-saves bij tab-wissel) en hoeft hij/zij geen reden te geven.
+    kaart_heeft_wijzigingen = (
+        KaartWijziging.query.filter_by(kaart_id=kaart.id, actie='Bewerkt').count() > 0
+    )
 
     # === AUTO-SAVE BIJ TAB-WISSEL ===
     # Bypass de strikte WTForms-validatie (Length/DataRequired): concept mag incompleet
@@ -425,7 +432,8 @@ def bewerken(kaart_id):
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + f'#tab-{auto_save_tab}')
 
     # === NORMALE OPSLAAN (submit-knop) ===
-    if request.method == 'POST' and not wijziging_toelichting:
+    if (request.method == 'POST' and not is_auto_save
+            and kaart_heeft_wijzigingen and not wijziging_toelichting):
         toelichting_fout = 'Vul een korte toelichting in waarom je deze kaart wijzigt.'
 
     # WTForms valideren — moet vóór de foto-check omdat validate_on_submit() de errors-dict reset.
@@ -551,10 +559,10 @@ def bewerken(kaart_id):
         form.kenmerken_kerntaak.label.text = kenmerken_kerntaak_label(form.kerntaak.data or kaart.kerntaak)
     type_info = KAART_TYPES[kaart.type]
 
-    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (scenariokaart + instructiekaart)
+    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (alleen scenariokaart)
     gekoppelde_kaarten = []
     beschikbaar_per_type = {}
-    if kaart.type in ('scenario', 'instructie'):
+    if kaart.type == 'scenario':
         gekoppelde_kaarten = kaart.get_gekoppelde_kaarten()
         huidige_ids = {k.id for k in gekoppelde_kaarten}
         huidige_ids.add(kaart.id)
@@ -628,6 +636,7 @@ def bewerken(kaart_id):
                            type_info=type_info, bewerken=True, kaart=kaart,
                            wijziging_toelichting=wijziging_toelichting,
                            toelichting_fout=toelichting_fout,
+                           kaart_heeft_wijzigingen=kaart_heeft_wijzigingen,
                            gekoppelde_kaarten=gekoppelde_kaarten,
                            beschikbaar_per_type=beschikbaar_per_type,
                            thema_kaart_links=thema_kaart_links,

@@ -1,13 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, SelectMultipleField, IntegerField, RadioField
-from wtforms.widgets import ListWidget, CheckboxInput
+from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, IntegerField, RadioField
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
-
-
-class MultiCheckboxField(SelectMultipleField):
-    """SelectMultipleField die rendert als een lijst grote checkboxes i.p.v. een multi-select dropdown."""
-    widget = ListWidget(prefix_label=False)
-    option_widget = CheckboxInput()
 
 NAAM_MAX = 40
 NAAM_VALIDATORS = [
@@ -122,17 +115,9 @@ WERKWIJZE_TEKST_MAX = {
     'D': 480,
 }
 
-# Standaard PBM-items (Persoonlijke Beschermingsmiddelen) voor de instructiekaart.
-PBM_KEUZES = [
-    ('helm',              'Helm'),
-    ('uitrukpak',         'Uitrukpak'),
-    ('handschoenen',      'Handschoenen'),
-    ('laarzen',           'Laarzen'),
-    ('ademlucht',         'Ademlucht'),
-    ('veiligheidsbril',   'Veiligheidsbril'),
-    ('gehoorbescherming', 'Gehoorbescherming'),
-    ('valbeveiliging',    'Valbeveiliging'),
-]
+# Veiligheid (fase 6g) — vrije opsomming van max 5 korte zinnen.
+VEILIGHEID_MAX_ZINNEN = 5
+VEILIGHEID_ZIN_MAX = 100
 
 
 class InstructiekaartForm(FlaskForm):
@@ -149,11 +134,12 @@ class InstructiekaartForm(FlaskForm):
     # Markers op de productfoto worden als JSON-string in een hidden veld meegestuurd.
     # Lijst van {nummer, x, y, label} — x/y zijn fracties (0..1) van foto-breedte/hoogte.
     productfoto_markers_json = StringField('Marker-legenda', validators=[Optional()])
-    # Veiligheid (fase 3) — LMRA wordt centraal beheerd, niet per kaart.
-    pbm_items = MultiCheckboxField('Persoonlijke beschermingsmiddelen',
-                                    choices=PBM_KEUZES, validators=[Optional()])
-    pbm_overige = StringField('Overige PBM',
-                              validators=[Optional(), Length(max=200, message='Maximaal 200 tekens.')])
+    # Veiligheid — 5 korte zinnen (max 100 tekens elk). LMRA wordt centraal beheerd, niet per kaart.
+    veiligheid_zin_1 = StringField('Veiligheidspunt 1', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_2 = StringField('Veiligheidspunt 2', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_3 = StringField('Veiligheidspunt 3', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_4 = StringField('Veiligheidspunt 4', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_5 = StringField('Veiligheidspunt 5', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
     # Werkwijze (fase 4) — platte lijst van stappen.
     # JSON-structuur: [{"id": "<uuid>", "layout": "A|B|C|D",
     #                   "titel": "<kort>", "tekst": "<uitleg>",
@@ -243,7 +229,9 @@ INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
               'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
     'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json',
-                   'pbm_overige', 'werkwijze_stappen_json'],
+                   'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
+                   'veiligheid_zin_4', 'veiligheid_zin_5',
+                   'werkwijze_stappen_json'],
     'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',
@@ -267,6 +255,4 @@ INHOUD_VELDEN = {
 
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).
 # Vereisen request.form.getlist() bij opslaan en lijst-prefill bij bewerken.
-INHOUD_LIJST_VELDEN = {
-    'instructie': ['pbm_items'],
-}
+INHOUD_LIJST_VELDEN = {}

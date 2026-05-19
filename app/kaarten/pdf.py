@@ -4,7 +4,7 @@ import os
 from flask import current_app, render_template
 from weasyprint import HTML
 from app.models import KAART_TYPES, KERNTAKEN, kenmerken_kerntaak_label
-from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, PBM_KEUZES
+from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, VEILIGHEID_MAX_ZINNEN
 
 
 def _qr_data_uri(qr, met_tekst=False):
@@ -196,10 +196,12 @@ def genereer_pdf(kaart):
                 else:
                     foto['pad'] = None
 
-        # PBM-labels uit de keuzes-constante
-        pbm_dict = dict(PBM_KEUZES)
-        pbm_gekozen = inhoud.get('pbm_items') or []
-        pbm_lijst = [{'key': k, 'naam': pbm_dict.get(k, k)} for k in pbm_gekozen if k in pbm_dict]
+        # Veiligheids-zinnen: maximaal VEILIGHEID_MAX_ZINNEN ingevulde regels.
+        veiligheid_zinnen = []
+        for i in range(1, VEILIGHEID_MAX_ZINNEN + 1):
+            zin = (inhoud.get(f'veiligheid_zin_{i}') or '').strip()
+            if zin:
+                veiligheid_zinnen.append(zin)
 
         # LMRA-URL (centrale config) → echte QR genereren als URL gezet is.
         lmra_url = current_app.config.get('LMRA_QR_URL') or ''
@@ -222,11 +224,10 @@ def genereer_pdf(kaart):
                                       werkwijze_stappen=werkwijze_stappen,
                                       productfoto_markers=productfoto_markers,
                                       productfoto_pad=productfoto_pad,
-                                      pbm_lijst=pbm_lijst,
+                                      veiligheid_zinnen=veiligheid_zinnen,
                                       lmra_url=lmra_url,
                                       lmra_qr_data_uri=lmra_qr_data_uri,
                                       instructie_qrs=instructie_qrs,
-                                      gekoppelde=gekoppelde,
                                       header_foto_pad=header_foto_pad,
                                       logo_pad=logo_pad,
                                       logo_wit_pad=logo_wit_pad,

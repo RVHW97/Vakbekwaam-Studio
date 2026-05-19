@@ -6,8 +6,8 @@ from config import Config
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.3.0'
-__version_date__ = '14 mei 2026'
+__version__ = '0.4.0'
+__version_date__ = '19 mei 2026'
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -25,6 +25,15 @@ def create_app():
     @app.context_processor
     def inject_versie():
         return {'app_versie': __version__, 'app_versie_datum': __version_date__}
+
+    @app.context_processor
+    def inject_kaart_constantes():
+        # Constanten die in meerdere templates (formulier + PDF) gebruikt worden.
+        from app.kaarten.forms import VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX
+        return {
+            'VEILIGHEID_MAX_ZINNEN': VEILIGHEID_MAX_ZINNEN,
+            'VEILIGHEID_ZIN_MAX': VEILIGHEID_ZIN_MAX,
+        }
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Je moet eerst inloggen.'
