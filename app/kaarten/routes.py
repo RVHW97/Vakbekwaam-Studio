@@ -25,6 +25,50 @@ HEADER_FOTO_MIN_H = 400
 HEADER_FOTO_RATIO = 3.0
 
 
+# --- Autorisatie -------------------------------------------------------------
+# Rollen (oplopend): medewerker < coordinator < specialist < admin.
+# - admin / specialist: mogen alles op alle kaarten
+# - coordinator: mag kaarten aanmaken en enkel eigen kaarten bewerken
+# - medewerker: alleen-lezen
+BEWERK_ROLLEN = {'admin', 'specialist'}
+AANMAAK_ROLLEN = {'admin', 'specialist', 'coordinator'}
+PUBLICATIE_ROLLEN = {'admin', 'specialist'}
+
+
+def kan_kaart_bewerken(user, kaart):
+    if not (user and user.is_authenticated):
+        return False
+    if user.rol in BEWERK_ROLLEN:
+        return True
+    if user.rol == 'coordinator' and kaart.auteur_id == user.id:
+        return True
+    return False
+
+
+def kan_kaart_aanmaken(user):
+    return bool(user and user.is_authenticated and user.rol in AANMAAK_ROLLEN)
+
+
+def kan_publiceren(user):
+    return bool(user and user.is_authenticated and user.rol in PUBLICATIE_ROLLEN)
+
+
+def _vereis_bewerken(kaart):
+    """Roep bovenaan elke write-route aan; stopt de request als de gebruiker niet mag."""
+    if not kan_kaart_bewerken(current_user, kaart):
+        abort(403)
+
+
+def _vereis_aanmaken():
+    if not kan_kaart_aanmaken(current_user):
+        abort(403)
+
+
+def _vereis_publiceren():
+    if not kan_publiceren(current_user):
+        abort(403)
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -292,6 +336,7 @@ def kies_type():
 @bp.route('/nieuw/<kaart_type>', methods=['GET', 'POST'])
 @login_required
 def aanmaken(kaart_type):
+    _vereis_aanmaken()
     if kaart_type not in KAART_TYPES:
         flash('Ongeldig kaarttype.', 'danger')
         return redirect(url_for('kaarten.kies_type'))
@@ -364,6 +409,9 @@ def aanmaken(kaart_type):
 @login_required
 def bewerken(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
+    if kaart.type not in FORMULIEREN:
+        abort(404)
     form_class = FORMULIEREN[kaart.type]
 
     if request.method == 'POST':
@@ -701,6 +749,7 @@ def bewerken(kaart_id):
 def koppel_actie(kaart_id):
     """Klein endpoint om koppelingen te beheren vanuit de verwijzingen-tab."""
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     actie = request.form.get('actie')
     doel_id = request.form.get('doel_id', type=int)
     if actie == 'toevoegen' and doel_id and doel_id != kaart.id:
@@ -745,6 +794,7 @@ def koppel_actie(kaart_id):
 @login_required
 def thema_kaart_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     doel_id = request.form.get('doel_id', type=int)
@@ -788,6 +838,7 @@ def thema_kaart_link_toevoegen(kaart_id):
 @login_required
 def thema_kaart_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     link = ThemaKaartLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -806,6 +857,7 @@ def thema_kaart_link_verwijderen(kaart_id, link_id):
 @login_required
 def thema_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
@@ -864,6 +916,7 @@ def _wissel_qr_volgorde(kaart, link, richting):
 @login_required
 def thema_qr_link_omhoog(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     link = ThemaQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -877,6 +930,7 @@ def thema_qr_link_omhoog(kaart_id, link_id):
 @login_required
 def thema_qr_link_omlaag(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     link = ThemaQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -890,6 +944,7 @@ def thema_qr_link_omlaag(kaart_id, link_id):
 @login_required
 def thema_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     link = ThemaQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -909,6 +964,7 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
 @login_required
 def instructie_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'instructie':
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
@@ -938,6 +994,7 @@ def instructie_qr_link_toevoegen(kaart_id):
 @login_required
 def instructie_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'instructie':
         abort(404)
     link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -955,6 +1012,7 @@ def instructie_qr_link_verwijderen(kaart_id, link_id):
 @login_required
 def thema_qr_link_label(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     if kaart.type != 'thema':
         abort(404)
     link = ThemaQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
@@ -1003,6 +1061,8 @@ def zoeken():
 @login_required
 def publiceren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_publiceren()
+    _vereis_bewerken(kaart)
     if kaart.status == 'gearchiveerd':
         flash('Gearchiveerde kaarten kunnen niet direct gepubliceerd worden. Heractiveer eerst.', 'warning')
         return redirect(url_for('kaarten.overzicht'))
@@ -1042,6 +1102,8 @@ def publiceren(kaart_id):
 @login_required
 def depubliceren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_publiceren()
+    _vereis_bewerken(kaart)
     kaart.status = 'concept'
     kaart.bijgewerkt_door_id = current_user.id
     log_wijziging(kaart, 'Teruggezet naar concept')
@@ -1054,6 +1116,7 @@ def depubliceren(kaart_id):
 @login_required
 def archiveren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     kaart.status = 'gearchiveerd'
     kaart.bijgewerkt_door_id = current_user.id
     log_wijziging(kaart, 'Gearchiveerd')
@@ -1066,6 +1129,7 @@ def archiveren(kaart_id):
 @login_required
 def heractiveren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
     kaart.status = 'concept'
     kaart.bijgewerkt_door_id = current_user.id
     log_wijziging(kaart, 'Uit archief gehaald')
@@ -1077,6 +1141,7 @@ def heractiveren(kaart_id):
 @bp.route('/<int:kaart_id>/kopieren', methods=['POST'])
 @login_required
 def kopieren(kaart_id):
+    _vereis_aanmaken()
     origineel = Kaart.query.get_or_404(kaart_id)
     nieuwe = Kaart(
         type=origineel.type,

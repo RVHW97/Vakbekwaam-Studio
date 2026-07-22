@@ -1,10 +1,29 @@
 from functools import wraps
+from urllib.parse import urlparse
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, NieuweGebruikerForm, GebruikerBewerkenForm
 from app.models import User
+
+# Dummy-hash om de check_password_hash-tijd óók te betalen bij onbekende e-mailadressen.
+# Zonder deze extra hash is een timing-side-channel te meten.
+_DUMMY_HASH = ('pbkdf2:sha256:600000$dummydummydummydummy$'
+               '0000000000000000000000000000000000000000000000000000000000000000')
+
+
+def _veilige_next_url(next_url):
+    """Sta alleen relatieve paden binnen dezelfde host toe — voorkomt open-redirect."""
+    if not next_url:
+        return None
+    parsed = urlparse(next_url)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if not next_url.startswith('/'):
+        return None
+    return next_url
 
 
 def admin_required(f):
@@ -28,8 +47,10 @@ def login():
         user = User.query.filter_by(email=form.email.data.lower().strip()).first()
         if user and user.actief and user.check_wachtwoord(form.wachtwoord.data):
             login_user(user, remember=form.onthoud_mij.data)
-            next_page = request.args.get('next')
+            next_page = _veilige_next_url(request.args.get('next'))
             return redirect(next_page or url_for('main.dashboard'))
+        # Betaal altijd de hash-tijd, ook bij onbekende gebruiker of gedeactiveerd account.
+        check_password_hash(_DUMMY_HASH, form.wachtwoord.data)
         flash('Ongeldige inloggegevens of account is gedeactiveerd.', 'danger')
 
     return render_template('auth/login.html', form=form)
@@ -86,10 +107,30 @@ def gebruiker_bewerken(user_id):
         if bestaande and bestaande.id != user.id:
             flash('Dit e-mailadres is al in gebruik.', 'danger')
         else:
+            nieuwe_rol = form.rol.data
+            nieuw_actief = form.actief.data
+            # Guard 1: admin mag zichzelf niet degraderen of deactiveren.
+            if user.id == current_user.id:
+                if nieuwe_rol != 'admin' or not nieuw_actief:
+                    flash('Je kunt je eigen adminrol of actief-status niet aanpassen. '
+                          'Vraag een andere admin.', 'danger')
+                    return render_template('auth/gebruiker_form.html', form=form,
+                                           titel='Gebruiker bewerken')
+            # Guard 2: laatste actieve admin moet blijven bestaan.
+            als_deze_wordt_gedegradeerd = (user.rol == 'admin'
+                                            and (nieuwe_rol != 'admin' or not nieuw_actief))
+            if als_deze_wordt_gedegradeerd:
+                aantal_admins = User.query.filter_by(rol='admin', actief=True).count()
+                if aantal_admins <= 1:
+                    flash('Dit is de laatste actieve admin — maak eerst een andere '
+                          'admin aan voordat je deze wijzigt.', 'danger')
+                    return render_template('auth/gebruiker_form.html', form=form,
+                                           titel='Gebruiker bewerken')
+
             user.naam = form.naam.data.strip()
             user.email = form.email.data.lower().strip()
-            user.rol = form.rol.data
-            user.actief = form.actief.data
+            user.rol = nieuwe_rol
+            user.actief = nieuw_actief
             if form.nieuw_wachtwoord.data:
                 user.set_wachtwoord(form.nieuw_wachtwoord.data)
             db.session.commit()

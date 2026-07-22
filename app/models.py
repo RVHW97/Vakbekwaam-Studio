@@ -89,7 +89,11 @@ class User(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    user = db.session.get(User, int(user_id))
+    # Gedeactiveerde gebruikers blijven anders ingelogd tot hun cookie verloopt.
+    if user is None or not user.actief:
+        return None
+    return user
 
 
 class Kaart(db.Model):

@@ -67,11 +67,19 @@ def genereer_pdf(kaart):
     # Frutiger fonts (file:// URLs voor WeasyPrint).
     # Frutiger Normal.ttf = 55 Roman (regular), FTB.ttf = 65 Bold, FTUBL.ttf = 95 Ultra Black.
     fonts_dir = os.path.join(current_app.root_path, 'static', 'fonts')
+    open_sans_dir = os.path.join(fonts_dir, 'open-sans')
     font_paden = {
         'regular': 'file://' + os.path.join(fonts_dir, 'Frutiger Normal.ttf'),
         'italic': 'file://' + os.path.join(fonts_dir, 'Frutiger Roman Italic.ttf'),
         'bold': 'file://' + os.path.join(fonts_dir, 'FTB.ttf'),
         'black': 'file://' + os.path.join(fonts_dir, 'FTUBL.ttf'),
+        # Open Sans lokaal (geen Google-Fonts-fetch bij render — offline-veilig, GDPR-veilig).
+        'os_300': 'file://' + os.path.join(open_sans_dir, 'open-sans-300.woff2'),
+        'os_400': 'file://' + os.path.join(open_sans_dir, 'open-sans-400.woff2'),
+        'os_400_italic': 'file://' + os.path.join(open_sans_dir, 'open-sans-400-italic.woff2'),
+        'os_600': 'file://' + os.path.join(open_sans_dir, 'open-sans-600.woff2'),
+        'os_700': 'file://' + os.path.join(open_sans_dir, 'open-sans-700.woff2'),
+        'os_800': 'file://' + os.path.join(open_sans_dir, 'open-sans-800.woff2'),
     }
 
     # Versie-info voor footer

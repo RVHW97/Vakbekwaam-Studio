@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from app import db
 from app.qr import bp
 from app.qr.forms import QRForm
-from app.models import QRCode, ThemaQRLink, QR_CATEGORIE_KEUZES, QR_STIJLEN
+from app.models import QRCode, ThemaQRLink, InstructieQRLink, QR_CATEGORIE_KEUZES, QR_STIJLEN
 
 
 QR_PDF_SUBFOLDER = 'qr_pdf'
@@ -237,8 +237,10 @@ def verwijderen(qr_id):
         flash('Je mag deze QR-code niet verwijderen.', 'danger')
         return redirect(url_for('qr.overzicht'))
     _verwijder_pdf(qr.pdf_bestand)
-    # Eventuele themakaart-koppelingen opruimen
+    # Eventuele koppelingen opruimen — anders blijven verweesde rijen achter en crashen
+    # thema- of instructiekaart-templates op `link.qr_code.naam` (NoneType).
     ThemaQRLink.query.filter_by(qr_code_id=qr.id).delete()
+    InstructieQRLink.query.filter_by(qr_code_id=qr.id).delete()
     db.session.delete(qr)
     db.session.commit()
     flash('QR-code verwijderd.', 'info')

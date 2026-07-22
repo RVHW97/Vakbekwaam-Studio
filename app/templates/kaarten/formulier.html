@@ -2,8 +2,8 @@
 {% block title %}{{ type_info.naam }} {{ 'bewerken' if bewerken else 'aanmaken' }} — Vakbekwaam Studio{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
-<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/cropperjs/cropper.min.css') }}">
+<script src="{{ url_for('static', filename='vendor/cropperjs/cropper.min.js') }}"></script>
 <style>
     .cropper-knoppen { display:flex; flex-wrap:wrap; gap:0.5rem; }
     .cropper-knoppen .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
@@ -916,14 +916,14 @@
         {% endfor %}
         {% if bewerken and kaart and kaart.header_foto %}
         <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
-            <label class="bestaande-afbeelding">
-                <img src="{{ url_for('static', filename='uploads/' + kaart.header_foto) }}"
+            <div class="bestaande-afbeelding">
+                <img src="{{ url_for('main.media', pad=kaart.header_foto) }}"
                      alt="Huidige headerfoto" style="max-height: 120px;">
-                <span class="verwijder-checkbox">
+                <label class="verwijder-checkbox">
                     <input type="checkbox" name="verwijder_header_foto" value="1">
                     Verwijderen
-                </span>
-            </label>
+                </label>
+            </div>
         </div>
         {% endif %}
         <div class="file-upload-area">
@@ -942,7 +942,7 @@
             <h4 class="form-subgroep-titel">Voorbeeld op de themakaart</h4>
             <p class="form-hint">Zo valt de foto met de huisstijl-vlakken erover. De vlakken zijn doorzichtig zodat je kunt zien wat eronder valt.{% if bewerken and kaart %} Vlakkleur volgt de gekozen kerntaak.{% endif %}</p>
             <div class="thema-foto-preview" id="thema-foto-preview"
-                 {% if bewerken and kaart and kaart.header_foto %}style="background-image: url('{{ url_for('static', filename='uploads/' + kaart.header_foto) }}');"{% endif %}>
+                 {% if bewerken and kaart and kaart.header_foto %}style="background-image: url('{{ url_for('main.media', pad=kaart.header_foto) }}');"{% endif %}>
                 <div class="thema-preview-cropper-target" id="thema-preview-cropper-target"></div>
                 {% if not (bewerken and kaart and kaart.header_foto) %}
                 <div class="thema-preview-leeg" id="thema-preview-leeg">Nog geen foto geüpload</div>
@@ -1202,14 +1202,14 @@
             <h4 class="form-subgroep-titel">Foto bij ensceneringstips (optioneel)</h4>
             {% if bewerken and kaart and kaart.ensceneringstips_foto %}
             <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
-                <label class="bestaande-afbeelding">
-                    <img src="{{ url_for('static', filename='uploads/' + kaart.ensceneringstips_foto) }}"
+                <div class="bestaande-afbeelding">
+                    <img src="{{ url_for('main.media', pad=kaart.ensceneringstips_foto) }}"
                          alt="Huidige foto" style="max-height: 120px;">
-                    <span class="verwijder-checkbox">
+                    <label class="verwijder-checkbox">
                         <input type="checkbox" name="verwijder_ensceneringstips_foto" value="1">
                         Verwijderen
-                    </span>
-                </label>
+                    </label>
+                </div>
             </div>
             {% endif %}
             <div class="file-upload-area">
@@ -1675,14 +1675,14 @@
 
                 {% if kaart.productfoto %}
                 <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
-                    <label class="bestaande-afbeelding">
-                        <img src="{{ url_for('static', filename='uploads/' + kaart.productfoto) }}"
+                    <div class="bestaande-afbeelding">
+                        <img src="{{ url_for('main.media', pad=kaart.productfoto) }}"
                              alt="Productfoto" style="max-height: 140px;">
-                        <span class="verwijder-checkbox">
+                        <label class="verwijder-checkbox">
                             <input type="checkbox" name="verwijder_productfoto" value="1">
                             Verwijderen
-                        </span>
-                    </label>
+                        </label>
+                    </div>
                 </div>
                 {% endif %}
 
@@ -1699,7 +1699,7 @@
                     <p class="form-hint">Klik ergens op de foto om een marker toe te voegen. Sleep om bij te stellen. Klik op het kruisje (×) in de legenda om een marker te verwijderen.</p>
                     <div class="productfoto-canvas" id="productfoto-canvas">
                         <img alt="Productfoto" class="productfoto-img" id="productfoto-img"
-                             {% if kaart.productfoto %}src="{{ url_for('static', filename='uploads/' + kaart.productfoto) }}"{% endif %}>
+                             {% if kaart.productfoto %}src="{{ url_for('main.media', pad=kaart.productfoto) }}"{% endif %}>
                         {# Markers worden door JS in deze container getekend #}
                     </div>
 
@@ -3433,7 +3433,7 @@ setupCropper({
             }
             var origineelServer = foto.bestand_origineel || foto.bestand;
             if (origineelServer) {
-                fetch('/static/uploads/' + origineelServer)
+                fetch('/media/' + origineelServer)
                     .then(function(r) { return r.blob(); })
                     .then(function(blob) {
                         var fakeFile = new File([blob], origineelServer, { type: blob.type || 'image/jpeg' });
@@ -3930,7 +3930,7 @@ setupCropper({
 
     function fotoBronnen(s) {
         return (s.fotos || []).map(function(f) {
-            if (f.bestand) return '/static/uploads/' + f.bestand;
+            if (f.bestand) return '/media/' + f.bestand;
             var inp = document.querySelector('input[name="werkwijze_foto_' + f.slot + '"]');
             if (inp && inp.files && inp.files[0]) {
                 return URL.createObjectURL(inp.files[0]);
@@ -4017,7 +4017,7 @@ setupCropper({
     // op een preview-foto weet welke slot/input bewerkt moet worden.
     function effectieveLayout(s) {
         var alles = (s.fotos || []).map(function(f) {
-            if (f.bestand) return { src: '/static/uploads/' + f.bestand, slot: f.slot };
+            if (f.bestand) return { src: '/media/' + f.bestand, slot: f.slot };
             var inp = document.querySelector('input[name="werkwijze_foto_' + f.slot + '"]');
             if (inp && inp.files && inp.files[0]) {
                 return { src: URL.createObjectURL(inp.files[0]), slot: f.slot };

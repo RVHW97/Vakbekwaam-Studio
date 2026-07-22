@@ -2,11 +2,24 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from config import Config
+
+
+# Zonder deze hook negeert SQLite ALLE foreign-key-constraints (cascade werkt niet,
+# koppel-tabellen kunnen dangling rijen krijgen). Enabled per connectie.
+@event.listens_for(Engine, 'connect')
+def _enable_sqlite_fk(dbapi_conn, _connection_record):
+    driver = type(dbapi_conn).__module__
+    if 'sqlite' in driver:
+        cursor = dbapi_conn.cursor()
+        cursor.execute('PRAGMA foreign_keys=ON')
+        cursor.close()
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 __version_date__ = '22 juli 2026'
 
 db = SQLAlchemy()
@@ -38,6 +51,8 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Je moet eerst inloggen.'
     login_manager.login_message_category = 'info'
+    # 'strong' invalideert de sessie zodra IP/user-agent verandert — beperkt session-hijacking.
+    login_manager.session_protection = 'strong'
 
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp)

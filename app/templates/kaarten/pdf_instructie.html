@@ -17,8 +17,13 @@
 <meta charset="UTF-8">
 <title>{{ kaart.nummer }} — {{ kaart.naam }}</title>
 <style>
-    /* === FONTS === */
-    @import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap");
+    /* === FONTS === Lokaal ingebed — geen externe fetch bij PDF-render. */
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_300 }}") format("woff2"); font-weight: 300; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_400 }}") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_400_italic }}") format("woff2"); font-weight: 400; font-style: italic; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_600 }}") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_700 }}") format("woff2"); font-weight: 700; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_800 }}") format("woff2"); font-weight: 800; }
 
     @font-face { font-family: "Frutiger"; src: url("{{ font_paden.regular }}") format("truetype"); font-weight: 400; }
     @font-face { font-family: "Frutiger"; src: url("{{ font_paden.italic }}") format("truetype"); font-weight: 400; font-style: italic; }

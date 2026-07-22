@@ -1271,6 +1271,11 @@ body {
     background-color: var(--kleur-achtergrond);
     border: 1px solid var(--kleur-rand-licht);
     border-radius: 6px;
+}
+
+/* Alleen de checkbox-label is klikbaar — de foto zelf niet, om per-ongeluk
+   toggelen (en daarmee verwijderen bij submit) te voorkomen. */
+.bestaande-afbeelding .verwijder-checkbox {
     cursor: pointer;
 }
 

@@ -55,3 +55,15 @@ def huisstijl_asset(bestand):
     project_root = os.path.dirname(current_app.root_path)
     huisstijl_dir = os.path.join(project_root, 'huisstijl')
     return send_from_directory(huisstijl_dir, bestand)
+
+
+@bp.route('/media/<path:pad>')
+@login_required
+def media(pad):
+    """Serveert kaart-uploads (foto's) alleen aan ingelogde gebruikers.
+
+    UPLOAD_FOLDER staat bewust buiten /app/static/ zodat Flask-static ze niet
+    publiek kan serveren. Alle kaart-foto's gaan hierdoor. QR-PDF's blijven via
+    de aparte publieke route qr.pdf lopen (nodig voor QR-scan van buitenaf).
+    """
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], pad)

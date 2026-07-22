@@ -60,6 +60,17 @@
         <div class="form-group">
             {{ form.nieuw_wachtwoord.label }}
             {{ form.nieuw_wachtwoord(class="form-input", placeholder="Laat leeg om niet te wijzigen") }}
+            {% for error in form.nieuw_wachtwoord.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.nieuw_wachtwoord_bevestig.label }}
+            {{ form.nieuw_wachtwoord_bevestig(class="form-input", placeholder="Herhaal nieuw wachtwoord") }}
+            {% for error in form.nieuw_wachtwoord_bevestig.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
         </div>
         {% endif %}
 
