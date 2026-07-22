@@ -163,17 +163,41 @@ def verwerk_werkwijze_fotos(json_string):
                 continue
             slot = (foto.get('slot') or '').strip()
             bestand = (foto.get('bestand') or '').strip()
+            bestand_origineel = (foto.get('bestand_origineel') or '').strip()
             if slot:
-                upload = request.files.get('werkwijze_foto_' + slot)
-                if upload and upload.filename:
-                    foto_naam, foto_fout = save_foto(upload, prefix='werkwijze', ratio=None)
+                # Nieuwe ORIGINELE upload (via de "+ Foto toevoegen" knop).
+                # De client stuurt hetzelfde bestand naar beide inputs bij een
+                # nieuwe upload, en alleen naar 'werkwijze_foto_<slot>' bij re-crop.
+                orig_upload = request.files.get('werkwijze_orig_' + slot)
+                if orig_upload and orig_upload.filename:
+                    orig_naam, orig_fout = save_foto(orig_upload, prefix='werkwijze_orig', ratio=None)
+                    if orig_naam:
+                        if bestand_origineel:
+                            verwijder_bestand(bestand_origineel)
+                        bestand_origineel = orig_naam
+                    elif orig_fout:
+                        flash(f'Werkwijze-foto (origineel): {orig_fout}', 'warning')
+                # Nieuwe GECROPTE versie (nieuwe upload = zelfde als origineel,
+                # of een blob uit de cropper bij re-crop).
+                crop_upload = request.files.get('werkwijze_foto_' + slot)
+                if crop_upload and crop_upload.filename:
+                    foto_naam, foto_fout = save_foto(crop_upload, prefix='werkwijze', ratio=None)
                     if foto_naam:
                         if bestand:
                             verwijder_bestand(bestand)
                         bestand = foto_naam
                     elif foto_fout:
                         flash(f'Werkwijze-foto: {foto_fout}', 'warning')
-            nieuwe_fotos.append({'slot': slot, 'bestand': bestand})
+                # Backfill voor oude data: als er wel een 'bestand' is maar geen
+                # 'bestand_origineel' → beschouw 'bestand' als origineel (zodat
+                # re-crop niet leidt tot een 404).
+                if bestand and not bestand_origineel:
+                    bestand_origineel = bestand
+            nieuwe_fotos.append({
+                'slot': slot,
+                'bestand': bestand,
+                'bestand_origineel': bestand_origineel,
+            })
         stap['fotos'] = nieuwe_fotos
     return json.dumps(stappen, ensure_ascii=False)
 
@@ -358,6 +382,22 @@ def bewerken(kaart_id):
     auto_save_tab = (request.form.get('auto_save_tab') or '').strip()
     is_auto_save = bool(auto_save_tab)
     toelichting_fout = None
+
+    # Werkwijze-foto's ALTIJD verwerken op POST — ook als de submit later door een
+    # validatiefout wordt afgewezen. Anders gaan geüploade foto's stilletjes verloren
+    # bij re-render van het formulier (browser stuurt file-inputs niet opnieuw mee).
+    processed_werkwijze_json = None
+    if request.method == 'POST' and kaart.type == 'instructie':
+        _incoming_ww = request.form.get('werkwijze_stappen_json') or '[]'
+        processed_werkwijze_json = verwerk_werkwijze_fotos(_incoming_ww)
+        if processed_werkwijze_json != _incoming_ww:
+            _inh = kaart.get_inhoud()
+            _inh['werkwijze_stappen_json'] = processed_werkwijze_json
+            kaart.set_inhoud(_inh)
+            db.session.commit()
+            # Update WTForms data zodat een eventuele re-render de nieuwe JSON toont.
+            if hasattr(form, 'werkwijze_stappen_json'):
+                form.werkwijze_stappen_json.data = processed_werkwijze_json
     # Toelichting is alleen vereist vanaf de tweede échte wijziging.
     # Telt het aantal 'Bewerkt'-records — als 0, dan slaat de gebruiker voor het eerst
     # echt op (na auto-saves bij tab-wissel) en hoeft hij/zij geen reden te geven.
@@ -374,9 +414,9 @@ def bewerken(kaart_id):
             inhoud[veld] = (request.form.get(veld) or '').strip()
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
             inhoud[veld] = request.form.getlist(veld)
-        # Werkwijze-foto's per slot uploaden + JSON updaten met nieuwe bestandsnamen
-        if kaart.type == 'instructie' and 'werkwijze_stappen_json' in inhoud:
-            inhoud['werkwijze_stappen_json'] = verwerk_werkwijze_fotos(inhoud['werkwijze_stappen_json'])
+        # Werkwijze-foto's zijn al bovenaan verwerkt — gebruik het resultaat.
+        if processed_werkwijze_json is not None and 'werkwijze_stappen_json' in inhoud:
+            inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -483,9 +523,9 @@ def bewerken(kaart_id):
             inhoud[veld] = getattr(form, veld).data or ''
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
             inhoud[veld] = getattr(form, veld).data or []
-        # Werkwijze-foto's per slot uploaden + JSON updaten met nieuwe bestandsnamen
-        if kaart.type == 'instructie' and 'werkwijze_stappen_json' in inhoud:
-            inhoud['werkwijze_stappen_json'] = verwerk_werkwijze_fotos(inhoud['werkwijze_stappen_json'])
+        # Werkwijze-foto's zijn al bovenaan verwerkt — gebruik het resultaat.
+        if processed_werkwijze_json is not None and 'werkwijze_stappen_json' in inhoud:
+            inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None

@@ -6,8 +6,8 @@ from config import Config
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.4.0'
-__version_date__ = '19 mei 2026'
+__version__ = '0.5.0'
+__version_date__ = '22 juli 2026'
 
 db = SQLAlchemy()
 login_manager = LoginManager()
