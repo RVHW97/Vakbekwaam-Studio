@@ -19,9 +19,9 @@ from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-HEADER_FOTO_MAX_BYTES = 5 * 1024 * 1024
-HEADER_FOTO_MIN_W = 1200
-HEADER_FOTO_MIN_H = 400
+HEADER_FOTO_MAX_BYTES = 20 * 1024 * 1024
+HEADER_FOTO_MIN_W = 900
+HEADER_FOTO_MIN_H = 300
 HEADER_FOTO_RATIO = 3.0
 
 
@@ -102,7 +102,7 @@ def save_header_foto(file):
     size = file.tell()
     file.seek(0)
     if size > HEADER_FOTO_MAX_BYTES:
-        return None, 'Bestand is te groot (max 5 MB).'
+        return None, 'Bestand is te groot (max 20 MB).'
     img = Image.open(file)
     # Pas EXIF-orientatie expliciet toe — anders bewaart PIL de fysieke pixels
     # zonder de rotatie-metadata, waardoor de foto op zijn kant in de PDF kan komen.
@@ -127,7 +127,7 @@ def save_header_foto(file):
     return filename, None
 
 
-FOTO_MAX_BYTES = 5 * 1024 * 1024
+FOTO_MAX_BYTES = 20 * 1024 * 1024
 FOTO_MIN_PX = 200  # minimaal 200px breed of hoog
 
 
@@ -139,7 +139,7 @@ def save_foto(file, prefix='foto', ratio=None):
     size = file.tell()
     file.seek(0)
     if size > FOTO_MAX_BYTES:
-        return None, 'Bestand is te groot (max 5 MB).'
+        return None, 'Bestand is te groot (max 20 MB).'
     img = Image.open(file)
     # Pas EXIF-orientatie expliciet toe — anders bewaart PIL de fysieke pixels
     # zonder de rotatie-metadata, waardoor de foto op zijn kant in de PDF kan komen.

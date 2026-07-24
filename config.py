@@ -32,7 +32,7 @@ class Config:
     # publiek (zonder login-check). Bestanden gaan via `main.media` en `qr.pdf`.
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or \
         os.path.join(basedir, 'instance', 'uploads')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
+    MAX_CONTENT_LENGTH = 60 * 1024 * 1024  # 60 MB max upload (ruim genoeg voor formulier met meerdere 20 MB-foto's)
     LMRA_QR_URL = os.environ.get('LMRA_QR_URL') or ''
 
     SESSION_COOKIE_HTTPONLY = True

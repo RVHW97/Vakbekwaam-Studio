@@ -694,6 +694,12 @@ body {
     border-radius: 0;
 }
 
+/* Binnen een tab-paneel niet omhoog trekken: de tabs-nav zit er al boven,
+   anders overlapt de gouden balk met het actieve-tab-streepje. */
+.tab-paneel .form-section-title:first-child {
+    margin-top: 0.5rem;
+}
+
 .form-label {
     display: block;
     margin-bottom: 0.4rem;

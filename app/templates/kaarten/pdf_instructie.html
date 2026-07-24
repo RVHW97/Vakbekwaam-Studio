@@ -244,14 +244,6 @@
         orphans: 3;
         widows: 3;
     }
-    .pdf-type-banner {
-        font-family: "Frutiger", "Open Sans", sans-serif;
-        font-size: 8.5pt;
-        color: #666;
-        font-style: italic;
-        margin-bottom: 4mm;
-    }
-
     /* === IK: Productinformatie / Omschrijving === */
     .ik-omschrijving {
         white-space: pre-wrap;
@@ -347,7 +339,7 @@
         line-height: 1.35;
     }
     .ik-lmra {
-        margin-top: 3mm;
+        margin-bottom: 3mm;
         display: flex;
         gap: 4mm;
         align-items: center;
@@ -625,11 +617,6 @@
 {% endif %}
 
 {% set is_materiaal = (inhoud.instructie_type == 'materiaal') %}
-{% if inhoud.instructie_type %}
-<div class="pdf-type-banner">
-    {% if is_materiaal %}Materiaalkaart{% else %}Procedurekaart{% endif %}
-</div>
-{% endif %}
 
 {# ==================== PRODUCTINFORMATIE / OMSCHRIJVING ==================== #}
 {% if inhoud.omschrijving or (is_materiaal and productfoto_pad) %}
@@ -669,6 +656,15 @@
 <section class="pdf-sectie">
     <div class="pdf-sectie-titel">Veiligheid</div>
     <div class="pdf-sectie-inhoud">
+        <div class="ik-lmra">
+            <div class="ik-lmra-qr-frame">
+                {% if lmra_qr_data_uri %}<img src="{{ lmra_qr_data_uri }}" alt="LMRA-QR">{% else %}<span>nog<br>leeg</span>{% endif %}
+            </div>
+            <div class="ik-lmra-info">
+                <strong>LMRA — Last Minute Risk Analysis</strong>
+                Scan vóór inzet de QR-code om het LMRA-formulier in te vullen.
+            </div>
+        </div>
         {% if veiligheid_zinnen %}
         <ul class="ik-veiligheid-lijst">
             {% for zin in veiligheid_zinnen %}
@@ -679,15 +675,6 @@
             {% endfor %}
         </ul>
         {% endif %}
-        <div class="ik-lmra">
-            <div class="ik-lmra-qr-frame">
-                {% if lmra_qr_data_uri %}<img src="{{ lmra_qr_data_uri }}" alt="LMRA-QR">{% else %}<span>nog<br>leeg</span>{% endif %}
-            </div>
-            <div class="ik-lmra-info">
-                <strong>LMRA — Last Minute Risk Analysis</strong>
-                Scan vóór inzet de QR-code om het LMRA-formulier in te vullen.
-            </div>
-        </div>
     </div>
 </section>
 {% endif %}

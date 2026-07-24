@@ -872,7 +872,6 @@
     </h1>
     <div class="btn-group">
         {% if bewerken and kaart %}
-            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary" target="_blank" rel="noopener">Bekijk PDF</a>
             <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
         {% else %}
             <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
@@ -929,9 +928,9 @@
         <div class="file-upload-area">
             {{ form.header_foto(class="form-file", accept="image/jpeg,image/png,image/webp", id="header-foto-input") }}
             {% if kaart_type == 'thema' %}
-            <p class="form-hint">Liggende foto, <strong>minimaal 200×200 px</strong>. Wordt achtergrond van de hele themakaart (verhouding A4 liggend). <strong>Max 5 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
+            <p class="form-hint">Liggende foto, <strong>minimaal 200×200 px</strong>. Wordt achtergrond van de hele themakaart (verhouding A4 liggend). <strong>Max 20 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
             {% else %}
-            <p class="form-hint">Liggend formaat, <strong>minimaal 1200×400 px</strong>. Je kunt na uploaden zelf het kader verschuiven en inzoomen. <strong>Max 5 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
+            <p class="form-hint">Liggend formaat, <strong>minimaal 900×300 px</strong>. Je kunt na uploaden zelf het kader verschuiven en inzoomen. <strong>Max 20 MB</strong>. Toegestane formaten: <strong>JPG, PNG of WebP</strong> (geen HEIC).</p>
             {% endif %}
         </div>
 
@@ -1215,7 +1214,7 @@
             <div class="file-upload-area">
                 <input type="file" name="ensceneringstips_foto" class="form-file"
                        accept="image/jpeg,image/png,image/webp" id="tips-foto-input">
-                <p class="form-hint">Liggend formaat (4:3). Je kunt na uploaden bijsnijden. Max 5 MB. (JPG, PNG, WebP)</p>
+                <p class="form-hint">Liggend formaat (4:3). Je kunt na uploaden bijsnijden. Max 20 MB. (JPG, PNG, WebP)</p>
             </div>
             <div id="tips-cropper-paneel" style="display:none; margin-top: 1rem;">
                 <div class="form-subgroep-blok">
@@ -1690,7 +1689,7 @@
                     <label class="form-label" for="productfoto-input">{{ 'Nieuwe foto uploaden (vervangt huidige)' if kaart.productfoto else 'Foto uploaden' }}</label>
                     <input type="file" name="productfoto" id="productfoto-input" class="form-file"
                            accept="image/jpeg,image/png,image/webp">
-                    <p class="form-hint">Vrij formaat (staand of liggend). Min 200×200 px, max 5 MB. JPG/PNG/WebP.</p>
+                    <p class="form-hint">Vrij formaat (staand of liggend). Min 200×200 px, max 20 MB. JPG/PNG/WebP.</p>
                 </div>
 
                 <div class="productfoto-marker-zone" id="productfoto-marker-zone"
@@ -1723,10 +1722,32 @@
             <h2 class="form-section-title">Veiligheid</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de veiligheidspunten en LMRA-QR invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de LMRA-QR en veiligheidspunten invullen.</p>
             {% else %}
 
-            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Veiligheidspunten</h3>
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">LMRA — Last Minute Risk Analysis</h3>
+            {% set lmra_url = config.get('LMRA_QR_URL') or '' %}
+            <p class="form-hint">Op elke instructiekaart verschijnt automatisch dezelfde LMRA-QR die naar het centrale LMRA-formulier verwijst. Deze URL wordt door de admin centraal beheerd — niet per kaart in te stellen.</p>
+
+            <div class="lmra-placeholder">
+                <div class="lmra-qr-frame {% if lmra_url %}gekoppeld{% endif %}">
+                    {% if lmra_url %}
+                    <div class="lmra-qr-gekoppeld" title="LMRA-URL geconfigureerd">✓</div>
+                    {% else %}
+                    <div class="lmra-qr-leeg">QR-code<br>(nog leeg)</div>
+                    {% endif %}
+                </div>
+                <div class="lmra-info">
+                    <strong>LMRA</strong>
+                    {% if lmra_url %}
+                    <p>LMRA-URL is centraal ingesteld. De QR-code komt automatisch op deze kaart in de PDF.</p>
+                    {% else %}
+                    <p>LMRA-URL is nog niet geconfigureerd. Een admin kan de centrale URL instellen via een omgevingsvariabele (<code>LMRA_QR_URL</code>) — in een latere fase volgt een instellingenpagina in de app.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Veiligheidspunten</h3>
             <p class="form-hint">Voeg aandachtspunten rondom veiligheid toe (maximaal {{ VEILIGHEID_MAX_ZINNEN }} punten, elk max {{ VEILIGHEID_ZIN_MAX }} tekens).</p>
 
             <div class="veiligheid-lijst" id="veiligheid-lijst">
@@ -1750,28 +1771,6 @@
             <button type="button" id="veiligheid-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
                 + Veiligheidspunt toevoegen
             </button>
-
-            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">LMRA — Last Minute Risk Analysis</h3>
-            {% set lmra_url = config.get('LMRA_QR_URL') or '' %}
-            <p class="form-hint">Op elke instructiekaart verschijnt automatisch dezelfde LMRA-QR die naar het centrale LMRA-formulier verwijst. Deze URL wordt door de admin centraal beheerd — niet per kaart in te stellen.</p>
-
-            <div class="lmra-placeholder">
-                <div class="lmra-qr-frame {% if lmra_url %}gekoppeld{% endif %}">
-                    {% if lmra_url %}
-                    <div class="lmra-qr-gekoppeld" title="LMRA-URL geconfigureerd">✓</div>
-                    {% else %}
-                    <div class="lmra-qr-leeg">QR-code<br>(nog leeg)</div>
-                    {% endif %}
-                </div>
-                <div class="lmra-info">
-                    <strong>LMRA</strong>
-                    {% if lmra_url %}
-                    <p>LMRA-URL is centraal ingesteld. De QR-code komt automatisch op deze kaart in de PDF.</p>
-                    {% else %}
-                    <p>LMRA-URL is nog niet geconfigureerd. Een admin kan de centrale URL instellen via een omgevingsvariabele (<code>LMRA_QR_URL</code>) — in een latere fase volgt een instellingenpagina in de app.</p>
-                    {% endif %}
-                </div>
-            </div>
 
             {% endif %}
 
@@ -1950,7 +1949,6 @@
         {{ form.submit(class="btn btn-primary btn-large") }}
         {% if bewerken and kaart %}
             <button type="submit" name="volgende_actie" value="pdf" class="btn btn-secondary btn-large" formtarget="_blank">Opslaan & bekijk PDF</button>
-            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary" target="_blank" rel="noopener">Bekijk PDF</a>
             <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
         {% else %}
             <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
@@ -2067,7 +2065,7 @@ function setupCropper(config) {
         if (allowed.indexOf(ext) === -1) {
             return 'verkeerd bestandstype (.' + ext + '). Alleen JPG, PNG of WebP.';
         }
-        var maxBytes = config.maxFileBytes || (5 * 1024 * 1024);
+        var maxBytes = config.maxFileBytes || (20 * 1024 * 1024);
         if (file.size > maxBytes) {
             var actMb = (file.size / 1024 / 1024).toFixed(1);
             var maxMb = Math.round(maxBytes / 1024 / 1024);
@@ -2170,12 +2168,28 @@ function setupCropper(config) {
     if (bevestigBtn) {
         bevestigBtn.addEventListener('click', function() {
             if (!cropper) return;
+            var fotoLabel = (config.label || 'foto');
+            fotoLabel = fotoLabel.charAt(0).toUpperCase() + fotoLabel.slice(1);
+            // Controleer dat het bijgesneden gebied groter dan het minimum uitkomt —
+            // anders krijgt de gebruiker pas bij opslaan een foutmelding van de server.
+            var minW = config.minW || 0;
+            var minH = config.minH || 0;
+            if (minW > 0 && minH > 0) {
+                var data = cropper.getData(true);
+                if (data && (data.width < minW || data.height < minH)) {
+                    toonValidatieFout(
+                        'bijgesneden gebied is te klein (' + Math.round(data.width) + '×' +
+                        Math.round(data.height) + ' px). Minimaal ' + minW + '×' + minH +
+                        ' px nodig — zoom uit of maak het kader groter.'
+                    );
+                    return;
+                }
+            }
+            wisValidatieFout();
             isBevestigd = true;
             if (statusEl) statusEl.style.display = 'block';
             // Lock de cropper zodat scrollen/klikken de crop niet meer verandert
             cropper.disable();
-            var fotoLabel = (config.label || 'foto');
-            fotoLabel = fotoLabel.charAt(0).toUpperCase() + fotoLabel.slice(1);
             bannerFoutVerwijderen(fotoLabel + ' bijsnijden');
         });
     }
@@ -2253,9 +2267,9 @@ setupCropper({
     ratio: 3 / 1,
     rotatable: true,
     maxW: 2400, maxH: 800,
-    minW: 1200, minH: 400,
+    minW: 900, minH: 300,
     {% endif %}
-    maxFileBytes: 5 * 1024 * 1024,
+    maxFileBytes: 20 * 1024 * 1024,
     fillColor: '#000',
     prefix: 'header',
     label: '{{ "achtergrondfoto" if kaart_type == "thema" else "headerfoto" }}',
@@ -2274,7 +2288,7 @@ setupCropper({
     rotatable: false,
     maxW: 1200, maxH: 900,
     minW: 200, minH: 200,
-    maxFileBytes: 5 * 1024 * 1024,
+    maxFileBytes: 20 * 1024 * 1024,
     fillColor: '#fff',
     prefix: 'tips',
     label: 'ensceneringstips foto',
@@ -2957,7 +2971,7 @@ setupCropper({
         // Snel client-side check op type/grootte
         var ext = (file.name.split('.').pop() || '').toLowerCase();
         if (['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) === -1) return;
-        if (file.size > 5 * 1024 * 1024) return;
+        if (file.size > 20 * 1024 * 1024) return;
 
         // Preview via object URL
         var url = URL.createObjectURL(file);
@@ -3666,8 +3680,8 @@ setupCropper({
                 this.value = '';
                 return;
             }
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Bestand te groot (max 5 MB).');
+            if (file.size > 20 * 1024 * 1024) {
+                alert('Bestand te groot (max 20 MB).');
                 this.value = '';
                 return;
             }
