@@ -203,17 +203,28 @@ class OpdrachtkaartForm(FlaskForm):
     naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
     header_foto = FileField('Headerfoto')
-    randvoorwaarden = TextAreaField('Randvoorwaarden', validators=[Optional()])
-    doelen = TextAreaField('Doelen', validators=[Optional()])
-    opdrachten = TextAreaField('Opdrachten', validators=[Optional()])
-    uitdagende_variant = TextAreaField('Uitdagende variant', validators=[Optional()])
-    veiligheid = TextAreaField('Veiligheid', validators=[Optional()])
-    verdiepende_vragen = TextAreaField('Verdiepende vragen', validators=[Optional()])
-    voorbereiding = TextAreaField('Voorbereiding & benodigdheden', validators=[Optional()])
-    evaluatie = TextAreaField('Evaluatie', validators=[Optional()])
-    achtergrondinformatie = TextAreaField('Achtergrondinformatie', validators=[Optional()])
-    verbeterpunten = TextAreaField('Verbeterpunten / tips', validators=[Optional()])
-    afbeeldingen = MultipleFileField('Afbeeldingen')
+    # Voorbereiding
+    doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
+    doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
+    # Oefenmiddelen gesplitst: (1) basis-set op eigen post, (2) extra te bestellen bij coördinator.
+    # Beide opgeslagen als JSON-string in een verborgen input; JS-editor rendert de rijen.
+    oefenmiddelen_basis = StringField('Basis (eigen post)', validators=[Optional(), Length(max=2000)])
+    oefenmiddelen_extra = StringField('Extra bestellen', validators=[Optional(), Length(max=2000)])
+    # Veiligheid: LMRA centraal + 5 korte zinnen (net als instructiekaart).
+    veiligheid_zin_1 = StringField('Veiligheidspunt 1', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_2 = StringField('Veiligheidspunt 2', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_3 = StringField('Veiligheidspunt 3', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_4 = StringField('Veiligheidspunt 4', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    veiligheid_zin_5 = StringField('Veiligheidspunt 5', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    # Opdrachten — JSON-lijst: [{"id": "<uuid>", "titel": "...", "tekst": "...",
+    #                            "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg",
+    #                                       "bestand_origineel": "yyy.jpg"}]}].
+    # Max 2 foto's per opdracht (net als bij werkwijze-stappen op de instructiekaart).
+    opdrachten_json = StringField('Opdrachten', validators=[Optional()])
+    # Onderstaande drie zijn dynamische lijsten (regel-per-punt) — mogen langere teksten bevatten.
+    uitdagende_variant = TextAreaField('Uitdagende variant', validators=[Optional(), Length(max=3000)])
+    verdiepende_vragen = TextAreaField('Verdiepende vragen', validators=[Optional(), Length(max=3000)])
+    evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
     submit = SubmitField('Opslaan als concept')
 
 
@@ -248,9 +259,12 @@ INHOUD_VELDEN = {
                  'verwijzing_url_3', 'verwijzing_label_3',
                  'verwijzing_url_4', 'verwijzing_label_4',
                  'verwijzing_url_5', 'verwijzing_label_5'],
-    'opdracht': ['randvoorwaarden', 'doelen', 'opdrachten', 'uitdagende_variant',
-                 'veiligheid', 'verdiepende_vragen', 'voorbereiding', 'evaluatie',
-                 'achtergrondinformatie', 'verbeterpunten'],
+    'opdracht': ['doelgroep', 'doelgroep_anders',
+                 'oefenmiddelen_basis', 'oefenmiddelen_extra',
+                 'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
+                 'veiligheid_zin_4', 'veiligheid_zin_5',
+                 'opdrachten_json', 'uitdagende_variant',
+                 'verdiepende_vragen', 'evaluatie'],
 }
 
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).

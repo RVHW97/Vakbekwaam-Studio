@@ -246,6 +246,86 @@ def genereer_pdf(kaart):
                                       font_paden=font_paden)
         return HTML(string=html_string).write_pdf()
 
+    # Voor opdrachtkaart: veiligheidszinnen + LMRA + opdrachten (met foto-paden)
+    # + oefenmiddelen-lijsten (JSON) omgezet naar leesbare labels.
+    veiligheid_zinnen = []
+    lmra_qr_data_uri = None
+    opdracht_stappen = []
+    oefenmiddelen_basis_labels = []
+    oefenmiddelen_extra_labels = []
+    opdracht_qrs = []
+    if kaart.type == 'opdracht':
+        for i in range(1, VEILIGHEID_MAX_ZINNEN + 1):
+            zin = (inhoud.get(f'veiligheid_zin_{i}') or '').strip()
+            if zin:
+                veiligheid_zinnen.append(zin)
+        lmra_url = current_app.config.get('LMRA_QR_URL') or ''
+        lmra_qr_data_uri = _url_qr_data_uri(lmra_url) if lmra_url else None
+
+        # Oefenmiddelen: JSON → labels
+        BASIS_LABELS = {'ts': 'TS', 'basisoefenset': 'Basisoefenset'}
+        EXTRA_LABELS = {'ademlucht': 'Ademlucht'}
+        try:
+            basis_items = json.loads(inhoud.get('oefenmiddelen_basis') or '[]')
+        except (ValueError, TypeError):
+            basis_items = []
+        if isinstance(basis_items, list):
+            for it in basis_items:
+                if not isinstance(it, dict):
+                    continue
+                t = (it.get('type') or '').strip()
+                if t == 'anders':
+                    tekst = (it.get('tekst') or '').strip()
+                    if tekst:
+                        oefenmiddelen_basis_labels.append(tekst)
+                elif t in BASIS_LABELS:
+                    oefenmiddelen_basis_labels.append(BASIS_LABELS[t])
+        try:
+            extra_items = json.loads(inhoud.get('oefenmiddelen_extra') or '[]')
+        except (ValueError, TypeError):
+            extra_items = []
+        if isinstance(extra_items, list):
+            for it in extra_items:
+                if not isinstance(it, dict):
+                    continue
+                t = (it.get('type') or '').strip()
+                aantal = (it.get('aantal') or '').strip()
+                if t == 'anders':
+                    tekst = (it.get('tekst') or '').strip()
+                    if tekst:
+                        oefenmiddelen_extra_labels.append(f'{aantal} × {tekst}' if aantal else tekst)
+                elif t in EXTRA_LABELS:
+                    naam = EXTRA_LABELS[t]
+                    oefenmiddelen_extra_labels.append(f'{aantal} × {naam}' if aantal else naam)
+
+        try:
+            opdracht_stappen = json.loads(inhoud.get('opdrachten_json') or '[]')
+            if not isinstance(opdracht_stappen, list):
+                opdracht_stappen = []
+        except (ValueError, TypeError):
+            opdracht_stappen = []
+
+        # Gekoppelde QR-codes uit de bank (achtergrond-tab). Reuse InstructieQRLink.
+        for link in kaart.get_instructie_qr_links():
+            if link.qr_code is None:
+                continue
+            opdracht_qrs.append({
+                'data_uri': _qr_data_uri(link.qr_code),
+                'naam': link.qr_code.naam,
+                'categorie': link.qr_code.categorie_naam,
+            })
+        # Foto-paden absoluut maken zodat WeasyPrint ze kan laden.
+        for opdr in opdracht_stappen:
+            if not isinstance(opdr, dict):
+                continue
+            for foto in (opdr.get('fotos') or []):
+                bestand = (foto.get('bestand') or '').strip() if isinstance(foto, dict) else ''
+                if bestand:
+                    pad = os.path.join(upload_folder, bestand)
+                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+                else:
+                    foto['pad'] = None
+
     html_string = render_template('kaarten/pdf_template.html',
                                   kaart=kaart,
                                   inhoud=inhoud,
@@ -265,7 +345,13 @@ def genereer_pdf(kaart):
                                   kerntaak_kleur=kerntaak_kleur,
                                   kerntaak_afk=kerntaak_afk,
                                   header_foto_pad=header_foto_pad,
-                                  tips_foto_pad=tips_foto_pad)
+                                  tips_foto_pad=tips_foto_pad,
+                                  veiligheid_zinnen=veiligheid_zinnen,
+                                  lmra_qr_data_uri=lmra_qr_data_uri,
+                                  opdracht_stappen=opdracht_stappen,
+                                  oefenmiddelen_basis_labels=oefenmiddelen_basis_labels,
+                                  oefenmiddelen_extra_labels=oefenmiddelen_extra_labels,
+                                  opdracht_qrs=opdracht_qrs)
 
     pdf = HTML(string=html_string).write_pdf()
     return pdf

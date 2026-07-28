@@ -182,6 +182,64 @@ def _kaart_naam_uit_request(request_form, kaart_type, fallback=''):
     return (request_form.get('naam') or fallback).strip() or fallback
 
 
+def verwerk_opdracht_fotos(json_string):
+    """Parse opdracht-JSON (platte lijst van opdrachten met max 2 foto's per opdracht),
+    upload nieuwe foto's per slot-id, return bijgewerkte JSON.
+
+    Per opdracht.fotos[i] = {'slot': '<uuid>', 'bestand': '<filename>',
+                             'bestand_origineel': '<filename>'}.
+    Bij een geüploade file in request.files['opdracht_foto_<slot>'] (gecropt) of
+    'opdracht_orig_<slot>' (origineel) wordt deze opgeslagen en de bestandsnaam in
+    de JSON vervangen. Oude bestanden bij vervangen worden opgeruimd.
+    """
+    try:
+        opdrachten = json.loads(json_string or '[]')
+    except (ValueError, TypeError):
+        return json_string or '[]'
+    if not isinstance(opdrachten, list):
+        return json_string or '[]'
+
+    for opdr in opdrachten:
+        if not isinstance(opdr, dict):
+            continue
+        fotos = opdr.get('fotos') or []
+        nieuwe_fotos = []
+        for foto in fotos[:2]:  # veiligheidsklem: max 2 foto's per opdracht
+            if not isinstance(foto, dict):
+                continue
+            slot = (foto.get('slot') or '').strip()
+            bestand = (foto.get('bestand') or '').strip()
+            bestand_origineel = (foto.get('bestand_origineel') or '').strip()
+            if slot:
+                orig_upload = request.files.get('opdracht_orig_' + slot)
+                if orig_upload and orig_upload.filename:
+                    orig_naam, orig_fout = save_foto(orig_upload, prefix='opdracht_orig', ratio=None)
+                    if orig_naam:
+                        if bestand_origineel:
+                            verwijder_bestand(bestand_origineel)
+                        bestand_origineel = orig_naam
+                    elif orig_fout:
+                        flash(f'Opdracht-foto (origineel): {orig_fout}', 'warning')
+                crop_upload = request.files.get('opdracht_foto_' + slot)
+                if crop_upload and crop_upload.filename:
+                    foto_naam, foto_fout = save_foto(crop_upload, prefix='opdracht', ratio=None)
+                    if foto_naam:
+                        if bestand:
+                            verwijder_bestand(bestand)
+                        bestand = foto_naam
+                    elif foto_fout:
+                        flash(f'Opdracht-foto: {foto_fout}', 'warning')
+                if bestand and not bestand_origineel:
+                    bestand_origineel = bestand
+            nieuwe_fotos.append({
+                'slot': slot,
+                'bestand': bestand,
+                'bestand_origineel': bestand_origineel,
+            })
+        opdr['fotos'] = nieuwe_fotos
+    return json.dumps(opdrachten, ensure_ascii=False)
+
+
 def verwerk_werkwijze_fotos(json_string):
     """Parse werkwijze-JSON (platte lijst van stappen), upload nieuwe foto's per slot-id,
     return bijgewerkte JSON.
@@ -446,6 +504,19 @@ def bewerken(kaart_id):
             # Update WTForms data zodat een eventuele re-render de nieuwe JSON toont.
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
+
+    # Opdracht-foto's: idem — bij POST altijd verwerken zodat uploads niet verloren gaan.
+    processed_opdracht_json = None
+    if request.method == 'POST' and kaart.type == 'opdracht':
+        _incoming_opdr = request.form.get('opdrachten_json') or '[]'
+        processed_opdracht_json = verwerk_opdracht_fotos(_incoming_opdr)
+        if processed_opdracht_json != _incoming_opdr:
+            _inh = kaart.get_inhoud()
+            _inh['opdrachten_json'] = processed_opdracht_json
+            kaart.set_inhoud(_inh)
+            db.session.commit()
+            if hasattr(form, 'opdrachten_json'):
+                form.opdrachten_json.data = processed_opdracht_json
     # Toelichting is alleen vereist vanaf de tweede échte wijziging.
     # Telt het aantal 'Bewerkt'-records — als 0, dan slaat de gebruiker voor het eerst
     # echt op (na auto-saves bij tab-wissel) en hoeft hij/zij geen reden te geven.
@@ -465,6 +536,8 @@ def bewerken(kaart_id):
         # Werkwijze-foto's zijn al bovenaan verwerkt — gebruik het resultaat.
         if processed_werkwijze_json is not None and 'werkwijze_stappen_json' in inhoud:
             inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
+        if processed_opdracht_json is not None and 'opdrachten_json' in inhoud:
+            inhoud['opdrachten_json'] = processed_opdracht_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -574,6 +647,8 @@ def bewerken(kaart_id):
         # Werkwijze-foto's zijn al bovenaan verwerkt — gebruik het resultaat.
         if processed_werkwijze_json is not None and 'werkwijze_stappen_json' in inhoud:
             inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
+        if processed_opdracht_json is not None and 'opdrachten_json' in inhoud:
+            inhoud['opdrachten_json'] = processed_opdracht_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None
@@ -663,10 +738,11 @@ def bewerken(kaart_id):
             if rijen:
                 beschikbaar_per_type[type_key] = {'naam': t_info['naam'], 'kaarten': rijen}
 
-    # Instructiekaart-achtergrond: QR-koppelingen + beschikbare QR-codes uit de bank
+    # Instructie- én opdrachtkaart-achtergrond: QR-koppelingen + beschikbare QR-codes uit de bank.
+    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus hij dekt beide types.
     instructie_qr_links = []
     instructie_beschikbare_qrs_per_categorie = {}
-    if kaart.type == 'instructie':
+    if kaart.type in ('instructie', 'opdracht'):
         instructie_qr_links = kaart.get_instructie_qr_links()
         gekoppelde_qr_ids = {r.qr_code_id for r in instructie_qr_links}
         beschikbare_qrs = QRCode.query.filter(
@@ -965,7 +1041,7 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
 def instructie_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type != 'instructie':
+    if kaart.type not in ('instructie', 'opdracht'):
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
     if not qr_id:
@@ -976,7 +1052,7 @@ def instructie_qr_link_toevoegen(kaart_id):
         flash('QR-code niet gevonden.', 'danger')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
     if InstructieQRLink.query.filter_by(kaart_id=kaart.id).count() >= INSTRUCTIE_MAX_QR_KOPPELINGEN:
-        flash(f'Maximaal {INSTRUCTIE_MAX_QR_KOPPELINGEN} QR-koppelingen op een instructiekaart.', 'warning')
+        flash(f'Maximaal {INSTRUCTIE_MAX_QR_KOPPELINGEN} QR-koppelingen per kaart.', 'warning')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + '#tab-achtergrond')
     if InstructieQRLink.query.filter_by(kaart_id=kaart.id, qr_code_id=qr_id).first():
         flash('Deze QR-code is al gekoppeld.', 'info')
@@ -995,7 +1071,7 @@ def instructie_qr_link_toevoegen(kaart_id):
 def instructie_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type != 'instructie':
+    if kaart.type not in ('instructie', 'opdracht'):
         abort(404)
     link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
     if not link:

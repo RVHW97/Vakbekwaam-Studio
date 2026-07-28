@@ -311,6 +311,239 @@
         line-height: 1.5;
     }
     .pdf-infostrip-sublijst span { display: block; }
+    /* Extra-bestellen-kolom: gouden achtergrond zodat de bevelvoerder in één oogopslag ziet
+       wat er niet standaard op de post ligt. */
+    .pdf-infostrip-kolom-extra {
+        background-color: #FFF6D9;
+        border-left: 1.5mm solid #DAB94F !important;
+    }
+    .pdf-infostrip-kolom-extra + .pdf-infostrip-kolom,
+    .pdf-infostrip-kolom + .pdf-infostrip-kolom-extra {
+        border-left: 1.5mm solid #DAB94F;
+    }
+    .pdf-extra-label {
+        color: #8A6D1E !important;
+    }
+    .pdf-infostrip-kolom-extra .pdf-infostrip-detail {
+        color: #3B2E00;
+    }
+    /* LMRA-blok (opdrachtkaart) */
+    .pdf-lmra {
+        margin-bottom: 3mm;
+        display: flex;
+        gap: 4mm;
+        align-items: center;
+        padding: 3mm 4mm;
+        background: #F0EFEC;
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+        page-break-inside: avoid;
+    }
+    .pdf-lmra-qr {
+        flex: 0 0 22mm;
+        width: 22mm;
+        height: 22mm;
+        background: #FFF;
+        border: 0.3mm solid #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7pt;
+        color: #888;
+        text-align: center;
+        font-style: italic;
+    }
+    .pdf-lmra-qr img {
+        width: 22mm;
+        height: 22mm;
+        display: block;
+    }
+    .pdf-lmra-info { flex: 1; font-size: 9pt; color: #1B2A4A; }
+    .pdf-lmra-info strong { display: block; font-size: 10.5pt; margin-bottom: 1mm; color: #1B2A4A; }
+
+    /* Opdrachtkaart-opdrachten (per opdracht een titelblok + tekst + optioneel 1-2 foto's) */
+    .pdf-opdracht-blok {
+        background: #FAFAF8;
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+        padding: 3mm 4mm;
+        margin-bottom: 3mm;
+        page-break-inside: avoid;
+        display: block;
+    }
+    .pdf-opdracht-kop {
+        display: flex;
+        align-items: baseline;
+        gap: 2mm;
+        margin-bottom: 1.5mm;
+    }
+    .pdf-opdracht-nummer {
+        font-weight: 700;
+        color: {{ kerntaak_kleur }};
+        font-size: 11pt;
+        flex: 0 0 auto;
+    }
+    .pdf-opdracht-titel {
+        font-weight: 700;
+        color: #1B2A4A;
+        font-size: 11pt;
+    }
+    .pdf-opdracht-body {
+        font-size: 9.5pt;
+        color: #222;
+        line-height: 1.4;
+    }
+    .pdf-opdracht-tekst {
+        line-height: 1.4;
+    }
+    .pdf-opdracht-body-met-fotos {
+        display: flex;
+        gap: 3mm;
+        align-items: flex-start;
+    }
+    .pdf-opdracht-body-met-fotos .pdf-opdracht-tekst {
+        flex: 1;
+    }
+    .pdf-opdracht-fotos {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 2mm;
+    }
+    .pdf-opdracht-foto {
+        width: 42mm;
+        height: 32mm;
+        overflow: hidden;
+        background: #eee;
+        border-radius: 1mm;
+    }
+    .pdf-opdracht-foto img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    /* Opdrachtkaart: nabespreking (verdiepende vragen + evaluatie side-by-side) */
+    .pdf-nabespreking {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        background: #1B2A4A10;
+        border-top: 1.5mm solid {{ kerntaak_kleur }};
+        border-bottom: 1.5mm solid {{ kerntaak_kleur }};
+        padding: 4mm 5mm 3mm 5mm;
+        width: 90%;
+        margin: 8mm auto 5mm auto;
+    }
+    .pdf-nabespreking .pdf-sectie-titel-plain {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #1B2A4A;
+        padding: 0 0 2mm 0;
+        margin: 0 0 3mm 0;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        text-align: center;
+    }
+    .pdf-nabespreking-tabel {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .pdf-nabespreking-cel {
+        width: 50%;
+        vertical-align: top;
+        padding: 0 3mm;
+    }
+    .pdf-nabespreking-cel + .pdf-nabespreking-cel {
+        border-left: 0.4mm solid #1B2A4A30;
+    }
+    .pdf-nabespreking-kop {
+        display: flex;
+        align-items: center;
+        gap: 2mm;
+        margin-bottom: 2mm;
+    }
+    .pdf-nabespreking-icoon {
+        display: inline-block;
+        width: 10mm;
+        height: 10mm;
+        border-radius: 50%;
+        text-align: center;
+        padding: 1mm;
+        box-sizing: border-box;
+        flex: 0 0 10mm;
+    }
+    .pdf-nabespreking-icoon svg {
+        width: 8mm;
+        height: 8mm;
+        vertical-align: middle;
+    }
+    .pdf-nabespreking-titel {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 9.5pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4pt;
+        color: #1B2A4A;
+    }
+    .pdf-nabespreking-lijst {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-family: "Open Sans", sans-serif;
+        font-size: 9pt;
+        line-height: 1.5;
+        color: #1B2A4A;
+    }
+    .pdf-nabespreking-lijst li {
+        position: relative;
+        padding-left: 4mm;
+        margin-bottom: 1.2mm;
+    }
+    .pdf-nabespreking-lijst li::before {
+        content: '●';
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: {{ kerntaak_kleur }};
+        font-size: 0.9em;
+        line-height: 1.5;
+    }
+    .pdf-nabespreking-leeg {
+        font-style: italic;
+        color: #888;
+        font-size: 9pt;
+        margin: 0;
+    }
+
+    /* Opdrachtkaart: gekoppelde QR-codes (zoals bij instructiekaart) */
+    .pdf-opdracht-qr-rij {
+        display: flex;
+        gap: 4mm;
+        flex-wrap: wrap;
+        margin-top: 1mm;
+    }
+    .pdf-opdracht-qr-blok {
+        flex: 0 0 auto;
+        width: 32mm;
+        text-align: center;
+        page-break-inside: avoid;
+    }
+    .pdf-opdracht-qr-blok img {
+        width: 28mm;
+        height: 28mm;
+        background: #fff;
+        border: 0.3mm solid #ddd;
+        padding: 1mm;
+    }
+    .pdf-opdracht-qr-label {
+        font-size: 8pt;
+        margin-top: 1mm;
+        color: #1B2A4A;
+        font-weight: 700;
+        word-break: break-word;
+    }
+    .pdf-opdracht-qr-cat {
+        font-size: 7pt;
+        color: #888;
+    }
 
     /* === PAGERBERICHT C35 === */
     .pdf-pager-sectie { page-break-inside: avoid; }
@@ -715,17 +948,21 @@
 {% endif %}
 
 <!-- INFOSTRIP: Doelgroep / Oefenstaf / Tijdsduur (alleen scenariokaarten) -->
-{% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen'] %}
+{% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen', 'oefenmiddelen_basis', 'oefenmiddelen_extra'] %}
 {% set pager_velden = ['pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen'] %}
 {% set verwijzing_velden = ['verwijzing_url_1', 'verwijzing_label_1', 'verwijzing_url_2', 'verwijzing_label_2', 'verwijzing_url_3', 'verwijzing_label_3', 'verwijzing_url_4', 'verwijzing_label_4', 'verwijzing_url_5', 'verwijzing_label_5'] %}
 {% set pager_soort_tekst = inhoud.get('pager_soort_anders') if inhoud.get('pager_soort') == 'anders' else inhoud.get('pager_soort', '') %}
 {% set heeft_pager = inhoud.get('pager_prio') or pager_soort_tekst or inhoud.get('pager_voertuigen') %}
 {% set kenmerken_velden = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
+{# Veiligheid-zinnen worden bij opdrachtkaart al in het LMRA-blok gerenderd — hier overslaan. #}
+{% set veiligheid_velden = ['veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3', 'veiligheid_zin_4', 'veiligheid_zin_5'] %}
 {% set heeft_kenmerken = namespace(v=false) %}
 {% for k in kenmerken_velden %}{% if inhoud.get(k) %}{% set heeft_kenmerken.v = true %}{% endif %}{% endfor %}
 {% set doelgroep_tekst = inhoud.get('doelgroep_anders') if inhoud.get('doelgroep') == 'anders' else (inhoud.get('doelgroep', '')|capitalize) %}
 {% set heeft_infostrip = inhoud.get('doelgroep') or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or inhoud.get('oefenmiddelen') %}
-{% if heeft_infostrip %}
+{# Infostrip is scenariokaart-specifiek (4 kolommen: doelgroep/tijdsduur/oefenstaf/oefenmiddelen).
+   Opdrachtkaart heeft alleen doelgroep + oefenmiddelen — die krijgt hieronder een eigen simpel blok. #}
+{% if heeft_infostrip and kaart.type != 'opdracht' %}
 <div class="pdf-infostrip">
     <div class="pdf-infostrip-rij">
         <div class="pdf-infostrip-kolom">
@@ -786,6 +1023,78 @@
                 {% else %}—{% endif %}
             </div>
         </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- OPDRACHTKAART: infostrip (doelgroep + oefenmiddelen basis + extra) -->
+{% if kaart.type == 'opdracht' and (inhoud.get('doelgroep') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels) %}
+<div class="pdf-infostrip">
+    <div class="pdf-infostrip-rij">
+        {% if inhoud.get('doelgroep') %}
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="7" r="4" fill="{{ kerntaak_kleur }}"/>
+                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+            </svg>
+            <div class="pdf-infostrip-label">Doelgroep</div>
+            <div class="pdf-infostrip-waarde">{{ doelgroep_tekst or '—' }}</div>
+        </div>
+        {% endif %}
+        {% if oefenmiddelen_basis_labels %}
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="8" width="18" height="11" rx="1.5" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M3 13h18" stroke="{{ kerntaak_kleur }}" stroke-width="1.5"/>
+            </svg>
+            <div class="pdf-infostrip-label">Basis (eigen post)</div>
+            <div class="pdf-infostrip-detail">
+                {% for label in oefenmiddelen_basis_labels %}
+                <div>{{ label }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% if oefenmiddelen_extra_labels %}
+        <div class="pdf-infostrip-kolom pdf-infostrip-kolom-extra">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" fill="#DAB94F" stroke="#8A6D1E" stroke-width="1.5"/>
+                <path d="M12 7v6M12 16v.5" stroke="#3B2E00" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <div class="pdf-infostrip-label pdf-extra-label">Extra bestellen</div>
+            <div class="pdf-infostrip-detail">
+                {% for label in oefenmiddelen_extra_labels %}
+                <div><strong>{{ label }}</strong></div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- OPDRACHTKAART: veiligheid — LMRA + veiligheidspunten -->
+{% if kaart.type == 'opdracht' and (veiligheid_zinnen or lmra_qr_data_uri) %}
+<div class="pdf-sectie">
+    <div class="pdf-sectie-titel">Veiligheid</div>
+    <div class="pdf-sectie-inhoud">
+        <div class="pdf-lmra">
+            <div class="pdf-lmra-qr">
+                {% if lmra_qr_data_uri %}<img src="{{ lmra_qr_data_uri }}" alt="LMRA-QR">{% else %}<span>QR<br>leeg</span>{% endif %}
+            </div>
+            <div class="pdf-lmra-info">
+                <strong>LMRA — Last Minute Risk Analysis</strong>
+                Scan vóór inzet de QR-code om het LMRA-formulier in te vullen.
+            </div>
+        </div>
+        {% if veiligheid_zinnen %}
+        <ul class="pdf-tipslijst">
+            {% for zin in veiligheid_zinnen %}
+            <li>{{ zin }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </div>
 </div>
 {% endif %}
@@ -892,7 +1201,7 @@
         </div>
         {% endif %}
     </div>
-    {% elif veld == 'evaluatie' and heeft_evaluatie %}
+    {% elif veld == 'evaluatie' and heeft_evaluatie and kaart.type == 'scenario' %}
     <div class="pdf-sectie">
         <div class="pdf-sectie-titel">{{ labels['evaluatie'] }}</div>
         <div class="pdf-sectie-inhoud">
@@ -903,7 +1212,96 @@
             </ol>
         </div>
     </div>
-    {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in verwijzing_velden %}
+    {% elif veld == 'opdrachten_json' and opdracht_stappen %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">Opdrachten</div>
+        <div class="pdf-sectie-inhoud">
+            {% for opdr in opdracht_stappen %}
+            <div class="pdf-opdracht-blok">
+                <div class="pdf-opdracht-kop">
+                    <span class="pdf-opdracht-nummer">{{ loop.index }}.</span>
+                    <span class="pdf-opdracht-titel">{{ opdr.titel or '' }}</span>
+                </div>
+                {% set gevulde_fotos = (opdr.fotos or []) | selectattr('pad') | list %}
+                {% if gevulde_fotos %}
+                <div class="pdf-opdracht-body pdf-opdracht-body-met-fotos">
+                    <div class="pdf-opdracht-tekst">{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                    <div class="pdf-opdracht-fotos">
+                        {% for foto in gevulde_fotos %}
+                        <div class="pdf-opdracht-foto"><img src="{{ foto.pad }}" alt=""></div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="pdf-opdracht-body">
+                    <div class="pdf-opdracht-tekst">{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif veld == 'uitdagende_variant' and kaart.type == 'opdracht' and (inhoud.get('verdiepende_vragen') or inhoud.get('uitdagende_variant')) %}
+    {# Verdiepende vragen + Uitdagende variant samen in kenmerkenschema-stijl, side-by-side. #}
+    <div class="pdf-nabespreking">
+        <div class="pdf-sectie-titel-plain">Verdieping</div>
+        <table class="pdf-nabespreking-tabel"><tr>
+            <td class="pdf-nabespreking-cel">
+                <div class="pdf-nabespreking-kop">
+                    <span class="pdf-nabespreking-icoon" style="background: #1B2A4A25;">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="9" stroke="#1B2A4A" stroke-width="2" fill="none"/>
+                            <path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5" stroke="#1B2A4A" stroke-width="2" stroke-linecap="round" fill="none"/>
+                            <circle cx="12" cy="17" r="0.9" fill="#1B2A4A"/>
+                        </svg>
+                    </span>
+                    <div class="pdf-nabespreking-titel">Verdiepende vragen</div>
+                </div>
+                {% if inhoud.get('verdiepende_vragen') %}
+                <ul class="pdf-nabespreking-lijst">
+                    {% for regel in inhoud['verdiepende_vragen'].split('\n') %}
+                        {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="pdf-nabespreking-leeg">—</p>
+                {% endif %}
+            </td>
+            <td class="pdf-nabespreking-cel">
+                <div class="pdf-nabespreking-kop">
+                    <span class="pdf-nabespreking-icoon" style="background: #1B2A4A25;">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" stroke="#1B2A4A" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                    </span>
+                    <div class="pdf-nabespreking-titel">Uitdagende variant</div>
+                </div>
+                {% if inhoud.get('uitdagende_variant') %}
+                <ul class="pdf-nabespreking-lijst">
+                    {% for regel in inhoud['uitdagende_variant'].split('\n') %}
+                        {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="pdf-nabespreking-leeg">—</p>
+                {% endif %}
+            </td>
+        </tr></table>
+    </div>
+    {% elif veld == 'verdiepende_vragen' and kaart.type == 'opdracht' %}
+    {# al gerenderd samen met uitdagende_variant #}
+    {% elif veld == 'evaluatie' and inhoud.get('evaluatie') and kaart.type == 'opdracht' %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">Evaluatie</div>
+        <div class="pdf-sectie-inhoud">
+            <ul class="pdf-tipslijst">
+                {% for regel in inhoud['evaluatie'].split('\n') %}
+                    {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in verwijzing_velden and veld not in veiligheid_velden %}
     <div class="pdf-sectie">
         <div class="pdf-sectie-titel">{{ labels[veld] }}</div>
         <div class="pdf-sectie-inhoud">{{ inhoud[veld] | replace('\n', '<br>')|safe }}</div>
@@ -944,6 +1342,24 @@
         {% endfor %}
     </div>
     {% endif %}
+</div>
+{% endif %}
+
+<!-- OPDRACHTKAART: gekoppelde QR-codes (zelfde stijl als instructiekaart) -->
+{% if kaart.type == 'opdracht' and opdracht_qrs %}
+<div class="pdf-sectie">
+    <div class="pdf-sectie-titel">Achtergrond</div>
+    <div class="pdf-sectie-inhoud">
+        <div class="pdf-opdracht-qr-rij">
+            {% for qr in opdracht_qrs %}
+            <div class="pdf-opdracht-qr-blok">
+                <img src="{{ qr.data_uri }}" alt="QR">
+                <div class="pdf-opdracht-qr-label">{{ qr.naam }}</div>
+                <div class="pdf-opdracht-qr-cat">{{ qr.categorie }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 {% endif %}
 

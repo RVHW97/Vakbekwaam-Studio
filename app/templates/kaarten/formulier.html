@@ -14,8 +14,18 @@
         gap: 0.5rem;
         margin-bottom: 0.4rem;
     }
-    .dynamische-lijst-item input {
+    .dynamische-lijst-item input,
+    .dynamische-lijst-item textarea {
         flex: 1;
+    }
+    .dynamische-lijst-item textarea {
+        min-height: 3.5rem;
+        resize: vertical;
+        font-family: inherit;
+    }
+    /* Textarea-rijen: knop bovenaan uitlijnen zodat hij niet verticaal midden hangt. */
+    .dynamische-lijst-item-textarea {
+        align-items: flex-start;
     }
     .dynamische-lijst-item .btn-verwijder {
         flex: 0 0 auto;
@@ -46,6 +56,7 @@
         background: none;
         border: none;
         border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
         font-family: inherit;
         font-size: 1rem;
         font-weight: 600;
@@ -861,6 +872,171 @@
     .werkwijze-preview-foto.is-klikbaar:hover::after {
         opacity: 1;
     }
+
+    /* === Opdrachtkaart-oefenmiddelen: keuze-lijsten (dropdown + optie 'Andere') === */
+    .keuze-lijst {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        max-width: 32rem;
+    }
+    .keuze-lijst-rij {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        padding: 0.4rem 0.5rem;
+        background: #FAFAF7;
+        border: 1px solid #E4E1D8;
+        border-radius: 6px;
+        flex-wrap: nowrap;
+    }
+    /* Type-slot = dropdown óf (bij Andere) tekstveld. Vult in beide gevallen dezelfde plek. */
+    .keuze-lijst-rij .keuze-lijst-type,
+    .keuze-lijst-rij .keuze-lijst-anders {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-weight: 600;
+    }
+    .keuze-lijst-rij .keuze-lijst-aantal {
+        flex: 0 0 3rem;
+        width: 3rem;
+        text-align: center;
+        padding-left: 0.3rem;
+        padding-right: 0.3rem;
+    }
+    .keuze-lijst-rij .is-verborgen {
+        display: none;
+    }
+    .keuze-lijst-rij .keuze-lijst-terug {
+        flex: 0 0 auto;
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        color: #666;
+        padding: 0.35rem 0.5rem;
+        line-height: 1;
+        font-size: 0.9rem;
+    }
+    .keuze-lijst-rij .keuze-lijst-terug:hover {
+        color: var(--kleur-blauw);
+        border-color: var(--kleur-blauw);
+    }
+    .keuze-lijst-rij .btn-verwijder {
+        flex: 0 0 auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        color: #999;
+        padding: 0.35rem 0.6rem;
+        line-height: 1;
+        margin-left: auto;
+    }
+    .keuze-lijst-rij .btn-verwijder:hover {
+        color: #C8102E;
+        border-color: #C8102E;
+    }
+
+    /* === Opdrachtkaart-opdrachten: compacte editor === */
+    .opdracht-blok {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 0.75rem;
+        background: #fff;
+    }
+    .opdracht-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 0.75rem;
+        background: #F5F3EE;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        user-select: none;
+    }
+    .opdracht-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: #666;
+        padding: 0;
+        width: 1.5rem;
+    }
+    .opdracht-blok.is-ingeklapt .opdracht-toggle::before { content: '▶'; }
+    .opdracht-blok:not(.is-ingeklapt) .opdracht-toggle::before { content: '▼'; }
+    .opdracht-blok.is-ingeklapt .opdracht-body { display: none; }
+    .opdracht-nummer {
+        font-weight: 700;
+        color: #1B2A4A;
+        font-size: 0.95rem;
+        flex: 0 0 auto;
+    }
+    .opdracht-samenvatting {
+        flex: 1;
+        color: #555;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .opdracht-header-acties {
+        display: flex;
+        gap: 0.25rem;
+        flex: 0 0 auto;
+    }
+    .opdracht-header-acties button {
+        min-width: 2rem;
+    }
+    .opdracht-body {
+        padding: 0.75rem 1rem 1rem;
+    }
+    .opdracht-body .form-group { margin-bottom: 0.75rem; }
+    .opdracht-fotos {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    .opdracht-foto-slot {
+        border: 1.5px dashed #ccc;
+        border-radius: 6px;
+        padding: 0.5rem;
+        min-height: 130px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: #FAFAF7;
+        text-align: center;
+    }
+    .opdracht-foto-slot.heeft-foto {
+        border-style: solid;
+        border-color: var(--kleur-blauw);
+        background: #fff;
+    }
+    .opdracht-foto-preview {
+        max-width: 100%;
+        max-height: 100px;
+        border-radius: 4px;
+        display: block;
+    }
+    .opdracht-foto-slot-label {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    .opdracht-foto-input-verborgen {
+        display: none;
+    }
+    .opdracht-foto-acties {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 </style>
 {% endblock %}
 
@@ -1620,19 +1796,21 @@
         {% set productinfo_label = 'Productinformatie' if is_materiaal else 'Omschrijving' %}
 
         <div class="tabs-nav" role="tablist">
-            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop{% if not bewerken %} actief{% endif %}" data-tab="type">Type</button>
+            <button type="button" class="tab-knop{% if bewerken %} actief{% endif %}" data-tab="algemeen">Algemeen</button>
             <button type="button" class="tab-knop" data-tab="productinfo" id="tab-knop-productinfo">{{ productinfo_label }}</button>
             <button type="button" class="tab-knop" data-tab="veiligheid">Veiligheid</button>
             <button type="button" class="tab-knop" data-tab="werkwijze">Werkwijze</button>
             <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
         </div>
 
-        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
-        <div class="tab-paneel actief" data-tab="algemeen">
-            {{ render_algemeen() }}
+        {# ---------------- TAB 0: TYPE INSTRUCTIEKAART ---------------- #}
+        <div class="tab-paneel{% if not bewerken %} actief{% endif %}" data-tab="type">
+            <h2 class="form-section-title">Type instructiekaart</h2>
+            <p class="form-hint">Kies eerst wat voor soort instructiekaart je gaat maken. De volgende stappen worden hierop aangepast.</p>
 
-            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Type instructiekaart <span class="verplicht">*</span></h3>
             <div class="form-group">
+                <label class="form-label">Kies een type <span class="verplicht">*</span></label>
                 <div class="instructie-type-rij" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom: 0.5rem;">
                     {% for sub in form.instructie_type %}
                     <label class="instructie-type-knop" style="flex:1; min-width:200px; padding: 0.75rem 1rem; border: 2px solid #ccc; border-radius: 6px; cursor: pointer; display:flex; align-items:center; gap:0.5rem; background: #fff;">
@@ -1647,6 +1825,16 @@
 
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-primary tab-volgende" data-naar="algemeen" data-lokaal="1">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
+        <div class="tab-paneel{% if bewerken %} actief{% endif %}" data-tab="algemeen">
+            {{ render_algemeen() }}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="type" data-lokaal="1">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="productinfo">Volgende →</button>
             </div>
         </div>
@@ -1789,8 +1977,8 @@
             {% else %}
 
             <p class="form-hint">
-                Voeg stappen toe in de volgorde waarop ze op de PDF komen. Per stap kies je
-                eerst een opmaak (foto-positie), daarna vul je titel, uitleg en foto's in.
+                Voeg stappen toe in de volgorde waarop ze op de PDF komen. Per stap vul je
+                een titel en uitleg in, en voeg je eventueel foto's toe.
                 Onderaan elke stap zie je een voorbeeld hoe het op de PDF komt.
                 Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> stappen — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
             </p>
@@ -1898,33 +2086,314 @@
             </div>
         </div>
 
-    {% else %}
+    {% elif kaart_type == 'opdracht' %}
         {# ============================================================ #}
-        {# NORMALE VARIANT — opdracht: generieke rendering              #}
+        {# TABS VARIANT — opdrachtkaart                                 #}
         {# ============================================================ #}
-        <h2 class="form-section-title">Algemeen</h2>
-        {{ render_algemeen() }}
+        <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop" data-tab="voorbereiding">Voorbereiding</button>
+            <button type="button" class="tab-knop" data-tab="opdrachten">Opdrachten</button>
+            <button type="button" class="tab-knop" data-tab="verdieping">Verdiepende vragen</button>
+            <button type="button" class="tab-knop" data-tab="evaluatie">Evaluatie</button>
+            <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
+        </div>
 
-        {% set skip_fields = ['naam', 'kerntaak', 'header_foto', 'afbeeldingen', 'submit', 'csrf_token'] %}
+        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
+        <div class="tab-paneel actief" data-tab="algemeen">
+            {{ render_algemeen() }}
+            <div class="tab-nav-footer">
+                <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="voorbereiding">Volgende →</button>
+            </div>
+        </div>
 
-        <h2 class="form-section-title">Inhoud</h2>
-        {% for field in form %}
-            {% if field.name not in skip_fields %}
-                <div class="form-group">
-                    {{ field.label(class="form-label") }}
-                    {% if field.type == 'TextAreaField' %}
-                        {{ field(class="form-input form-textarea", rows=4,
-                           placeholder="Typ hier de " + field.label.text|lower + "...") }}
-                    {% else %}
-                        {{ field(class="form-input",
-                           placeholder="Typ hier de " + field.label.text|lower + "...") }}
-                    {% endif %}
-                    {% for error in field.errors %}
-                    <span class="form-error">{{ error }}</span>
+        {# ---------------- TAB 2: VOORBEREIDING ---------------- #}
+        <div class="tab-paneel" data-tab="voorbereiding">
+            <h2 class="form-section-title">Voorbereiding</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier doelgroep, oefenmiddelen en veiligheid invullen.</p>
+            {% else %}
+
+            {# Doelgroep #}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Doelgroep</h3>
+                <div class="form-groep-rij">
+                    <div class="form-groep-kolom">
+                        <div class="form-group">
+                            {{ form.doelgroep.label(class="form-label") }}
+                            {{ form.doelgroep(class="form-input form-select", id="doelgroep-select") }}
+                            {% for error in form.doelgroep.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-groep-kolom" id="doelgroep-anders-kolom" style="{% if form.doelgroep.data != 'anders' %}display:none;{% endif %}">
+                        <div class="form-group">
+                            {{ form.doelgroep_anders.label(class="form-label") }}
+                            {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
+                            {% for error in form.doelgroep_anders.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Oefenmiddelen — gesplitst in 2 keuze-lijsten (dropdown + optie 'Andere') #}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Oefenmiddelen</h3>
+                <p class="form-hint">Splits de middelen op in wat al op de eigen post ligt en wat je extra moet bestellen bij de oefencoördinator.</p>
+
+                <div class="form-subgroep-blok">
+                    <h4 class="form-subgroep-titel">Basis (eigen post)</h4>
+                    <p class="form-hint">Kies uit TS of Basisoefenset, of typ zelf iets in via "Andere" (bv. oefenpop, rookmachine). Max 10 items.</p>
+                    {{ form.oefenmiddelen_basis(type="hidden", id="oefenmiddelen-basis-hidden") }}
+                    <div id="oefenmiddelen-basis-lijst" class="keuze-lijst"></div>
+                    <button type="button" id="oefenmiddelen-basis-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+                </div>
+
+                <div class="form-subgroep-blok" style="margin-top: 1rem;">
+                    <h4 class="form-subgroep-titel">Extra bestellen bij oefencoördinator</h4>
+                    <p class="form-hint">Boventallige middelen die niet standaard op de post staan. Kies Ademlucht (met aantal) of typ zelf iets in via "Andere". Op de PDF komt dit in een gouden vak zodat je in één oogopslag ziet wat er extra besteld moet worden. Max 10 items.</p>
+                    {{ form.oefenmiddelen_extra(type="hidden", id="oefenmiddelen-extra-hidden") }}
+                    <div id="oefenmiddelen-extra-lijst" class="keuze-lijst"></div>
+                    <button type="button" id="oefenmiddelen-extra-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+                </div>
+            </div>
+
+            {# Veiligheid — LMRA + 5 punten (zoals instructiekaart) #}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Veiligheid</h3>
+
+                <h4 class="form-subgroep-titel">LMRA — Last Minute Risk Analysis</h4>
+                {% set lmra_url = config.get('LMRA_QR_URL') or '' %}
+                <p class="form-hint">Op elke opdrachtkaart verschijnt automatisch dezelfde LMRA-QR die naar het centrale LMRA-formulier verwijst. Deze URL wordt door de admin centraal beheerd — niet per kaart in te stellen.</p>
+
+                <div class="lmra-placeholder">
+                    <div class="lmra-qr-frame {% if lmra_url %}gekoppeld{% endif %}">
+                        {% if lmra_url %}
+                        <div class="lmra-qr-gekoppeld" title="LMRA-URL geconfigureerd">✓</div>
+                        {% else %}
+                        <div class="lmra-qr-leeg">QR-code<br>(nog leeg)</div>
+                        {% endif %}
+                    </div>
+                    <div class="lmra-info">
+                        <strong>LMRA</strong>
+                        {% if lmra_url %}
+                        <p>LMRA-URL is centraal ingesteld. De QR-code komt automatisch op deze kaart in de PDF.</p>
+                        {% else %}
+                        <p>LMRA-URL is nog niet geconfigureerd. Een admin kan de centrale URL instellen via een omgevingsvariabele (<code>LMRA_QR_URL</code>).</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h4 class="form-subgroep-titel" style="margin-top: 1.5rem;">Veiligheidspunten</h4>
+                <p class="form-hint">Voeg aandachtspunten rondom veiligheid toe (maximaal {{ VEILIGHEID_MAX_ZINNEN }} punten, elk max {{ VEILIGHEID_ZIN_MAX }} tekens).</p>
+
+                <div class="veiligheid-lijst" id="veiligheid-lijst">
+                    {% for i in range(1, VEILIGHEID_MAX_ZINNEN + 1) %}
+                    {% set veld = form['veiligheid_zin_' ~ i] %}
+                    {% set heeft_waarde = (veld.data or '')|trim %}
+                    <div class="form-group veiligheid-rij {% if i > 1 and not heeft_waarde %}is-verborgen{% endif %}"
+                         data-veiligheid-rij="{{ i }}">
+                        <label class="form-label" for="veiligheid_zin_{{ i }}">{{ i }}.</label>
+                        {{ veld(class="form-input", maxlength=VEILIGHEID_ZIN_MAX,
+                           id="veiligheid_zin_" ~ i,
+                           placeholder="Bv. Werk altijd met minimaal twee personen, draag verplicht handschoenen, …") }}
+                        <button type="button" class="btn-verwijder veiligheid-rij-verwijder"
+                                data-veiligheid-rij-doel="{{ i }}"
+                                title="Veiligheidspunt verwijderen">✕</button>
+                        {% for error in veld.errors %}<span class="form-error" style="grid-column: 2 / -1;">{{ error }}</span>{% endfor %}
+                    </div>
                     {% endfor %}
                 </div>
+
+                <button type="button" id="veiligheid-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                    + Veiligheidspunt toevoegen
+                </button>
+            </div>
+
             {% endif %}
-        {% endfor %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="opdrachten">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 3: OPDRACHTEN ---------------- #}
+        <div class="tab-paneel" data-tab="opdrachten">
+            <h2 class="form-section-title">Opdrachten</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de opdrachten invullen.</p>
+            {% else %}
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Basis-opdrachten</h3>
+                <p class="form-hint"><strong>Houd het behapbaar.</strong> Per opdracht een korte titel, uitleg en eventueel max 2 foto's. Max <strong>10</strong> opdrachten — <span id="opdracht-teller">0 / 10</span>.</p>
+
+                {{ form.opdrachten_json(type="hidden", id="opdrachten-json") }}
+                <div id="opdrachten-lijst"></div>
+
+                <button type="button" id="opdracht-nieuwe-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                    + Opdracht toevoegen
+                </button>
+                {% for error in form.opdrachten_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+                {# Cropper-modal voor opdracht-foto's — hergebruikt voor elk foto-slot. #}
+                <div id="opdracht-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
+                    <div class="werkwijze-cropper-modal-content">
+                        <h3 style="margin-top:0;">Foto bijsnijden</h3>
+                        <p class="form-hint" style="margin-top:0;">Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.</p>
+                        <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="liggend">📷 Liggend</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="staand">📱 Staand</button>
+                        </div>
+                        <div class="werkwijze-cropper-canvas-wrap">
+                            <img id="opdracht-cropper-img" alt="">
+                        </div>
+                        <div class="cropper-knoppen" style="margin-top: 0.75rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-actie="zoom-in">Inzoomen +</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-actie="zoom-uit">Uitzoomen −</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-actie="reset">Reset</button>
+                            <span style="flex: 1;"></span>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-actie="links">↺ Linksom</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-actie="rechts">↻ Rechtsom</button>
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary" data-opdracht-cropper-actie="annuleer">Annuleren</button>
+                            <button type="button" class="btn btn-primary" data-opdracht-cropper-actie="bevestig">Bijsnijden &amp; gebruiken</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Uitdagende variant <span style="font-weight:normal; color:#888; font-size:0.9em;">(optioneel)</span></h3>
+                <p class="form-hint">Extra uitdaging voor gevorderde deelnemers of een tweede ronde. Elke variant als eigen punt (bv. extra tijdsdruk, minder informatie, complexere situatie). Max 8 punten.</p>
+                {{ form.uitdagende_variant(style="display:none", id="uitdagende-variant-hidden") }}
+                <div class="dynamische-lijst" id="uitdagende-variant-lijst"
+                     data-hidden="uitdagende-variant-hidden" data-max="8"
+                     data-invoer="textarea" data-rows="2"
+                     data-placeholder="Bijv. Voer dezelfde opdrachten uit maar in het donker met beperkte communicatie…"></div>
+                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="uitdagende-variant-lijst" style="margin-top: 0.5rem;">+ Variant toevoegen</button>
+                {% for error in form.uitdagende_variant.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            </div>
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="voorbereiding">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="verdieping">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 4: VERDIEPENDE VRAGEN ---------------- #}
+        <div class="tab-paneel" data-tab="verdieping">
+            <h2 class="form-section-title">Verdiepende vragen</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier verdiepende vragen invullen.</p>
+            {% else %}
+
+            <p class="form-hint">Vragen die deelnemers laten nadenken over het waarom achter de opdracht. Handig voor nabespreking. Max 10 vragen.</p>
+            {{ form.verdiepende_vragen(style="display:none", id="verdiepende-vragen-hidden") }}
+            <div class="dynamische-lijst" id="verdiepende-vragen-lijst"
+                 data-hidden="verdiepende-vragen-hidden" data-max="10"
+                 data-invoer="textarea" data-rows="2"
+                 data-placeholder="Bijv. Waarom kies je voor deze opstelling?"></div>
+            <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="verdiepende-vragen-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
+            {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="opdrachten">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="evaluatie">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 5: EVALUATIE ---------------- #}
+        <div class="tab-paneel" data-tab="evaluatie">
+            <h2 class="form-section-title">Evaluatie</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de evaluatie invullen.</p>
+            {% else %}
+
+            <p class="form-hint">Vragen of aandachtspunten voor de nabespreking van de oefening. Max 10 punten.</p>
+            {{ form.evaluatie(style="display:none", id="evaluatie-opdracht-hidden") }}
+            <div class="dynamische-lijst" id="evaluatie-opdracht-lijst"
+                 data-hidden="evaluatie-opdracht-hidden" data-max="10"
+                 data-invoer="textarea" data-rows="2"
+                 data-placeholder="Bijv. Wat ging er goed?"></div>
+            <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="evaluatie-opdracht-lijst" style="margin-top: 0.5rem;">+ Punt toevoegen</button>
+            {% for error in form.evaluatie.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="verdieping">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="achtergrond">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 6: ACHTERGROND ---------------- #}
+        <div class="tab-paneel" data-tab="achtergrond">
+            <h2 class="form-section-title">Achtergrond</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier QR-codes koppelen.</p>
+            {% else %}
+
+            {# === QR-codes uit de bank === #}
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">QR-codes</h3>
+            <p class="form-hint">Koppel QR-codes uit de QR-bank. Op de PDF verschijnen ze onderaan als "Meer informatie". Maximaal {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} koppelingen.</p>
+
+            {% if instructie_qr_links %}
+            <ul style="list-style:none; padding:0; margin: 0 0 0.75rem 0;">
+                {% for link in instructie_qr_links %}
+                <li class="dynamische-lijst-item" style="background: #f8f8f8; padding: 0.4rem 0.6rem; border-radius: 4px; margin-bottom: 0.3rem;">
+                    <span class="badge" style="background:#1B2A4A; color:#fff;">{{ link.qr_code.categorie_naam }}</span>
+                    <strong>{{ link.qr_code.slug }}</strong>
+                    <span style="flex:1;">{{ link.qr_code.naam }}</span>
+                    <button type="button" class="btn-verwijder instructie-actie-knop" title="QR-koppeling verwijderen"
+                            data-instructie-url="{{ url_for('kaarten.instructie_qr_link_verwijderen', kaart_id=kaart.id, link_id=link.id) }}">✕</button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="form-hint" style="font-style:italic; margin-bottom: 0.75rem;">Nog geen QR-codes gekoppeld.</p>
+            {% endif %}
+
+            {% if instructie_beschikbare_qrs_per_categorie and instructie_qr_links|length < INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <div class="instructie-koppel-blok koppel-form"
+                 data-instructie-url="{{ url_for('kaarten.instructie_qr_link_toevoegen', kaart_id=kaart.id) }}"
+                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;">
+                    <option value="">— kies een QR-code uit de bank —</option>
+                    {% for cat_key, blok in instructie_beschikbare_qrs_per_categorie.items() %}
+                    <optgroup label="{{ blok.naam }}">
+                        {% for q in blok.qrs %}
+                        <option value="{{ q.id }}">{{ q.slug }} — {{ q.naam }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm instructie-actie-knop" data-instructie-veld-blok>+ Koppelen</button>
+            </div>
+            {% elif instructie_qr_links|length >= INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <p class="form-hint" style="color:#b6463d;">Maximum van {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} QR-koppelingen bereikt.</p>
+            {% else %}
+            <p class="form-hint">Geen beschikbare QR-codes meer (of maak er eerst een aan via het QR-codes-menu).</p>
+            {% endif %}
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="evaluatie">← Vorige</button>
+                <span class="tab-nav-spacer"></span>
+            </div>
+        </div>
     {% endif %}
 
     {# ==================== ALTIJD ZICHTBAAR ONDERAAN ==================== #}
@@ -2355,6 +2824,10 @@ setupCropper({
         var hiddenId = container.dataset.hidden;
         var max = parseInt(container.dataset.max) || 7;
         var placeholder = container.dataset.placeholder || '';
+        // data-invoer="textarea" → meerregelige tekst per item (bv. verdiepende vragen).
+        // Standaard "input" → één regel (bv. oefenmiddelen).
+        var invoer = container.dataset.invoer === 'textarea' ? 'textarea' : 'input';
+        var rijHoogte = parseInt(container.dataset.rows) || 3;
         var hidden = document.getElementById(hiddenId);
         if (!hidden) return;
 
@@ -2363,8 +2836,15 @@ setupCropper({
         function maakItem(waarde) {
             var div = document.createElement('div');
             div.className = 'dynamische-lijst-item';
-            var input = document.createElement('input');
-            input.type = 'text';
+            if (invoer === 'textarea') div.classList.add('dynamische-lijst-item-textarea');
+            var input;
+            if (invoer === 'textarea') {
+                input = document.createElement('textarea');
+                input.rows = rijHoogte;
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+            }
             input.className = 'form-input';
             input.placeholder = placeholder;
             input.value = waarde || '';
@@ -2385,10 +2865,13 @@ setupCropper({
         }
 
         function syncNaarHidden() {
-            var inputs = container.querySelectorAll('input[type="text"]');
+            // Regels worden per veld gejoined met '\n'; om multi-regel textarea-inputs veilig te
+            // scheiden, vervangen we interne newlines door een spatie.
+            var velden = container.querySelectorAll('input[type="text"], textarea');
             var regels = [];
-            inputs.forEach(function(inp) {
-                if (inp.value.trim()) regels.push(inp.value.trim());
+            velden.forEach(function(inp) {
+                var waarde = (inp.value || '').replace(/\s*\n\s*/g, ' ').trim();
+                if (waarde) regels.push(waarde);
             });
             hidden.value = regels.join('\n');
         }
@@ -2434,10 +2917,11 @@ setupCropper({
                 var hiddenId = container.dataset.hidden;
                 var hidden = document.getElementById(hiddenId);
                 if (!hidden) return;
-                var inputs = container.querySelectorAll('input[type="text"]');
+                var velden = container.querySelectorAll('input[type="text"], textarea');
                 var regels = [];
-                inputs.forEach(function(inp) {
-                    if (inp.value.trim()) regels.push(inp.value.trim());
+                velden.forEach(function(inp) {
+                    var waarde = (inp.value || '').replace(/\s*\n\s*/g, ' ').trim();
+                    if (waarde) regels.push(waarde);
                 });
                 hidden.value = regels.join('\n');
             });
@@ -2547,9 +3031,17 @@ setupCropper({
         }
     }
 
-    // Tab-klik bovenaan → auto-save + switch
+    // Tab-klik bovenaan → auto-save + switch. Uitzondering: vanuit de "type"-tab
+    // is er niets op te slaan (alleen een radio-keuze die pas met de eerstvolgende
+    // Algemeen-save meegaat), dus vanaf daar alleen client-side switchen.
     knoppen.forEach(function(k) {
         k.addEventListener('click', function() {
+            var huidig = document.querySelector('.tab-paneel.actief');
+            var huidigTab = huidig ? huidig.dataset.tab : null;
+            if (huidigTab === 'type') {
+                zetActief(k.dataset.tab);
+                return;
+            }
             autoSaveEnSwitch(k.dataset.tab);
         });
     });
@@ -2585,7 +3077,15 @@ setupCropper({
             { type: 'lijst', hidden: 'ensceneringstips-hidden', label: 'Ensceneringstips (minimaal 1)', min: 1 },
             { type: 'lijst', hidden: 'evaluatie-hidden', label: 'Evaluatie (minimaal 1)', min: 1 }
         ],
-        'verwijzingen': []
+        'verwijzingen': [],
+        // Opdrachtkaart-tabs (voorbereiding/verdieping/evaluatie/achtergrond zijn optioneel)
+        'voorbereiding': [
+            { id: 'doelgroep-select', label: 'Doelgroep' },
+            { type: 'json-lijst', hidden: 'oefenmiddelen-basis-hidden', label: 'Basis-oefenmiddelen (minimaal 1)', min: 1 }
+        ],
+        'opdrachten': [
+            { type: 'opdrachten-json', hidden: 'opdrachten-json', label: 'Opdrachten (minimaal 1)', min: 1 }
+        ]
     };
 
     function valideerTab(tabId) {
@@ -2597,6 +3097,30 @@ setupCropper({
                 if (hidden) {
                     var regels = hidden.value.split('\n').filter(function(r) { return r.trim(); });
                     if (regels.length < (v.min || 1)) ontbrekend.push(v.label);
+                }
+            } else if (v.type === 'opdrachten-json') {
+                var hidden = document.getElementById(v.hidden);
+                if (hidden) {
+                    var aantal = 0;
+                    try {
+                        var arr = JSON.parse(hidden.value || '[]');
+                        if (Array.isArray(arr)) {
+                            aantal = arr.filter(function(o) {
+                                return (o && ((o.titel || '').trim() || (o.tekst || '').trim()));
+                            }).length;
+                        }
+                    } catch (_) {}
+                    if (aantal < (v.min || 1)) ontbrekend.push(v.label);
+                }
+            } else if (v.type === 'json-lijst') {
+                var hidden = document.getElementById(v.hidden);
+                if (hidden) {
+                    var aantal = 0;
+                    try {
+                        var arr = JSON.parse(hidden.value || '[]');
+                        if (Array.isArray(arr)) aantal = arr.length;
+                    } catch (_) {}
+                    if (aantal < (v.min || 1)) ontbrekend.push(v.label);
                 }
             } else {
                 var el = document.getElementById(v.id);
@@ -2688,7 +3212,9 @@ setupCropper({
         }
     });
 
-    // Vorige/Volgende knoppen binnen tabs — beide triggeren auto-save
+    // Vorige/Volgende knoppen binnen tabs — beide triggeren auto-save,
+    // tenzij data-lokaal="1" gezet is (dan alleen client-side switch — bv. Type-tab
+    // heeft niets op te slaan; auto-save zou in create-mode fout gaan op lege verplichte velden).
     document.querySelectorAll('.tab-vorige, .tab-volgende').forEach(function(btn) {
         btn.addEventListener('click', function() {
             // Volgende: valideer huidige tab voor waarschuwing (niet blokkerend)
@@ -2703,6 +3229,10 @@ setupCropper({
                     }
                     wisTabFout(huidigTab);
                 }
+            }
+            if (btn.dataset.lokaal === '1') {
+                zetActief(btn.dataset.naar);
+                return;
             }
             autoSaveEnSwitch(btn.dataset.naar);
         });
@@ -2843,6 +3373,67 @@ setupCropper({
         });
     });
 })();
+
+/* === Veiligheidspunten (gedeeld: instructie- en opdrachtkaart) ===
+   Eén regel zichtbaar + "+ Toevoegen" onthult de volgende + per-regel ✕ verbergt weer.
+   Null-check zorgt dat dit veilig is op pagina's zonder veiligheid-lijst. */
+(function() {
+    var lijst = document.getElementById('veiligheid-lijst');
+    if (!lijst) return;
+    var toevoegKnop = document.getElementById('veiligheid-toevoegen');
+    var rijen = lijst.querySelectorAll('.veiligheid-rij');
+
+    function updateToevoegKnop() {
+        var verborgen = lijst.querySelector('.veiligheid-rij.is-verborgen');
+        if (toevoegKnop) toevoegKnop.style.display = verborgen ? '' : 'none';
+    }
+
+    rijen.forEach(function(rij) {
+        var knop = rij.querySelector('.veiligheid-rij-verwijder');
+        if (!knop) return;
+        knop.addEventListener('click', function() {
+            var input = rij.querySelector('input');
+            if (input) input.value = '';
+            rij.classList.add('is-verborgen');
+            updateToevoegKnop();
+        });
+    });
+
+    if (toevoegKnop) {
+        toevoegKnop.addEventListener('click', function() {
+            var volgende = lijst.querySelector('.veiligheid-rij.is-verborgen');
+            if (!volgende) return;
+            volgende.classList.remove('is-verborgen');
+            var input = volgende.querySelector('input');
+            if (input) input.focus();
+            updateToevoegKnop();
+        });
+    }
+
+    updateToevoegKnop();
+})();
+
+/* === Auto-koppel bij dropdown-selectie ===
+   Voor toevoeg-blokken (kaart-koppel + QR-koppel) op scenario, thema en instructie:
+   verbergt de "+ Koppelen"/"+ Toevoegen"-knop en triggert de koppel-actie direct
+   op change van de select. Eén actie i.p.v. twee. Wisdruk-veiligheid: verkeerd
+   gekoppeld = één klik op de ✕ in de gekoppelde-lijst om te ontkoppelen. */
+(function() {
+    var BLOK_KLASSEN = ['thema-koppel-blok', 'scenario-koppel-blok', 'instructie-koppel-blok'];
+    BLOK_KLASSEN.forEach(function(klasse) {
+        document.querySelectorAll('.' + klasse).forEach(function(blok) {
+            var select = blok.querySelector('select[name]');
+            if (!select) return;
+            var knop = blok.querySelector('[data-thema-veld-blok],[data-scenario-veld-blok],[data-instructie-veld-blok]');
+            if (!knop) return;
+            knop.style.display = 'none';
+            select.addEventListener('change', function() {
+                if (!select.value) return;
+                knop.click();
+            });
+        });
+    });
+})();
 </script>
 
 {# ============================================================ #}
@@ -2901,43 +3492,6 @@ setupCropper({
 {# ============================================================ #}
 {% if kaart_type == 'instructie' %}
 <script>
-/* === Veiligheidspunten: één regel zichtbaar + "+ Toevoegen" + per-regel ✕ === */
-(function() {
-    var lijst = document.getElementById('veiligheid-lijst');
-    if (!lijst) return;
-    var toevoegKnop = document.getElementById('veiligheid-toevoegen');
-    var rijen = lijst.querySelectorAll('.veiligheid-rij');
-
-    function updateToevoegKnop() {
-        var verborgen = lijst.querySelector('.veiligheid-rij.is-verborgen');
-        if (toevoegKnop) toevoegKnop.style.display = verborgen ? '' : 'none';
-    }
-
-    rijen.forEach(function(rij) {
-        var knop = rij.querySelector('.veiligheid-rij-verwijder');
-        if (!knop) return;
-        knop.addEventListener('click', function() {
-            var input = rij.querySelector('input');
-            if (input) input.value = '';
-            rij.classList.add('is-verborgen');
-            updateToevoegKnop();
-        });
-    });
-
-    if (toevoegKnop) {
-        toevoegKnop.addEventListener('click', function() {
-            var volgende = lijst.querySelector('.veiligheid-rij.is-verborgen');
-            if (!volgende) return;
-            volgende.classList.remove('is-verborgen');
-            var input = volgende.querySelector('input');
-            if (input) input.focus();
-            updateToevoegKnop();
-        });
-    }
-
-    updateToevoegKnop();
-})();
-
 /* === Type-radio: wisselt live de Productinfo-tabnaam + toont/verbergt het materiaal-blok === */
 (function() {
     var radios = document.querySelectorAll('input[name="instructie_type"]');
@@ -4273,7 +4827,16 @@ setupCropper({
     updateTeller();
 })();
 
-/* === Instructiekaart-achtergrond: koppel-knoppen (fetch + reload, geen nested form) === */
+
+</script>
+{% endif %}
+
+{# ============================================================ #}
+{# Instructie/opdrachtkaart-achtergrond: QR-koppel-knoppen       #}
+{# (fetch + reload, geen nested form) — gedeeld tussen types.    #}
+{# ============================================================ #}
+{% if kaart_type == 'instructie' or kaart_type == 'opdracht' %}
+<script>
 (function() {
     var knoppen = document.querySelectorAll('.instructie-actie-knop');
     if (!knoppen.length) return;
@@ -4312,12 +4875,710 @@ setupCropper({
             fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
                 .then(function() { window.location.reload(); })
                 .catch(function(err) {
-                    console.error('Instructie-koppel-actie fout:', err);
+                    console.error('QR-koppel-actie fout:', err);
                     btn.disabled = false;
                     btn.textContent = origTekst;
                 });
         });
     });
+})();
+</script>
+{% endif %}
+
+{# ============================================================ #}
+{# Opdrachtkaart: opdrachten-editor (titel + tekst + max 2 foto's) #}
+{# ============================================================ #}
+{% if kaart_type == 'opdracht' %}
+<script>
+/* === Oefenmiddelen: keuze-lijst-editor (dropdown per rij + 'Andere'-optie) ===
+   - Vaste opties (niet-'anders') kunnen elk maar 1x gekozen worden in de lijst.
+   - Aantal-invoer (indien meegegeven) staat vóór de type-keuze.
+*/
+function initKeuzeLijst(config) {
+    var hidden    = document.getElementById(config.hiddenId);
+    var lijst     = document.getElementById(config.lijstId);
+    var toevoegBtn = document.getElementById(config.toevoegBtnId);
+    if (!hidden || !lijst || !toevoegBtn) return;
+
+    var MAX = config.max || 10;
+    var OPTIES = config.opties;   // [{value, label}]
+    var METAANTAL = !!config.metAantal;
+
+    var items = [];
+    try {
+        var initieel = JSON.parse(hidden.value || '[]');
+        if (Array.isArray(initieel)) items = initieel;
+    } catch (_) {}
+
+    function syncNaarHidden() {
+        var schoon = items.filter(function(it) {
+            if (!it || !it.type) return false;
+            if (it.type === 'anders') return !!(it.tekst && it.tekst.trim());
+            return true;
+        }).map(function(it) {
+            var rij = { type: it.type };
+            if (it.type === 'anders' && it.tekst) rij.tekst = it.tekst.trim();
+            if (METAANTAL && it.aantal) rij.aantal = String(it.aantal).trim();
+            return rij;
+        });
+        hidden.value = JSON.stringify(schoon);
+    }
+
+    function updateToevoegKnop() {
+        toevoegBtn.disabled = items.length >= MAX;
+    }
+
+    // Set van reeds gekozen vaste opties (excl. huidige rij) — bepalen welke opties nog beschikbaar zijn.
+    function gebruikteVasteOpties(behalveIndex) {
+        var s = {};
+        items.forEach(function(it, i) {
+            if (i === behalveIndex) return;
+            if (it && it.type && it.type !== 'anders') s[it.type] = true;
+        });
+        return s;
+    }
+
+    function vulSelectOpties(sel, huidigType, gebruikt) {
+        sel.innerHTML = '';
+        // Lege startoptie zodat de gebruiker altijd zelf een keuze maakt.
+        var leeg = document.createElement('option');
+        leeg.value = '';
+        leeg.textContent = '— kies —';
+        if (!huidigType) leeg.selected = true;
+        sel.appendChild(leeg);
+        OPTIES.forEach(function(opt) {
+            // Sla vaste opties over die al elders gebruikt zijn (maar houd de huidige selectie zichtbaar).
+            if (opt.value !== 'anders' && opt.value !== huidigType && gebruikt[opt.value]) return;
+            var o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.label;
+            if (opt.value === huidigType) o.selected = true;
+            sel.appendChild(o);
+        });
+    }
+
+    function updateAlleSelectOpties() {
+        var rijen = lijst.querySelectorAll('.keuze-lijst-rij');
+        rijen.forEach(function(rij, i) {
+            var sel = rij.querySelector('select');
+            if (!sel) return;
+            var it = items[i];
+            if (!it) return;
+            vulSelectOpties(sel, it.type, gebruikteVasteOpties(i));
+        });
+        // Voorkom dat er niets meer te kiezen valt bij "+ Item toevoegen":
+        // als alle vaste opties op zijn, blijft alleen "anders" — dat mag altijd.
+    }
+
+    function maakRij(index) {
+        var it = items[index];
+        var rij = document.createElement('div');
+        rij.className = 'keuze-lijst-rij';
+
+        // Aantal-invoer (indien van toepassing) staat vóór de type-keuze.
+        var aantalInp = null;
+        if (METAANTAL) {
+            aantalInp = document.createElement('input');
+            aantalInp.type = 'number';
+            aantalInp.min = '1';
+            aantalInp.max = '99';
+            aantalInp.className = 'form-input keuze-lijst-aantal';
+            aantalInp.placeholder = '#';
+            aantalInp.value = it.aantal || '';
+            aantalInp.addEventListener('input', function() {
+                it.aantal = aantalInp.value;
+                syncNaarHidden();
+            });
+            rij.appendChild(aantalInp);
+        }
+
+        // Type-slot: dropdown standaard, of tekstveld als 'Andere' is gekozen.
+        // Ze delen dezelfde plek — er is altijd één van de twee zichtbaar.
+        var sel = document.createElement('select');
+        sel.className = 'form-input form-select keuze-lijst-type';
+        vulSelectOpties(sel, it.type, gebruikteVasteOpties(index));
+        rij.appendChild(sel);
+
+        var andersInp = document.createElement('input');
+        andersInp.type = 'text';
+        andersInp.className = 'form-input keuze-lijst-anders';
+        andersInp.placeholder = 'Typ hier wat je nodig hebt';
+        andersInp.maxLength = 60;
+        andersInp.value = it.tekst || '';
+        andersInp.addEventListener('input', function() {
+            it.tekst = andersInp.value;
+            syncNaarHidden();
+        });
+        rij.appendChild(andersInp);
+
+        // Kleine "terug"-knop om weer een vaste optie te kiezen na 'Andere'.
+        var terugBtn = document.createElement('button');
+        terugBtn.type = 'button';
+        terugBtn.className = 'keuze-lijst-terug';
+        terugBtn.textContent = '↺';
+        terugBtn.title = 'Terug naar keuze';
+        terugBtn.addEventListener('click', function() {
+            it.type = '';
+            it.tekst = '';
+            andersInp.value = '';
+            wisselNaar('sel');
+            syncNaarHidden();
+            updateAlleSelectOpties();
+        });
+        rij.appendChild(terugBtn);
+
+        var verwijderBtn = document.createElement('button');
+        verwijderBtn.type = 'button';
+        verwijderBtn.className = 'btn-verwijder';
+        verwijderBtn.textContent = '✕';
+        verwijderBtn.title = 'Verwijderen';
+        verwijderBtn.addEventListener('click', function() {
+            var idx = items.indexOf(it);
+            if (idx >= 0) items.splice(idx, 1);
+            rij.remove();
+            syncNaarHidden();
+            updateAlleSelectOpties();
+            updateToevoegKnop();
+        });
+        rij.appendChild(verwijderBtn);
+
+        function wisselNaar(modus) {
+            if (modus === 'anders') {
+                sel.classList.add('is-verborgen');
+                andersInp.classList.remove('is-verborgen');
+                terugBtn.classList.remove('is-verborgen');
+            } else {
+                sel.classList.remove('is-verborgen');
+                andersInp.classList.add('is-verborgen');
+                terugBtn.classList.add('is-verborgen');
+            }
+        }
+        wisselNaar(it.type === 'anders' ? 'anders' : 'sel');
+
+        sel.addEventListener('change', function() {
+            it.type = sel.value;
+            if (it.type === 'anders') {
+                wisselNaar('anders');
+                andersInp.focus();
+            } else {
+                wisselNaar('sel');
+            }
+            syncNaarHidden();
+            updateAlleSelectOpties();
+        });
+
+        lijst.appendChild(rij);
+    }
+
+    // Init: bestaande items renderen (default: één lege rij als leeg is,
+    // met lege type zodat de gebruiker zelf kiest).
+    if (items.length === 0) {
+        items.push({ type: '' });
+    }
+    items.forEach(function(_, i) { maakRij(i); });
+    syncNaarHidden();
+    updateToevoegKnop();
+
+    toevoegBtn.addEventListener('click', function() {
+        if (items.length >= MAX) return;
+        var nieuw = { type: '' };
+        items.push(nieuw);
+        maakRij(items.length - 1);
+        syncNaarHidden();
+        updateAlleSelectOpties();
+        updateToevoegKnop();
+    });
+}
+
+// Oefenmiddelen — basis (eigen post)
+initKeuzeLijst({
+    hiddenId: 'oefenmiddelen-basis-hidden',
+    lijstId:  'oefenmiddelen-basis-lijst',
+    toevoegBtnId: 'oefenmiddelen-basis-toevoegen',
+    max: 10,
+    metAantal: false,
+    opties: [
+        { value: 'ts',             label: 'TS' },
+        { value: 'basisoefenset',  label: 'Basisoefenset' },
+        { value: 'anders',         label: 'Andere…' }
+    ]
+});
+
+// Oefenmiddelen — extra bestellen bij oefencoördinator
+initKeuzeLijst({
+    hiddenId: 'oefenmiddelen-extra-hidden',
+    lijstId:  'oefenmiddelen-extra-lijst',
+    toevoegBtnId: 'oefenmiddelen-extra-toevoegen',
+    max: 10,
+    metAantal: true,
+    opties: [
+        { value: 'ademlucht',   label: 'Ademlucht' },
+        { value: 'anders',      label: 'Andere…' }
+    ]
+});
+
+(function() {
+    var hiddenJson = document.getElementById('opdrachten-json');
+    var lijst      = document.getElementById('opdrachten-lijst');
+    var nieuweBtn  = document.getElementById('opdracht-nieuwe-knop');
+    var teller     = document.getElementById('opdracht-teller');
+    var modal      = document.getElementById('opdracht-cropper-modal');
+    if (!hiddenJson || !lijst || !nieuweBtn) return;
+
+    var MAX_OPDRACHTEN = 10;
+    var MAX_FOTOS      = 2;
+    var TITEL_MAX      = 60;
+    var TEKST_MAX      = 500;
+
+    function genId(prefix) {
+        if (window.crypto && window.crypto.randomUUID) return prefix + '-' + window.crypto.randomUUID();
+        return prefix + '-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    var opdrachten = [];
+    try {
+        var initieel = JSON.parse(hiddenJson.value || '[]');
+        if (Array.isArray(initieel)) opdrachten = initieel;
+    } catch (_) {}
+    opdrachten.forEach(function(o) {
+        if (!o.id) o.id = genId('op');
+        if (!Array.isArray(o.fotos)) o.fotos = [];
+        while (o.fotos.length < MAX_FOTOS) o.fotos.push({ slot: genId('ofslot'), bestand: '', bestand_origineel: '' });
+        if (o.fotos.length > MAX_FOTOS) o.fotos.length = MAX_FOTOS;
+    });
+
+    // File-cache per slot (behoudt ongesavede uploads bij re-render).
+    var origineleFiles = {};
+    var geCropteFiles  = {};
+
+    function syncJson() {
+        hiddenJson.value = JSON.stringify(opdrachten);
+        opdrachten.forEach(function(o) {
+            var blok = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + o.id + '"]');
+            if (blok) updateSamenvatting(o, blok);
+        });
+        updateTeller();
+    }
+
+    function updateTeller() {
+        if (teller) teller.textContent = opdrachten.length + ' / ' + MAX_OPDRACHTEN;
+        nieuweBtn.disabled = opdrachten.length >= MAX_OPDRACHTEN;
+    }
+
+    function vindIndex(id) {
+        for (var i = 0; i < opdrachten.length; i++) if (opdrachten[i].id === id) return i;
+        return -1;
+    }
+
+    function updateSamenvatting(o, blok) {
+        var samenv = blok.querySelector('.opdracht-samenvatting');
+        if (!samenv) return;
+        var titel = (o.titel || '').trim() || '(geen titel)';
+        var fotoAantal = (o.fotos || []).filter(function(f) {
+            return f.bestand || geCropteFiles[f.slot];
+        }).length;
+        var fotoTxt = fotoAantal === 0 ? '' : ' — ' + fotoAantal + ' foto' + (fotoAantal === 1 ? '' : "'s");
+        samenv.textContent = titel + fotoTxt;
+    }
+
+    function updateNummers() {
+        var blokken = lijst.querySelectorAll('.opdracht-blok');
+        blokken.forEach(function(b, i) {
+            var nr = b.querySelector('.opdracht-nummer');
+            if (nr) nr.textContent = 'Opdracht ' + (i + 1);
+            var up = b.querySelector('[data-rol="op-up"]');
+            var dn = b.querySelector('[data-rol="op-down"]');
+            if (up) up.disabled = (i === 0);
+            if (dn) dn.disabled = (i === blokken.length - 1);
+        });
+    }
+
+    function mkKnop(tekst, titel, klasse, dis, onClick) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = klasse;
+        b.textContent = tekst;
+        if (titel) b.title = titel;
+        if (dis) b.disabled = true;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    function klapAlleDicht(behalveId) {
+        lijst.querySelectorAll('.opdracht-blok').forEach(function(b) {
+            if (b.dataset.opdrachtId !== behalveId) b.classList.add('is-ingeklapt');
+        });
+    }
+
+    function renderFotoSlot(o, foto, index) {
+        var wrap = document.createElement('div');
+        wrap.className = 'opdracht-foto-slot';
+        wrap.dataset.slot = foto.slot;
+
+        var heeftFoto = !!(foto.bestand || geCropteFiles[foto.slot]);
+        if (heeftFoto) wrap.classList.add('heeft-foto');
+
+        var previewImg = document.createElement('img');
+        previewImg.className = 'opdracht-foto-preview';
+        previewImg.alt = '';
+        if (geCropteFiles[foto.slot]) {
+            previewImg.src = URL.createObjectURL(geCropteFiles[foto.slot]);
+        } else if (foto.bestand) {
+            previewImg.src = '/media/' + foto.bestand;
+        } else {
+            previewImg.style.display = 'none';
+        }
+        wrap.appendChild(previewImg);
+
+        var lbl = document.createElement('div');
+        lbl.className = 'opdracht-foto-slot-label';
+        lbl.textContent = heeftFoto ? 'Foto ' + (index + 1) : 'Foto ' + (index + 1) + ' (leeg)';
+        wrap.appendChild(lbl);
+
+        // Verborgen file-inputs: crop-versie + origineel — die worden bij submit meegestuurd.
+        var inpCrop = document.createElement('input');
+        inpCrop.type = 'file';
+        inpCrop.name = 'opdracht_foto_' + foto.slot;
+        inpCrop.accept = 'image/jpeg,image/png,image/webp';
+        inpCrop.className = 'opdracht-foto-input-verborgen';
+        wrap.appendChild(inpCrop);
+
+        var inpOrig = document.createElement('input');
+        inpOrig.type = 'file';
+        inpOrig.name = 'opdracht_orig_' + foto.slot;
+        inpOrig.accept = 'image/jpeg,image/png,image/webp';
+        inpOrig.className = 'opdracht-foto-input-verborgen';
+        wrap.appendChild(inpOrig);
+
+        // Bewaar eerder geuploade files terug (bij re-render).
+        if (geCropteFiles[foto.slot]) {
+            try {
+                var dt1 = new DataTransfer();
+                dt1.items.add(geCropteFiles[foto.slot]);
+                inpCrop.files = dt1.files;
+            } catch (_) {}
+        }
+        if (origineleFiles[foto.slot]) {
+            try {
+                var dt2 = new DataTransfer();
+                dt2.items.add(origineleFiles[foto.slot]);
+                inpOrig.files = dt2.files;
+            } catch (_) {}
+        }
+
+        // Zichtbare "Foto kiezen" / "Vervangen"
+        var acties = document.createElement('div');
+        acties.className = 'opdracht-foto-acties';
+
+        var kiezerLabel = document.createElement('label');
+        kiezerLabel.className = 'btn btn-secondary btn-sm';
+        kiezerLabel.style.margin = '0';
+        kiezerLabel.textContent = heeftFoto ? 'Vervangen' : '📷 Foto kiezen';
+        var kiezerInp = document.createElement('input');
+        kiezerInp.type = 'file';
+        kiezerInp.accept = 'image/jpeg,image/png,image/webp';
+        kiezerInp.style.display = 'none';
+        kiezerInp.addEventListener('change', function() {
+            var f = kiezerInp.files && kiezerInp.files[0];
+            if (!f) return;
+            openCropper(o.id, foto.slot, f);
+        });
+        kiezerLabel.appendChild(kiezerInp);
+        acties.appendChild(kiezerLabel);
+
+        if (heeftFoto) {
+            acties.appendChild(mkKnop('✕', 'Foto verwijderen', 'btn-verwijder', false, function() {
+                foto.bestand = '';
+                foto.bestand_origineel = '';
+                delete geCropteFiles[foto.slot];
+                delete origineleFiles[foto.slot];
+                syncJson();
+                herrenderOpdracht(o.id);
+            }));
+        }
+        wrap.appendChild(acties);
+        return wrap;
+    }
+
+    function maakOpdrachtDOM(o) {
+        var blok = document.createElement('div');
+        blok.className = 'opdracht-blok';
+        blok.dataset.opdrachtId = o.id;
+
+        var hdr = document.createElement('div');
+        hdr.className = 'opdracht-header';
+
+        var toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'opdracht-toggle';
+        toggle.setAttribute('aria-label', 'In-/uitklappen');
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            blok.classList.toggle('is-ingeklapt');
+        });
+        hdr.appendChild(toggle);
+
+        var nr = document.createElement('span');
+        nr.className = 'opdracht-nummer';
+        hdr.appendChild(nr);
+
+        var samenv = document.createElement('span');
+        samenv.className = 'opdracht-samenvatting';
+        hdr.appendChild(samenv);
+
+        var acties = document.createElement('span');
+        acties.className = 'opdracht-header-acties';
+        acties.appendChild(mkKnop('↑', 'Omhoog', 'btn btn-secondary btn-sm', false, function(e) {
+            e.stopPropagation();
+            var idx = vindIndex(o.id);
+            if (idx > 0) {
+                var t = opdrachten[idx - 1];
+                opdrachten[idx - 1] = opdrachten[idx];
+                opdrachten[idx] = t;
+                renderAlles();
+                syncJson();
+            }
+        }));
+        acties.appendChild(mkKnop('↓', 'Omlaag', 'btn btn-secondary btn-sm', false, function(e) {
+            e.stopPropagation();
+            var idx = vindIndex(o.id);
+            if (idx >= 0 && idx < opdrachten.length - 1) {
+                var t = opdrachten[idx + 1];
+                opdrachten[idx + 1] = opdrachten[idx];
+                opdrachten[idx] = t;
+                renderAlles();
+                syncJson();
+            }
+        }));
+        acties.appendChild(mkKnop('✕', 'Opdracht verwijderen', 'btn-verwijder', false, function(e) {
+            e.stopPropagation();
+            if (!confirm('Deze opdracht verwijderen?')) return;
+            var idx = vindIndex(o.id);
+            if (idx >= 0) {
+                (opdrachten[idx].fotos || []).forEach(function(f) {
+                    delete geCropteFiles[f.slot];
+                    delete origineleFiles[f.slot];
+                });
+                opdrachten.splice(idx, 1);
+                renderAlles();
+                syncJson();
+            }
+        }));
+        hdr.appendChild(acties);
+
+        // Klik op de rest van de header (niet knoppen) → toggle
+        hdr.addEventListener('click', function(e) {
+            if (e.target.closest('button')) return;
+            blok.classList.toggle('is-ingeklapt');
+        });
+
+        blok.appendChild(hdr);
+
+        // Body
+        var body = document.createElement('div');
+        body.className = 'opdracht-body';
+
+        var grpTitel = document.createElement('div');
+        grpTitel.className = 'form-group';
+        var lblTitel = document.createElement('label');
+        lblTitel.className = 'form-label';
+        lblTitel.textContent = 'Titel';
+        grpTitel.appendChild(lblTitel);
+        var inpTitel = document.createElement('input');
+        inpTitel.type = 'text';
+        inpTitel.className = 'form-input';
+        inpTitel.maxLength = TITEL_MAX;
+        inpTitel.placeholder = 'Bijv. Aanvalslijn hoge druk';
+        inpTitel.value = o.titel || '';
+        inpTitel.addEventListener('input', function() {
+            o.titel = inpTitel.value;
+            syncJson();
+        });
+        grpTitel.appendChild(inpTitel);
+        body.appendChild(grpTitel);
+
+        var grpTekst = document.createElement('div');
+        grpTekst.className = 'form-group';
+        var lblTekst = document.createElement('label');
+        lblTekst.className = 'form-label';
+        lblTekst.textContent = 'Uitleg';
+        grpTekst.appendChild(lblTekst);
+        var inpTekst = document.createElement('textarea');
+        inpTekst.className = 'form-input form-textarea';
+        inpTekst.rows = 3;
+        inpTekst.maxLength = TEKST_MAX;
+        inpTekst.placeholder = 'Wat moet er precies gebeuren?';
+        inpTekst.value = o.tekst || '';
+        inpTekst.addEventListener('input', function() {
+            o.tekst = inpTekst.value;
+            syncJson();
+        });
+        grpTekst.appendChild(inpTekst);
+        body.appendChild(grpTekst);
+
+        var lblFotos = document.createElement('label');
+        lblFotos.className = 'form-label';
+        lblFotos.textContent = 'Foto\'s (optioneel, max 2)';
+        body.appendChild(lblFotos);
+
+        var fotoRij = document.createElement('div');
+        fotoRij.className = 'opdracht-fotos';
+        (o.fotos || []).forEach(function(f, i) {
+            fotoRij.appendChild(renderFotoSlot(o, f, i));
+        });
+        body.appendChild(fotoRij);
+
+        blok.appendChild(body);
+        return blok;
+    }
+
+    function herrenderOpdracht(id) {
+        var idx = vindIndex(id);
+        if (idx < 0) return;
+        var oud = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + id + '"]');
+        if (!oud) return;
+        var isIngeklapt = oud.classList.contains('is-ingeklapt');
+        var nieuw = maakOpdrachtDOM(opdrachten[idx]);
+        if (isIngeklapt) nieuw.classList.add('is-ingeklapt');
+        oud.replaceWith(nieuw);
+        updateNummers();
+        updateSamenvatting(opdrachten[idx], nieuw);
+    }
+
+    function renderAlles() {
+        lijst.innerHTML = '';
+        opdrachten.forEach(function(o) {
+            var b = maakOpdrachtDOM(o);
+            b.classList.add('is-ingeklapt');
+            lijst.appendChild(b);
+            updateSamenvatting(o, b);
+        });
+        updateNummers();
+    }
+
+    nieuweBtn.addEventListener('click', function() {
+        if (opdrachten.length >= MAX_OPDRACHTEN) return;
+        var o = { id: genId('op'), titel: '', tekst: '', fotos: [] };
+        for (var i = 0; i < MAX_FOTOS; i++) {
+            o.fotos.push({ slot: genId('ofslot'), bestand: '', bestand_origineel: '' });
+        }
+        opdrachten.push(o);
+        klapAlleDicht(o.id);
+        var dom = maakOpdrachtDOM(o);
+        lijst.appendChild(dom);
+        updateNummers();
+        updateSamenvatting(o, dom);
+        syncJson();
+        try { dom.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    });
+
+    // ============ Cropper-modal ============
+    var cropper = null;
+    var actieveOpdrachtId = null;
+    var actieveSlot = null;
+    var actieveOrient = 'liggend';
+    var actieveOrigFile = null;
+    var img = document.getElementById('opdracht-cropper-img');
+    var VERHOUDING = { liggend: 4/3, staand: 3/4 };
+
+    function openCropper(opdrachtId, slot, file) {
+        actieveOpdrachtId = opdrachtId;
+        actieveSlot = slot;
+        actieveOrigFile = file;
+        origineleFiles[slot] = file;
+        actieveOrient = 'liggend';
+
+        var url = URL.createObjectURL(file);
+        img.src = url;
+        img.dataset.objectUrl = url;
+
+        modal.style.display = 'flex';
+        // Wacht op img.onload voordat cropper start
+        img.onload = function() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            cropper = new Cropper(img, {
+                aspectRatio: VERHOUDING[actieveOrient],
+                viewMode: 1,
+                autoCropArea: 0.9,
+                zoomable: true,
+                movable: true,
+                scalable: false,
+                rotatable: true
+            });
+        };
+    }
+
+    function sluitModal() {
+        if (cropper) { cropper.destroy(); cropper = null; }
+        modal.style.display = 'none';
+        if (img.dataset.objectUrl) {
+            try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (_) {}
+            delete img.dataset.objectUrl;
+        }
+        actieveOpdrachtId = null;
+        actieveSlot = null;
+        actieveOrigFile = null;
+    }
+
+    modal.querySelectorAll('[data-opdracht-cropper-orient]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            actieveOrient = btn.getAttribute('data-opdracht-cropper-orient');
+            if (cropper) cropper.setAspectRatio(VERHOUDING[actieveOrient]);
+        });
+    });
+
+    modal.querySelectorAll('[data-opdracht-cropper-actie]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var actie = btn.getAttribute('data-opdracht-cropper-actie');
+            if (!cropper && actie !== 'annuleer') return;
+            if (actie === 'zoom-in')  cropper.zoom(0.1);
+            if (actie === 'zoom-uit') cropper.zoom(-0.1);
+            if (actie === 'reset')    cropper.reset();
+            if (actie === 'links')    cropper.rotate(-90);
+            if (actie === 'rechts')   cropper.rotate(90);
+            if (actie === 'annuleer') sluitModal();
+            if (actie === 'bevestig') bevestigCrop();
+        });
+    });
+
+    function bevestigCrop() {
+        if (!cropper) return;
+        var canvas = cropper.getCroppedCanvas({
+            maxWidth: 1600,
+            maxHeight: 1600,
+            imageSmoothingQuality: 'high',
+            fillColor: '#fff'
+        });
+        if (!canvas) { sluitModal(); return; }
+        canvas.toBlob(function(blob) {
+            var slot = actieveSlot;
+            var opdrachtId = actieveOpdrachtId;
+            try {
+                var naam = (actieveOrigFile.name || 'opdracht').replace(/\.[^.]+$/, '') + '.jpg';
+                var croppedFile = new File([blob], naam, { type: 'image/jpeg' });
+                geCropteFiles[slot] = croppedFile;
+                // Origineel ook cachen zodat een re-crop het originele startpunt gebruikt.
+                if (actieveOrigFile) origineleFiles[slot] = actieveOrigFile;
+                // In JSON alvast de slot registreren (bestand wordt server-side ingevuld).
+                var idx = vindIndex(opdrachtId);
+                if (idx >= 0) {
+                    var op = opdrachten[idx];
+                    var f = (op.fotos || []).find(function(x) { return x.slot === slot; });
+                    if (f) {
+                        // bestand blijft leeg tot server het opslaat; UI toont blob via cache.
+                    }
+                }
+                syncJson();
+                herrenderOpdracht(opdrachtId);
+            } catch (err) {
+                console.error('Opdracht-cropper fout:', err);
+            }
+            sluitModal();
+        }, 'image/jpeg', 0.9);
+    }
+
+    renderAlles();
+    updateTeller();
 })();
 </script>
 {% endif %}
