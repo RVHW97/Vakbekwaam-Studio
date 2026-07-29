@@ -688,7 +688,8 @@
         font-size: 8pt;
     }
     /* Preview-foto toont de crop volledig binnen een grijs kader (matcht de PDF).
-       Afwijkende verhoudingen (breed, vierkant, vrij) blijven zo netjes ingekaderd. */
+       Alle foto's in een fotostrip staan op dezelfde CEL-hoogte, dus zijn automatisch
+       even hoog naast elkaar — hun ware verhouding blijft behouden. */
     .werkwijze-preview-foto {
         background: #F0EFEC;
         padding: 1mm;
@@ -1424,7 +1425,13 @@
             <div id="tips-cropper-paneel" style="display:none; margin-top: 1rem;">
                 <div class="form-subgroep-blok">
                     <h4 class="form-subgroep-titel">Foto bijsnijden</h4>
-                    <p class="form-hint">Sleep om te verschuiven, knoppen om in/uit te zoomen. Vast 4:3 formaat. Klik "Bevestig" als je tevreden bent.</p>
+                    <p class="form-hint">Kies een verhouding en sleep om te verschuiven. Klik "Bevestig" als je tevreden bent.</p>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="breed">🖼️ Breed</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="liggend">📷 Liggend</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="vierkant">🔲 Vierkant</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="staand">📱 Staand</button>
+                    </div>
                     <div style="max-width: 100%; max-height: 350px; background: #1A1A1A; margin: 0.75rem 0;">
                         <img id="tips-cropper-img" style="display:block; max-width:100%;">
                     </div>
@@ -2011,6 +2018,9 @@
                 Onderaan elke stap zie je een voorbeeld hoe het op de PDF komt.
                 Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> stappen — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
             </p>
+            <p class="form-hint">
+                💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een stap — de volgende foto's binnen die stap volgen automatisch dezelfde verhouding voor een strak eindresultaat.
+            </p>
 
             <div id="werkwijze-stappen-lijst"></div>
 
@@ -2027,12 +2037,14 @@
                     <p class="form-hint" id="werkwijze-cropper-uitleg" style="margin-top:0;">
                         Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
                     </p>
+                    <div id="werkwijze-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
+                        ⚠️ <strong>Let op:</strong> er staan al andere foto's in deze stap. Als je hier een andere verhouding kiest, snij die dan ook even opnieuw bij zodat alle foto's dezelfde verhouding hebben.
+                    </div>
                     <div class="werkwijze-cropper-orient-keuze" style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="breed">🖼️ Breed</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="liggend">📷 Liggend</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vierkant">🔲 Vierkant</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="staand">📱 Staand</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vrij">🎨 Vrij</button>
                     </div>
                     <div class="werkwijze-cropper-canvas-wrap">
                         <img id="werkwijze-cropper-img" alt="">
@@ -2293,12 +2305,14 @@
                     <div class="werkwijze-cropper-modal-content">
                         <h3 style="margin-top:0;">Foto bijsnijden</h3>
                         <p class="form-hint" style="margin-top:0;">Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.</p>
+                        <div id="opdracht-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
+                            ⚠️ <strong>Let op:</strong> er staan al andere foto's in deze opdracht. Als je hier een andere verhouding kiest, snij die dan ook even opnieuw bij zodat alle foto's dezelfde verhouding hebben.
+                        </div>
                         <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="breed">🖼️ Breed</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="liggend">📷 Liggend</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="vierkant">🔲 Vierkant</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="staand">📱 Staand</button>
-                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="vrij">🎨 Vrij</button>
                         </div>
                         <div class="werkwijze-cropper-canvas-wrap">
                             <img id="opdracht-cropper-img" alt="">
@@ -2673,6 +2687,24 @@ function setupCropper(config) {
         reader.readAsDataURL(file);
     }
 
+    // Aspect-knoppen (optioneel): dispatch op config.aspectAttr met een key uit config.aspectRatios.
+    if (config.aspectAttr && config.aspectRatios) {
+        paneel.addEventListener('click', function(e) {
+            var btn = e.target.closest('[' + config.aspectAttr + ']');
+            if (!btn || !cropper) return;
+            var key = btn.getAttribute(config.aspectAttr);
+            var ratio = config.aspectRatios[key];
+            if (typeof ratio === 'number') {
+                cropper.setAspectRatio(ratio);
+                paneel.querySelectorAll('[' + config.aspectAttr + ']').forEach(function(b) {
+                    var actief = b.getAttribute(config.aspectAttr) === key;
+                    b.classList.toggle('btn-primary', actief);
+                    b.classList.toggle('btn-secondary', !actief);
+                });
+            }
+        });
+    }
+
     paneel.addEventListener('click', function(e) {
         var btn = e.target.closest('[' + config.dataAttr + ']');
         if (!btn || !cropper) return;
@@ -2800,7 +2832,7 @@ setupCropper({
     processedKey: 'headerProcessed'
 });
 
-// Tips foto cropper
+// Tips foto cropper — met 4 aspect-keuzes (breed / liggend / vierkant / staand).
 setupCropper({
     inputId: 'tips-foto-input',
     paneelId: 'tips-cropper-paneel',
@@ -2808,6 +2840,8 @@ setupCropper({
     bevestigId: 'tips-crop-bevestig',
     statusId: 'tips-crop-status',
     dataAttr: 'data-tips-crop',
+    aspectAttr: 'data-tips-aspect',
+    aspectRatios: { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4 },
     ratio: 4 / 3,
     rotatable: false,
     maxW: 1200, maxH: 900,
@@ -4464,10 +4498,10 @@ setupCropper({
             }, 'image/jpeg', 0.92);
         }
 
-        // Vaste ratios voor 'breed', 'vierkant', 'vrij'. Voor 'liggend'/'staand' blijft
-        // de layout-aware ratio uit aspectRatioVoorLayout leidend (bepaalt cel-vorm in PDF).
-        var VASTE_RATIOS = { breed: 16/9, vierkant: 1, vrij: NaN };
-        var GELDIGE_ORIENTS = ['breed', 'liggend', 'vierkant', 'staand', 'vrij'];
+        // Vaste ratios voor 'breed' en 'vierkant'. Voor 'liggend'/'staand' blijft de
+        // layout-aware ratio uit aspectRatioVoorLayout leidend (bepaalt cel-vorm in PDF).
+        var VASTE_RATIOS = { breed: 16/9, vierkant: 1 };
+        var GELDIGE_ORIENTS = ['breed', 'liggend', 'vierkant', 'staand'];
 
         function updateUitleg() {
             if (!uitleg) return;
@@ -4483,6 +4517,36 @@ setupCropper({
                 var actief = btn.getAttribute('data-werkwijze-cropper-orient') === actiefLbl;
                 btn.classList.toggle('btn-primary', actief);
                 btn.classList.toggle('btn-secondary', !actief);
+            });
+        }
+
+        // Aspect-lock per stap: als er al andere foto's naast staan, hou dezelfde verhouding
+        // aan. De eerst-gevulde foto mag altijd vrij aangepast worden — dan verschijnt wel
+        // een waarschuwing dat de andere ook opnieuw bijgesneden moeten worden.
+        function slotHeeftBestand(f) {
+            if (f.bestand) return true;
+            var inp = document.querySelector('input[name="werkwijze_foto_' + f.slot + '"]');
+            return !!(inp && inp.files && inp.files[0]);
+        }
+        function stapEersteGevuldeFoto(s) {
+            return (s.fotos || []).find(slotHeeftBestand);
+        }
+        function stapAspectLock(s, huidigeSlot) {
+            if (!s) return null;
+            var eerste = stapEersteGevuldeFoto(s);
+            if (!eerste || eerste.slot === huidigeSlot) return null;
+            return s.foto_orientatie || null;
+        }
+        function stapHeeftAndereFotos(s, huidigeSlot) {
+            if (!s) return false;
+            return (s.fotos || []).some(function(f) {
+                return f.slot !== huidigeSlot && slotHeeftBestand(f);
+            });
+        }
+        function updateOrientKnoppenZichtbaarheid(lock) {
+            modal.querySelectorAll('[data-werkwijze-cropper-orient]').forEach(function(btn) {
+                var val = btn.getAttribute('data-werkwijze-cropper-orient');
+                btn.style.display = (lock && val !== lock) ? 'none' : '';
             });
         }
 
@@ -4514,6 +4578,22 @@ setupCropper({
             origineleNaam  = file.name || 'foto.jpg';
 
             if (!s.foto_orientatie) s.foto_orientatie = 'liggend';
+
+            // Bepaal slot uit input-naam ("werkwijze_foto_<slot>") en pas aspect-lock toe.
+            var huidigeSlot = null;
+            if (inputEl && inputEl.name) {
+                var m = inputEl.name.match(/^werkwijze_foto_(.+)$/);
+                if (m) huidigeSlot = m[1];
+            }
+            var lock = stapAspectLock(s, huidigeSlot);
+            if (lock) s.foto_orientatie = lock;
+            updateOrientKnoppenZichtbaarheid(lock);
+            var waarsch = document.getElementById('werkwijze-cropper-waarschuwing');
+            if (waarsch) {
+                var toon = !lock && stapHeeftAndereFotos(s, huidigeSlot);
+                waarsch.style.display = toon ? '' : 'none';
+            }
+
             var ratio = (opts && opts.aspectRatio) || NaN;
 
             updateOrientKnoppen();
@@ -5494,6 +5574,11 @@ initKeuzeLijst({
                     foto.bestand_origineel = '';
                     delete geCropteFiles[foto.slot];
                     delete origineleFiles[foto.slot];
+                    // Als deze de laatste foto in de opdracht was: aspect-lock loslaten.
+                    var nogFotos = (o.fotos || []).some(function(f) {
+                        return f.bestand || geCropteFiles[f.slot];
+                    });
+                    if (!nogFotos) delete o.foto_aspect;
                     syncJson();
                     herrenderOpdracht(o.id);
                 }));
@@ -5686,7 +5771,8 @@ initKeuzeLijst({
         var fotoHint = document.createElement('p');
         fotoHint.className = 'form-hint';
         fotoHint.style.margin = '0 0 0.5rem 0';
-        fotoHint.textContent = 'Voeg maximaal ' + MAX_FOTOS + ' foto\'s toe. De opmaak wordt automatisch bepaald door het aantal foto\'s. Klik op een foto in het voorbeeld hieronder om deze opnieuw bij te snijden.';
+        fotoHint.innerHTML = 'Voeg maximaal ' + MAX_FOTOS + ' foto\'s toe. De opmaak wordt automatisch bepaald door het aantal foto\'s. Klik op een foto in het voorbeeld hieronder om deze opnieuw bij te snijden.<br>' +
+            '💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> — de volgende foto\'s volgen automatisch dezelfde verhouding voor een strak eindresultaat.';
         body.appendChild(fotoHint);
 
         // Compacte foto-rij (lege slots verborgen). Rendert alle max-slots — user onthult ze via "+" knop.
@@ -5982,15 +6068,59 @@ initKeuzeLijst({
     var actieveOrient = 'liggend';
     var actieveOrigFile = null;
     var img = document.getElementById('opdracht-cropper-img');
-    // Meer aspect-verhoudingen voor flexibiliteit; NaN = vrije verhouding.
-    var VERHOUDING = { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4, vrij: NaN };
+    // Vier vaste aspect-verhoudingen — voldoende flexibel maar zonder rare crops.
+    var VERHOUDING = { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4 };
+
+    // Aspect-lock geldt alleen voor foto's NA de eerste. De eerste (eerst-gevulde)
+    // foto mag je altijd aanpassen — als er al andere staan, tonen we een waarschuwing
+    // dat je die ook opnieuw moet bijsnijden voor visuele consistentie.
+    function eersteGevuldeFoto(o) {
+        return (o.fotos || []).find(function(f) {
+            return f.bestand || geCropteFiles[f.slot];
+        });
+    }
+    function opdrachtAspectLock(opdrachtId, huidigeSlot) {
+        var idx = vindIndex(opdrachtId);
+        if (idx < 0) return null;
+        var o = opdrachten[idx];
+        var eerste = eersteGevuldeFoto(o);
+        // Geen eerste gevulde foto → dit IS de eerste; of we bewerken de eerste
+        // (eerst-gevulde) foto → in beide gevallen geen lock.
+        if (!eerste || eerste.slot === huidigeSlot) return null;
+        return o.foto_aspect || null;
+    }
+    function opdrachtHeeftAndereFotos(opdrachtId, huidigeSlot) {
+        var idx = vindIndex(opdrachtId);
+        if (idx < 0) return false;
+        return (opdrachten[idx].fotos || []).some(function(f) {
+            return f.slot !== huidigeSlot && (f.bestand || geCropteFiles[f.slot]);
+        });
+    }
+
+    function updateOrientKnoppenZichtbaarheid(lock) {
+        modal.querySelectorAll('[data-opdracht-cropper-orient]').forEach(function(btn) {
+            var val = btn.getAttribute('data-opdracht-cropper-orient');
+            btn.style.display = (lock && val !== lock) ? 'none' : '';
+        });
+    }
 
     function openCropper(opdrachtId, slot, file) {
         actieveOpdrachtId = opdrachtId;
         actieveSlot = slot;
         actieveOrigFile = file;
         origineleFiles[slot] = file;
-        actieveOrient = 'liggend';
+        var lock = opdrachtAspectLock(opdrachtId, slot);
+        // Als niet gelockt: gebruik de eerder gekozen aspect als startpunt zodat
+        // opeenvolgende foto's dezelfde suggestie hebben, maar alle knoppen zichtbaar blijven.
+        var suggestie = opdrachten[vindIndex(opdrachtId)].foto_aspect || 'liggend';
+        actieveOrient = lock || suggestie;
+        updateOrientKnoppenZichtbaarheid(lock);
+        // Waarschuwing tonen: eerste foto wordt bewerkt EN er staan al andere naast.
+        var waarschuwing = document.getElementById('opdracht-cropper-waarschuwing');
+        if (waarschuwing) {
+            var toon = !lock && opdrachtHeeftAndereFotos(opdrachtId, slot);
+            waarschuwing.style.display = toon ? '' : 'none';
+        }
 
         var url = URL.createObjectURL(file);
         img.src = url;
@@ -6063,10 +6193,13 @@ initKeuzeLijst({
                 geCropteFiles[slot] = croppedFile;
                 // Origineel ook cachen zodat een re-crop het originele startpunt gebruikt.
                 if (actieveOrigFile) origineleFiles[slot] = actieveOrigFile;
-                // In JSON alvast de slot registreren (bestand wordt server-side ingevuld).
+                // In JSON alvast de slot registreren en de gekozen aspect vastleggen.
+                // Bij het re-cropen van de eerste foto mag de aspect wijzigen (want
+                // aspect-lock is dan niet actief); daarom altijd bijwerken.
                 var idx = vindIndex(opdrachtId);
                 if (idx >= 0) {
                     var op = opdrachten[idx];
+                    op.foto_aspect = actieveOrient;
                     var f = (op.fotos || []).find(function(x) { return x.slot === slot; });
                     if (f) {
                         // bestand blijft leeg tot server het opslaat; UI toont blob via cache.

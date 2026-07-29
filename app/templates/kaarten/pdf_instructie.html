@@ -495,8 +495,10 @@
         color: #aaa;
         font-size: 8pt;
     }
-    /* object-fit: contain zorgt dat vrij-gesneden foto's (breed, vierkant, vrij…)
-       volledig zichtbaar blijven — de kaderrand vult de overige ruimte. */
+    /* object-fit: contain zorgt dat vrij-gesneden foto's (breed, liggend, vierkant, staand)
+       volledig zichtbaar blijven en hun ware verhouding behouden. Alle foto's naast
+       elkaar in een fotostrip krijgen dezelfde CEL-hoogte, dus zijn ook automatisch
+       even hoog (de breedte volgt de aspectratio). */
     .ik-stap-foto img {
         max-width: 100%;
         max-height: 100%;
