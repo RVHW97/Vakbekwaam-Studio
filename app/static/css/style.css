@@ -740,6 +740,18 @@ body {
     padding-bottom: 0.5rem;
     border-bottom: 2px solid var(--kleur-rood);
 }
+/* Groep-titel met inline SVG-icoontje (bv. oefendoel target-icon). */
+.form-groep-titel-met-icoon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.form-groep-icoon-oefendoel {
+    width: 1.4rem;
+    height: 1.4rem;
+    flex: 0 0 auto;
+    color: var(--kleur-rood);
+}
 
 .form-groep-rij {
     display: flex;
@@ -1711,6 +1723,15 @@ body {
 }
 .teken-teller.waarschuwing { color: #d97706; }
 .teken-teller.limiet       { color: #C8102E; font-weight: 600; }
+
+/* Auto-teller (kaart-formulier) — hergebruikt dezelfde waarschuwings-kleuren. */
+.auto-teller {
+    font-size: 0.78rem;
+    color: #888;
+    user-select: none;
+}
+.auto-teller.is-waarschuwing { color: #d97706; }
+.auto-teller.is-limiet       { color: #C8102E; font-weight: 600; }
 
 .form-sectie-kop {
     font-family: 'neue-frutiger-world', 'Open Sans', sans-serif;

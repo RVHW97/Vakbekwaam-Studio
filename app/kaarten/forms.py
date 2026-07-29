@@ -163,9 +163,11 @@ class ScenariokaartForm(FlaskForm):
     overig_functie = StringField('Overige functie', validators=[Optional(), Length(max=40)])
     overig_aantal = IntegerField('Aantal', validators=[Optional(), NumberRange(min=0, max=20)])
     tijdsduur = SelectField('Tijdsduur', choices=TIJDSDUUR_KEUZES, validators=[Optional()])
-    # Overige secties
-    oefenmiddelen = TextAreaField('Oefenmiddelen', validators=[Optional(), Length(max=500)])
-    aanleiding_doelen = TextAreaField('Oefendoel', validators=[Optional(), Length(max=2000)])
+    # Oefenmiddelen gesplitst (zelfde patroon als opdrachtkaart):
+    # basis (op eigen post) + extra (bestellen bij oefencoördinator). Beide opgeslagen als JSON.
+    oefenmiddelen_basis = StringField('Basis (eigen post)', validators=[Optional(), Length(max=2000)])
+    oefenmiddelen_extra = StringField('Extra bestellen', validators=[Optional(), Length(max=2000)])
+    aanleiding_doelen = TextAreaField('Oefendoel', validators=[Optional(), Length(max=500)])
     # Pagerbericht (C35) — prio + soort + (optioneel) voertuigen
     pager_prio = SelectField('Prioriteit', choices=PAGER_PRIO_KEUZES, validators=[Optional()])
     pager_soort = SelectField('Soort melding', choices=PAGER_SOORT_KEUZES, validators=[Optional()])
@@ -196,7 +198,7 @@ class ScenariokaartForm(FlaskForm):
 # Velden die gegroepeerd worden in het "Doelgroep, Oefenstaf en tijdsduur" blok
 SCENARIO_GROEP_VELDEN = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'ensceneerder_aantal',
                           'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur',
-                          'oefenmiddelen']
+                          'oefenmiddelen_basis', 'oefenmiddelen_extra']
 
 
 class OpdrachtkaartForm(FlaskForm):
@@ -216,6 +218,8 @@ class OpdrachtkaartForm(FlaskForm):
     veiligheid_zin_3 = StringField('Veiligheidspunt 3', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
     veiligheid_zin_4 = StringField('Veiligheidspunt 4', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
     veiligheid_zin_5 = StringField('Veiligheidspunt 5', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
+    # Eén SMART-oefendoel — kort en bondig (max 500 tekens).
+    oefendoel = TextAreaField('Oefendoel', validators=[Optional(), Length(max=500)])
     # Opdrachten — JSON-lijst: [{"id": "<uuid>", "titel": "...", "tekst": "...",
     #                            "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg",
     #                                       "bestand_origineel": "yyy.jpg"}]}].
@@ -247,7 +251,7 @@ INHOUD_VELDEN = {
                  'oefenleider_rol_anders',
                  'ensceneerder_aantal',
                  'waarnemer_aantal', 'overig_functie', 'overig_aantal',
-                 'tijdsduur', 'oefenmiddelen', 'aanleiding_doelen',
+                 'tijdsduur', 'oefenmiddelen_basis', 'oefenmiddelen_extra', 'aanleiding_doelen',
                  'pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen',
                  'scenariobeschrijving',
                  'ensceneringstips',
@@ -263,6 +267,7 @@ INHOUD_VELDEN = {
                  'oefenmiddelen_basis', 'oefenmiddelen_extra',
                  'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                  'veiligheid_zin_4', 'veiligheid_zin_5',
+                 'oefendoel',
                  'opdrachten_json', 'uitdagende_variant',
                  'verdiepende_vragen', 'evaluatie'],
 }

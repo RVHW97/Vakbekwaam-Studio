@@ -13,18 +13,6 @@
 
         <h2 class="form-sectie-kop">Algemeen</h2>
 
-        <div class="form-group">
-            {{ form.naam.label }}
-            {{ form.naam(class="form-input", maxlength=80, placeholder="Bv. Oefening brand — 12 april") }}
-            {% for error in form.naam.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-        </div>
-
-        <div class="form-group">
-            {{ form.omschrijving.label }}
-            {{ form.omschrijving(class="form-input", rows=2, maxlength=300) }}
-            {% for error in form.omschrijving.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-        </div>
-
         <div class="form-row">
             <div class="form-group form-group-half">
                 {{ form.categorie.label }}
@@ -35,6 +23,18 @@
                 {{ form.categorie_anders(class="form-input", maxlength=40) }}
                 {% for error in form.categorie_anders.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
             </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.naam.label }}
+            {{ form.naam(class="form-input", maxlength=80, placeholder="Bv. Oefening brand — 12 april") }}
+            {% for error in form.naam.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.omschrijving.label }}
+            {{ form.omschrijving(class="form-input", rows=2, maxlength=300) }}
+            {% for error in form.omschrijving.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
         </div>
 
         <h2 class="form-sectie-kop">Doel van de QR</h2>
@@ -218,6 +218,36 @@
 
     stijlRadios.forEach(function(r) { r.addEventListener('change', updatePreview); });
     updatePreview();
+
+    // Auto-teller op elk QR-form-veld met maxlength (skipt velden die al een eigen teller hebben).
+    (function() {
+        var qrForm = document.querySelector('.qr-form');
+        if (!qrForm) return;
+        var velden = qrForm.querySelectorAll('input[maxlength], textarea[maxlength]');
+        velden.forEach(function(el) {
+            if (el.type === 'file' || el.type === 'hidden') return;
+            var max = parseInt(el.getAttribute('maxlength'), 10);
+            if (!max || max < 1) return;
+            var nxt = el.nextElementSibling;
+            if (nxt && nxt.classList &&
+                (nxt.classList.contains('auto-teller') || nxt.classList.contains('teken-teller'))) return;
+            var teller = document.createElement('span');
+            teller.className = 'auto-teller form-hulp';
+            teller.style.display = 'block';
+            teller.style.textAlign = 'right';
+            teller.style.marginTop = '0.15rem';
+            function vernieuw() {
+                var n = (el.value || '').length;
+                teller.textContent = n + ' / ' + max + ' tekens';
+                teller.classList.remove('is-waarschuwing', 'is-limiet');
+                if (n >= max) teller.classList.add('is-limiet');
+                else if (n >= max * 0.8) teller.classList.add('is-waarschuwing');
+            }
+            el.addEventListener('input', vernieuw);
+            el.parentNode.insertBefore(teller, el.nextSibling);
+            vernieuw();
+        });
+    })();
 
     // Verwijder-knop: POST via fetch i.p.v. nested <form>, met confirm.
     var verwijderKnop = document.querySelector('.qr-verwijder-knop');

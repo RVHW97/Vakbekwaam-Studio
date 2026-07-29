@@ -225,7 +225,24 @@
     }
 
     /* === SECTIES === */
-    .pdf-sectie { margin-bottom: 5.5mm; }
+    /* page-break-inside: avoid — één onderwerp mag niet midden op een paginarand
+       worden afgekapt (CLAUDE.md-regel). Als een sectie langer is dan een pagina
+       verplaatst WeasyPrint 'm dan naar de volgende. Blijft display: block zodat
+       WeasyPrint het "keep together"-gedrag ook echt respecteert (flex/grid
+       schakelt het stil uit). */
+    .pdf-sectie {
+        margin-bottom: 5.5mm;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        display: block;
+    }
+    /* Uitzondering: secties met opeenvolgende stappen (opdrachten, werkwijze)
+       mogen tussen stappen splitsen — anders zou een lange lijst niet passen.
+       Elke individuele stap blijft afzonderlijk beschermd. */
+    .pdf-sectie--stappen {
+        page-break-inside: auto;
+        break-inside: auto;
+    }
     .pdf-sectie-titel {
         page-break-after: avoid;
         break-after: avoid;
@@ -327,6 +344,33 @@
     .pdf-infostrip-kolom-extra .pdf-infostrip-detail {
         color: #3B2E00;
     }
+    /* "Extra bestellen" als sub-blok onderin dezelfde kolom als "Basis" (scenariokaart) —
+       zelfde stijl als de rest van de infostrip. */
+    .pdf-infostrip-extra-onder {
+        margin-top: 2.5mm;
+        padding-top: 2mm;
+        border-top: 0.3mm solid #D9D5CC;
+    }
+    .pdf-infostrip-extra-onder-kop {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 7pt;
+        font-weight: 700;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 1mm;
+        display: flex;
+        align-items: center;
+        gap: 1.5mm;
+    }
+    .pdf-infostrip-extra-onder-icoon {
+        width: 4mm;
+        height: 4mm;
+        flex: 0 0 4mm;
+    }
+    .pdf-infostrip-extra-onder .pdf-infostrip-detail {
+        margin-top: 0;
+    }
     /* LMRA-blok (opdrachtkaart) */
     .pdf-lmra {
         margin-bottom: 3mm;
@@ -359,88 +403,156 @@
     }
     .pdf-lmra-info { flex: 1; font-size: 9pt; color: #1B2A4A; }
     .pdf-lmra-info strong { display: block; font-size: 10.5pt; margin-bottom: 1mm; color: #1B2A4A; }
-
-    /* Opdrachtkaart-opdrachten (per opdracht een titelblok + tekst + optioneel 1-2 foto's) */
-    .pdf-opdracht-blok {
-        background: #FAFAF8;
-        border-left: 1.5mm solid {{ kerntaak_kleur }};
-        padding: 3mm 4mm;
-        margin-bottom: 3mm;
-        page-break-inside: avoid;
-        display: block;
-    }
-    .pdf-opdracht-kop {
-        display: flex;
-        align-items: baseline;
-        gap: 2mm;
-        margin-bottom: 1.5mm;
-    }
-    .pdf-opdracht-nummer {
-        font-weight: 700;
-        color: {{ kerntaak_kleur }};
-        font-size: 11pt;
-        flex: 0 0 auto;
-    }
-    .pdf-opdracht-titel {
+    /* Subkop tussen LMRA en aanvullende veiligheidspunten. LMRA blijft leidend,
+       maar de bulletpoints eronder vragen extra aandacht bij deze oefening. */
+    .pdf-veiligheid-subkop {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 9pt;
         font-weight: 700;
         color: #1B2A4A;
-        font-size: 11pt;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin: 3mm 0 1.5mm 0;
     }
-    .pdf-opdracht-body {
-        font-size: 9.5pt;
-        color: #222;
-        line-height: 1.4;
+    .pdf-veiligheid-subkop-noot {
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: normal;
+        color: #666;
+        font-style: italic;
+        font-size: 8.5pt;
     }
-    .pdf-opdracht-tekst {
-        line-height: 1.4;
-    }
-    .pdf-opdracht-body-met-fotos {
-        display: flex;
-        gap: 3mm;
-        align-items: flex-start;
-    }
-    .pdf-opdracht-body-met-fotos .pdf-opdracht-tekst {
-        flex: 1;
-    }
-    .pdf-opdracht-fotos {
-        flex: 0 0 auto;
-        display: flex;
-        gap: 2mm;
-    }
-    .pdf-opdracht-foto {
-        width: 42mm;
-        height: 32mm;
-        overflow: hidden;
-        background: #eee;
-        border-radius: 1mm;
-    }
-    .pdf-opdracht-foto img {
+
+    /* Opdrachtkaart-opdrachten in werkwijze-stijl (chevron-header + auto-layout T/B/C). */
+    .pdf-opdracht-stap {
+        background: #FAFAF8;
+        padding: 2mm 5mm 4mm 5mm;
+        margin: 3mm 0;
+        box-sizing: border-box;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        display: block;
         width: 100%;
-        height: 100%;
-        object-fit: cover;
+    }
+    .pdf-opdracht-stap-kop {
+        margin: 0 0 0.5mm -8mm;
+        line-height: 0;
+    }
+    .pdf-opdracht-stap-titel-chevron {
+        display: inline-flex;
+        align-items: stretch;
+        width: 78mm;
+        height: 7mm;
+        font-weight: 700;
+        font-size: 10pt;
+        letter-spacing: 0.3px;
+        line-height: 1;
+    }
+    .pdf-opdracht-stap-titel-tekst {
+        background: {{ kerntaak_kleur }};
+        color: #fff;
+        padding: 0 1mm 0 4mm;
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        margin-right: -0.25mm;
+    }
+    .pdf-opdracht-stap-titel-slant {
+        width: 2mm;
+        height: 7mm;
+        flex: 0 0 auto;
         display: block;
     }
-    /* Opdrachtkaart: nabespreking (verdiepende vragen + evaluatie side-by-side) */
+    .pdf-opdracht-stap-tekst {
+        white-space: pre-wrap;
+        font-size: 9.5pt;
+        margin-top: 1mm;
+        color: #1A1A1A;
+        overflow: hidden;
+    }
+    .pdf-opdracht-stap-bullets {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .pdf-opdracht-stap-bullets li {
+        position: relative;
+        padding-left: 4mm;
+        margin-bottom: 0.8mm;
+        line-height: 1.3;
+    }
+    .pdf-opdracht-stap-bullets li::before {
+        content: '●';
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: {{ kerntaak_kleur }};
+        font-size: 1em;
+        line-height: 1.3;
+    }
+    .pdf-opdracht-stap-foto {
+        background: #F0EFEC;
+        border: 0.3mm solid #ddd;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1mm;
+        box-sizing: border-box;
+    }
+    /* object-fit: contain zodat vrijgesneden foto's (breed, hoog, vierkant, vrij)
+       volledig zichtbaar blijven — kleine grijze marge om de foto vult de kader. */
+    .pdf-opdracht-stap-foto img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+    }
+    .pdf-opdracht-stap-layout-T,
+    .pdf-opdracht-stap-layout-B,
+    .pdf-opdracht-stap-layout-C,
+    .pdf-opdracht-stap-layout-D { width: 100%; }
+    .pdf-opdracht-stap-layout-T { display: block; }
+    .pdf-opdracht-stap-layout-T .pdf-opdracht-stap-tekst { width: 100%; display: block; }
+    .pdf-opdracht-stap-layout-B {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+        align-items: center;
+    }
+    .pdf-opdracht-stap-layout-B .pdf-opdracht-stap-foto { height: 60mm; }
+    .pdf-opdracht-stap-layout-B .pdf-opdracht-stap-tekst { margin-top: 0; }
+    /* Layout D: 1 foto groot onder de tekst (volle breedte). */
+    .pdf-opdracht-stap-layout-D { display: block; }
+    .pdf-opdracht-stap-layout-D .pdf-opdracht-stap-tekst { width: 100%; display: block; }
+    .pdf-opdracht-stap-layout-D .pdf-opdracht-stap-foto {
+        width: 100%;
+        height: 70mm;
+        margin-top: 2mm;
+    }
+    .pdf-opdracht-stap-layout-C .pdf-opdracht-stap-tekst { width: 100%; display: block; }
+    .pdf-opdracht-stap-fotostrip {
+        display: grid;
+        /* grid-template-columns wordt inline gezet op basis van foto-aantal (2 of 3). */
+        gap: 3mm;
+        margin-top: 2mm;
+        width: 100%;
+    }
+    .pdf-opdracht-stap-layout-C .pdf-opdracht-stap-foto { height: 45mm; }
+    /* Opdrachtkaart: nabespreking (verdiepende vragen + uitdagende variant side-by-side).
+       Zit binnen een gewone .pdf-sectie met standaard sectie-titel "Verdieping", zodat
+       de overgang bij andere secties niet abrupt is. */
     .pdf-nabespreking {
         page-break-inside: avoid;
         break-inside: avoid;
         background: #1B2A4A10;
-        border-top: 1.5mm solid {{ kerntaak_kleur }};
-        border-bottom: 1.5mm solid {{ kerntaak_kleur }};
+        border-top: 1mm solid {{ kerntaak_kleur }};
+        border-bottom: 1mm solid {{ kerntaak_kleur }};
         padding: 4mm 5mm 3mm 5mm;
-        width: 90%;
-        margin: 8mm auto 5mm auto;
-    }
-    .pdf-nabespreking .pdf-sectie-titel-plain {
-        font-family: "Frutiger", "Open Sans", sans-serif;
-        font-size: 10pt;
-        font-weight: 700;
-        color: #1B2A4A;
-        padding: 0 0 2mm 0;
-        margin: 0 0 3mm 0;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        text-align: center;
+        margin: 0;
     }
     .pdf-nabespreking-tabel {
         width: 100%;
@@ -511,6 +623,37 @@
         color: #888;
         font-size: 9pt;
         margin: 0;
+    }
+
+    /* Oefendoel — watermerk-icoon rechts, altijd verticaal midden op de tekst.
+       Flex op de INNERLIJKE container (buitenste .pdf-sectie blijft display: block
+       zodat page-break-inside: avoid betrouwbaar blijft — CLAUDE.md-regel). */
+    .pdf-oefendoel-inhoud {
+        position: relative;
+        min-height: 30mm;
+        padding-right: 32mm;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+    }
+    /* Icoon absoluut gepositioneerd, verticaal gecentreerd via top:50% + margin-top
+       = -halve icoon-hoogte. Betrouwbaar in WeasyPrint (geen transform nodig). */
+    .pdf-oefendoel-watermark {
+        position: absolute;
+        right: 3mm;
+        top: 50%;
+        margin-top: -12.5mm;
+        width: 25mm;
+        height: 25mm;
+        opacity: 0.15;
+    }
+    .pdf-oefendoel-tekst {
+        font-size: 10pt;
+        line-height: 1.55;
+        color: #1B2A4A;
+        flex: 1;
+        /* Links uitgelijnd; verticaal centreren gebeurt via flex align-items op de parent. */
+        text-align: left;
     }
 
     /* Opdrachtkaart: gekoppelde QR-codes (zoals bij instructiekaart) */
@@ -959,7 +1102,7 @@
 {% set heeft_kenmerken = namespace(v=false) %}
 {% for k in kenmerken_velden %}{% if inhoud.get(k) %}{% set heeft_kenmerken.v = true %}{% endif %}{% endfor %}
 {% set doelgroep_tekst = inhoud.get('doelgroep_anders') if inhoud.get('doelgroep') == 'anders' else (inhoud.get('doelgroep', '')|capitalize) %}
-{% set heeft_infostrip = inhoud.get('doelgroep') or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or inhoud.get('oefenmiddelen') %}
+{% set heeft_infostrip = inhoud.get('doelgroep') or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels %}
 {# Infostrip is scenariokaart-specifiek (4 kolommen: doelgroep/tijdsduur/oefenstaf/oefenmiddelen).
    Opdrachtkaart heeft alleen doelgroep + oefenmiddelen — die krijgt hieronder een eigen simpel blok. #}
 {% if heeft_infostrip and kaart.type != 'opdracht' %}
@@ -1014,14 +1157,26 @@
                 <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
                 <path d="M3 13h18" stroke="{{ kerntaak_kleur }}" stroke-width="1.5"/>
             </svg>
-            <div class="pdf-infostrip-label">Oefenmiddelen</div>
+            <div class="pdf-infostrip-label">Basis (eigen post)</div>
             <div class="pdf-infostrip-detail">
-                {% if inhoud.get('oefenmiddelen') %}
-                    {% for regel in inhoud.get('oefenmiddelen').split('\n') %}
-                        {% if regel.strip() %}<div>{{ regel.strip() }}</div>{% endif %}
-                    {% endfor %}
+                {% if oefenmiddelen_basis_labels %}
+                    {% for label in oefenmiddelen_basis_labels %}<div>{{ label }}</div>{% endfor %}
                 {% else %}—{% endif %}
             </div>
+            {% if oefenmiddelen_extra_labels %}
+            <div class="pdf-infostrip-extra-onder">
+                <div class="pdf-infostrip-extra-onder-kop">
+                    <svg class="pdf-infostrip-extra-onder-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="5" width="18" height="14" rx="1.5" stroke="#666" stroke-width="2" fill="none"/>
+                        <path d="M3 7l9 6 9-6" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    Extra bestellen
+                </div>
+                <div class="pdf-infostrip-detail">
+                    {% for label in oefenmiddelen_extra_labels %}<div>{{ label }}</div>{% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -1050,23 +1205,19 @@
             </svg>
             <div class="pdf-infostrip-label">Basis (eigen post)</div>
             <div class="pdf-infostrip-detail">
-                {% for label in oefenmiddelen_basis_labels %}
-                <div>{{ label }}</div>
-                {% endfor %}
+                {% for label in oefenmiddelen_basis_labels %}<div>{{ label }}</div>{% endfor %}
             </div>
         </div>
         {% endif %}
         {% if oefenmiddelen_extra_labels %}
-        <div class="pdf-infostrip-kolom pdf-infostrip-kolom-extra">
+        <div class="pdf-infostrip-kolom">
             <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#DAB94F" stroke="#8A6D1E" stroke-width="1.5"/>
-                <path d="M12 7v6M12 16v.5" stroke="#3B2E00" stroke-width="2.5" stroke-linecap="round"/>
+                <rect x="3" y="5" width="18" height="14" rx="1.5" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M3 7l9 6 9-6" stroke="{{ kerntaak_kleur }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </svg>
-            <div class="pdf-infostrip-label pdf-extra-label">Extra bestellen</div>
+            <div class="pdf-infostrip-label">Extra bestellen</div>
             <div class="pdf-infostrip-detail">
-                {% for label in oefenmiddelen_extra_labels %}
-                <div><strong>{{ label }}</strong></div>
-                {% endfor %}
+                {% for label in oefenmiddelen_extra_labels %}<div>{{ label }}</div>{% endfor %}
             </div>
         </div>
         {% endif %}
@@ -1089,6 +1240,7 @@
             </div>
         </div>
         {% if veiligheid_zinnen %}
+        <div class="pdf-veiligheid-subkop">Extra aandachtspunten <span class="pdf-veiligheid-subkop-noot">— LMRA blijft leidend</span></div>
         <ul class="pdf-tipslijst">
             {% for zin in veiligheid_zinnen %}
             <li>{{ zin }}</li>
@@ -1213,28 +1365,42 @@
         </div>
     </div>
     {% elif veld == 'opdrachten_json' and opdracht_stappen %}
-    <div class="pdf-sectie">
+    <div class="pdf-sectie pdf-sectie--stappen">
         <div class="pdf-sectie-titel">Opdrachten</div>
         <div class="pdf-sectie-inhoud">
             {% for opdr in opdracht_stappen %}
-            <div class="pdf-opdracht-blok">
-                <div class="pdf-opdracht-kop">
-                    <span class="pdf-opdracht-nummer">{{ loop.index }}.</span>
-                    <span class="pdf-opdracht-titel">{{ opdr.titel or '' }}</span>
+            {% set gevulde_fotos = (opdr.fotos or []) | selectattr('pad') | list %}
+            {% set gevuld_n = gevulde_fotos | length %}
+            {% if gevuld_n == 0 %}{% set layout = 'T' %}
+            {% elif gevuld_n == 1 %}{% set layout = 'D' if opdr.foto_plaatsing == 'onder' else 'B' %}
+            {% else %}{% set layout = 'C' %}{% endif %}
+            <div class="pdf-opdracht-stap">
+                <div class="pdf-opdracht-stap-kop">
+                    <span class="pdf-opdracht-stap-titel-chevron"><span class="pdf-opdracht-stap-titel-tekst">{{ loop.index }}. {{ opdr.titel or '' }}</span><svg class="pdf-opdracht-stap-titel-slant" viewBox="0 0 2 7" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon fill="{{ kerntaak_kleur }}" points="0,0 2,0 0.25,7"/></svg></span>
                 </div>
-                {% set gevulde_fotos = (opdr.fotos or []) | selectattr('pad') | list %}
-                {% if gevulde_fotos %}
-                <div class="pdf-opdracht-body pdf-opdracht-body-met-fotos">
-                    <div class="pdf-opdracht-tekst">{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}</div>
-                    <div class="pdf-opdracht-fotos">
-                        {% for foto in gevulde_fotos %}
-                        <div class="pdf-opdracht-foto"><img src="{{ foto.pad }}" alt=""></div>
-                        {% endfor %}
-                    </div>
+                {% if layout == 'T' %}
+                <div class="pdf-opdracht-stap-layout-T">
+                    <div class="pdf-opdracht-stap-tekst">{% if opdr.tekst_opmaak == 'lijst' and (opdr.tekst or '').strip() %}<ul class="pdf-opdracht-stap-bullets">{% for regel in (opdr.tekst or '').split('\n') %}{% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}{% endfor %}</ul>{% else %}{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
+                </div>
+                {% elif layout == 'B' %}
+                <div class="pdf-opdracht-stap-layout-B">
+                    <div class="pdf-opdracht-stap-tekst">{% if opdr.tekst_opmaak == 'lijst' and (opdr.tekst or '').strip() %}<ul class="pdf-opdracht-stap-bullets">{% for regel in (opdr.tekst or '').split('\n') %}{% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}{% endfor %}</ul>{% else %}{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
+                    <div class="pdf-opdracht-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
+                </div>
+                {% elif layout == 'D' %}
+                <div class="pdf-opdracht-stap-layout-D">
+                    <div class="pdf-opdracht-stap-tekst">{% if opdr.tekst_opmaak == 'lijst' and (opdr.tekst or '').strip() %}<ul class="pdf-opdracht-stap-bullets">{% for regel in (opdr.tekst or '').split('\n') %}{% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}{% endfor %}</ul>{% else %}{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
+                    <div class="pdf-opdracht-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
                 </div>
                 {% else %}
-                <div class="pdf-opdracht-body">
-                    <div class="pdf-opdracht-tekst">{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                {% set strip_n = [gevuld_n, 3] | min %}
+                <div class="pdf-opdracht-stap-layout-C">
+                    <div class="pdf-opdracht-stap-tekst">{% if opdr.tekst_opmaak == 'lijst' and (opdr.tekst or '').strip() %}<ul class="pdf-opdracht-stap-bullets">{% for regel in (opdr.tekst or '').split('\n') %}{% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}{% endfor %}</ul>{% else %}{{ (opdr.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
+                    <div class="pdf-opdracht-stap-fotostrip" style="grid-template-columns: repeat({{ strip_n }}, 1fr);">
+                        {% for f in gevulde_fotos[:3] %}
+                        <div class="pdf-opdracht-stap-foto"><img src="{{ f.pad }}" alt=""></div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -1242,9 +1408,11 @@
         </div>
     </div>
     {% elif veld == 'uitdagende_variant' and kaart.type == 'opdracht' and (inhoud.get('verdiepende_vragen') or inhoud.get('uitdagende_variant')) %}
-    {# Verdiepende vragen + Uitdagende variant samen in kenmerkenschema-stijl, side-by-side. #}
-    <div class="pdf-nabespreking">
-        <div class="pdf-sectie-titel-plain">Verdieping</div>
+    {# Verdieping-sectie: standaard sectie-kop, met daaronder het side-by-side blok. #}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">Verdieping</div>
+        <div class="pdf-sectie-inhoud">
+        <div class="pdf-nabespreking">
         <table class="pdf-nabespreking-tabel"><tr>
             <td class="pdf-nabespreking-cel">
                 <div class="pdf-nabespreking-kop">
@@ -1287,6 +1455,8 @@
                 {% endif %}
             </td>
         </tr></table>
+        </div>
+        </div>
     </div>
     {% elif veld == 'verdiepende_vragen' and kaart.type == 'opdracht' %}
     {# al gerenderd samen met uitdagende_variant #}
@@ -1299,6 +1469,18 @@
                     {% if regel.strip() %}<li>{{ regel.strip() }}</li>{% endif %}
                 {% endfor %}
             </ul>
+        </div>
+    </div>
+    {% elif veld in ['oefendoel', 'aanleiding_doelen'] and inhoud.get(veld) %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">Oefendoel</div>
+        <div class="pdf-sectie-inhoud pdf-oefendoel-inhoud">
+            <svg class="pdf-oefendoel-watermark" viewBox="0 0 310.41 310.47" fill="{{ kerntaak_kleur }}" xmlns="http://www.w3.org/2000/svg">
+                <path d="M250.07,243.01c36.89-39.81,45.24-98.84,19.79-147.5l18.98-19.13c30.27,50.97,28.51,115.09-4.16,164.36-29.05,43.83-78.08,70.02-130.42,69.72-51.99-.29-100.85-26.96-129.27-70.9-33.06-50.59-33.15-116.24-1.24-166.81C68.55,1.75,161.23-21.28,234.05,21.55l-19.08,19.04c-51.69-27.01-114.23-15.78-153.51,25.66-51.55,54.39-46.29,140.3,10.89,188.19,52.45,43.93,130.58,39.44,177.72-11.43Z"/>
+                <path d="M181.38,96.11c-29.01-12.75-61.95-2.75-79.36,22.43s-14.62,60.1,7.34,82.21c21.9,22.05,56.36,25.5,82.14,7.94,25.44-17.33,35.66-50.48,22.84-79.6l19.17-19.36c22.96,39.71,12.73,89.6-23.1,117.22-35.98,27.74-86.87,24.44-119.05-7.56s-35.73-82.89-8.18-119,77.62-46.51,117.48-23.48l-19.29,19.2Z"/>
+                <path d="M232.96,88.51l-54.76,54.72c5.86,11.57,2.55,25.24-7.67,32.86-10.14,7.57-24.45,6.48-33.46-2.39-9.03-8.89-10.38-23.1-2.99-33.42s21.11-14.18,33.02-8.01l54.77-54.74.09-21.94L274.04,3.54l.11,32.74,32.76.1-51.92,51.98-22.04.15Z"/>
+            </svg>
+            <div class="pdf-oefendoel-tekst">{{ inhoud[veld] | replace('\n', '<br>')|safe }}</div>
         </div>
     </div>
     {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in verwijzing_velden and veld not in veiligheid_velden %}

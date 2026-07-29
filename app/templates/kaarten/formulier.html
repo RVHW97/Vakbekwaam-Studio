@@ -687,10 +687,19 @@
         color: #aaa;
         font-size: 8pt;
     }
+    /* Preview-foto toont de crop volledig binnen een grijs kader (matcht de PDF).
+       Afwijkende verhoudingen (breed, vierkant, vrij) blijven zo netjes ingekaderd. */
+    .werkwijze-preview-foto {
+        background: #F0EFEC;
+        padding: 1mm;
+        box-sizing: border-box;
+    }
     .werkwijze-preview-foto img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
     }
     .werkwijze-preview-tekst {
         white-space: pre-wrap;
@@ -1271,22 +1280,42 @@
         </div>
     </div>
 
-    {# Oefenmiddelen #}
+    {# Oefenmiddelen — gesplitst in basis + extra (zelfde patroon als opdrachtkaart) #}
     <div class="form-groep-blok">
         <h3 class="form-groep-titel">Oefenmiddelen</h3>
-        <p class="form-hint">Max 7 items. Kort houden (bijv. "Ladder", "CO-meter").</p>
-        {{ form.oefenmiddelen(style="display:none", id="oefenmiddelen-hidden") }}
-        <div class="dynamische-lijst" id="oefenmiddelen-lijst" data-hidden="oefenmiddelen-hidden" data-max="7" data-placeholder="Bijv. Ladder, CO-meter..."></div>
-        <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="oefenmiddelen-lijst" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+        <p class="form-hint">Splits de middelen op in wat al op de eigen post ligt en wat je extra moet bestellen bij de oefencoördinator.</p>
+
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Basis (eigen post)</h4>
+            <p class="form-hint">Kies uit TS of Basisoefenset, of typ zelf iets in via "Andere" (bv. oefenpop, rookmachine). Max 10 items.</p>
+            {{ form.oefenmiddelen_basis(type="hidden", id="oefenmiddelen-basis-hidden") }}
+            <div id="oefenmiddelen-basis-lijst" class="keuze-lijst"></div>
+            <button type="button" id="oefenmiddelen-basis-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+        </div>
+
+        <div class="form-subgroep-blok" style="margin-top: 1rem;">
+            <h4 class="form-subgroep-titel">Extra bestellen bij oefencoördinator</h4>
+            <p class="form-hint">Boventallige middelen die niet standaard op de post staan. Kies Ademlucht (met aantal) of typ zelf iets in via "Andere". Op de PDF komt dit in een gouden vak zodat je in één oogopslag ziet wat er extra besteld moet worden. Max 10 items.</p>
+            {{ form.oefenmiddelen_extra(type="hidden", id="oefenmiddelen-extra-hidden") }}
+            <div id="oefenmiddelen-extra-lijst" class="keuze-lijst"></div>
+            <button type="button" id="oefenmiddelen-extra-toevoegen" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">+ Item toevoegen</button>
+        </div>
     </div>
 
     {# Oefendoel #}
     <div class="form-groep-blok">
-        <h3 class="form-groep-titel">Oefendoel</h3>
+        <h3 class="form-groep-titel form-groep-titel-met-icoon">
+            <svg class="form-groep-icoon-oefendoel" viewBox="0 0 310.41 310.47" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M250.07,243.01c36.89-39.81,45.24-98.84,19.79-147.5l18.98-19.13c30.27,50.97,28.51,115.09-4.16,164.36-29.05,43.83-78.08,70.02-130.42,69.72-51.99-.29-100.85-26.96-129.27-70.9-33.06-50.59-33.15-116.24-1.24-166.81C68.55,1.75,161.23-21.28,234.05,21.55l-19.08,19.04c-51.69-27.01-114.23-15.78-153.51,25.66-51.55,54.39-46.29,140.3,10.89,188.19,52.45,43.93,130.58,39.44,177.72-11.43Z"/>
+                <path d="M181.38,96.11c-29.01-12.75-61.95-2.75-79.36,22.43s-14.62,60.1,7.34,82.21c21.9,22.05,56.36,25.5,82.14,7.94,25.44-17.33,35.66-50.48,22.84-79.6l19.17-19.36c22.96,39.71,12.73,89.6-23.1,117.22-35.98,27.74-86.87,24.44-119.05-7.56s-35.73-82.89-8.18-119,77.62-46.51,117.48-23.48l-19.29,19.2Z"/>
+                <path d="M232.96,88.51l-54.76,54.72c5.86,11.57,2.55,25.24-7.67,32.86-10.14,7.57-24.45,6.48-33.46-2.39-9.03-8.89-10.38-23.1-2.99-33.42s21.11-14.18,33.02-8.01l54.77-54.74.09-21.94L274.04,3.54l.11,32.74,32.76.1-51.92,51.98-22.04.15Z"/>
+            </svg>
+            Oefendoel
+        </h3>
         <div class="form-group">
-            {{ form.aanleiding_doelen(class="form-input form-textarea", rows=8, maxlength=2000,
-               placeholder="Formuleer een SMART oefendoel.&#10;&#10;Hoofddoel:&#10;De deelnemers kunnen binnen 10 minuten...&#10;&#10;Subdoelen:&#10;- Subdoel 1&#10;- Subdoel 2") }}
-            <p class="form-hint">Formuleer een SMART oefendoel (Specifiek, Meetbaar, Acceptabel, Realistisch, Tijdgebonden). Voeg eventueel subdoelen toe. Max 2000 tekens.</p>
+            {{ form.aanleiding_doelen(class="form-input form-textarea", rows=4, maxlength=500,
+               placeholder="Bv. De deelnemers herkennen binnen 5 minuten een BLEVE-risico bij een LPG-incident en kunnen de juiste veiligheidsafstand aanhouden.") }}
+            <p class="form-hint">Formuleer één <strong>SMART</strong> oefendoel (Specifiek, Meetbaar, Acceptabel, Realistisch, Tijdgebonden). Kort en bondig — max 500 tekens.</p>
             {% for error in form.aanleiding_doelen.errors %}
             <span class="form-error">{{ error }}</span>
             {% endfor %}
@@ -1999,8 +2028,11 @@
                         Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
                     </p>
                     <div class="werkwijze-cropper-orient-keuze" style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="breed">🖼️ Breed</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="liggend">📷 Liggend</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vierkant">🔲 Vierkant</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="staand">📱 Staand</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vrij">🎨 Vrij</button>
                     </div>
                     <div class="werkwijze-cropper-canvas-wrap">
                         <img id="werkwijze-cropper-img" alt="">
@@ -2094,7 +2126,7 @@
             <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
             <button type="button" class="tab-knop" data-tab="voorbereiding">Voorbereiding</button>
             <button type="button" class="tab-knop" data-tab="opdrachten">Opdrachten</button>
-            <button type="button" class="tab-knop" data-tab="verdieping">Verdiepende vragen</button>
+            <button type="button" class="tab-knop" data-tab="verdieping">Verdieping</button>
             <button type="button" class="tab-knop" data-tab="evaluatie">Evaluatie</button>
             <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
         </div>
@@ -2228,7 +2260,24 @@
             {% else %}
 
             <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Basis-opdrachten</h3>
+                <h3 class="form-groep-titel form-groep-titel-met-icoon">
+            <svg class="form-groep-icoon-oefendoel" viewBox="0 0 310.41 310.47" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M250.07,243.01c36.89-39.81,45.24-98.84,19.79-147.5l18.98-19.13c30.27,50.97,28.51,115.09-4.16,164.36-29.05,43.83-78.08,70.02-130.42,69.72-51.99-.29-100.85-26.96-129.27-70.9-33.06-50.59-33.15-116.24-1.24-166.81C68.55,1.75,161.23-21.28,234.05,21.55l-19.08,19.04c-51.69-27.01-114.23-15.78-153.51,25.66-51.55,54.39-46.29,140.3,10.89,188.19,52.45,43.93,130.58,39.44,177.72-11.43Z"/>
+                <path d="M181.38,96.11c-29.01-12.75-61.95-2.75-79.36,22.43s-14.62,60.1,7.34,82.21c21.9,22.05,56.36,25.5,82.14,7.94,25.44-17.33,35.66-50.48,22.84-79.6l19.17-19.36c22.96,39.71,12.73,89.6-23.1,117.22-35.98,27.74-86.87,24.44-119.05-7.56s-35.73-82.89-8.18-119,77.62-46.51,117.48-23.48l-19.29,19.2Z"/>
+                <path d="M232.96,88.51l-54.76,54.72c5.86,11.57,2.55,25.24-7.67,32.86-10.14,7.57-24.45,6.48-33.46-2.39-9.03-8.89-10.38-23.1-2.99-33.42s21.11-14.18,33.02-8.01l54.77-54.74.09-21.94L274.04,3.54l.11,32.74,32.76.1-51.92,51.98-22.04.15Z"/>
+            </svg>
+            Oefendoel
+        </h3>
+                <p class="form-hint">Formuleer één <strong>SMART</strong> oefendoel (Specifiek, Meetbaar, Acceptabel, Realistisch, Tijdgebonden). Kort en bondig — max 500 tekens.</p>
+                <div class="form-group">
+                    {{ form.oefendoel(class="form-input form-textarea", rows=4, maxlength=500,
+                       placeholder="Bv. De deelnemers kunnen binnen 10 minuten een aanvalslijn hoge druk opzetten en veilig verplaatsen.") }}
+                    {% for error in form.oefendoel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Opdrachten</h3>
                 <p class="form-hint"><strong>Houd het behapbaar.</strong> Per opdracht een korte titel, uitleg en eventueel max 2 foto's. Max <strong>10</strong> opdrachten — <span id="opdracht-teller">0 / 10</span>.</p>
 
                 {{ form.opdrachten_json(type="hidden", id="opdrachten-json") }}
@@ -2245,8 +2294,11 @@
                         <h3 style="margin-top:0;">Foto bijsnijden</h3>
                         <p class="form-hint" style="margin-top:0;">Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.</p>
                         <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="breed">🖼️ Breed</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="liggend">📷 Liggend</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="vierkant">🔲 Vierkant</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="staand">📱 Staand</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-opdracht-cropper-orient="vrij">🎨 Vrij</button>
                         </div>
                         <div class="werkwijze-cropper-canvas-wrap">
                             <img id="opdracht-cropper-img" alt="">
@@ -2267,18 +2319,6 @@
                 </div>
             </div>
 
-            <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Uitdagende variant <span style="font-weight:normal; color:#888; font-size:0.9em;">(optioneel)</span></h3>
-                <p class="form-hint">Extra uitdaging voor gevorderde deelnemers of een tweede ronde. Elke variant als eigen punt (bv. extra tijdsdruk, minder informatie, complexere situatie). Max 8 punten.</p>
-                {{ form.uitdagende_variant(style="display:none", id="uitdagende-variant-hidden") }}
-                <div class="dynamische-lijst" id="uitdagende-variant-lijst"
-                     data-hidden="uitdagende-variant-hidden" data-max="8"
-                     data-invoer="textarea" data-rows="2"
-                     data-placeholder="Bijv. Voer dezelfde opdrachten uit maar in het donker met beperkte communicatie…"></div>
-                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="uitdagende-variant-lijst" style="margin-top: 0.5rem;">+ Variant toevoegen</button>
-                {% for error in form.uitdagende_variant.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-            </div>
-
             {% endif %}
 
             <div class="tab-nav-footer">
@@ -2287,22 +2327,37 @@
             </div>
         </div>
 
-        {# ---------------- TAB 4: VERDIEPENDE VRAGEN ---------------- #}
+        {# ---------------- TAB 4: VERDIEPING (verdiepende vragen + uitdagende variant) ---------------- #}
         <div class="tab-paneel" data-tab="verdieping">
-            <h2 class="form-section-title">Verdiepende vragen</h2>
+            <h2 class="form-section-title">Verdieping</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier verdiepende vragen invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier verdiepende vragen en varianten invullen.</p>
             {% else %}
 
-            <p class="form-hint">Vragen die deelnemers laten nadenken over het waarom achter de opdracht. Handig voor nabespreking. Max 10 vragen.</p>
-            {{ form.verdiepende_vragen(style="display:none", id="verdiepende-vragen-hidden") }}
-            <div class="dynamische-lijst" id="verdiepende-vragen-lijst"
-                 data-hidden="verdiepende-vragen-hidden" data-max="10"
-                 data-invoer="textarea" data-rows="2"
-                 data-placeholder="Bijv. Waarom kies je voor deze opstelling?"></div>
-            <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="verdiepende-vragen-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
-            {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Verdiepende vragen</h3>
+                <p class="form-hint">Vragen die deelnemers laten nadenken over het waarom achter de opdracht. Max 10 vragen, elk max 200 tekens.</p>
+                {{ form.verdiepende_vragen(style="display:none", id="verdiepende-vragen-hidden") }}
+                <div class="dynamische-lijst" id="verdiepende-vragen-lijst"
+                     data-hidden="verdiepende-vragen-hidden" data-max="10"
+                     data-invoer="textarea" data-rows="2" data-maxlength="200"
+                     data-placeholder="Bijv. Waarom kies je voor deze opstelling?"></div>
+                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="verdiepende-vragen-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
+                {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            </div>
+
+            <div class="form-groep-blok" style="margin-top: 1.25rem;">
+                <h3 class="form-groep-titel">Uitdagende variant <span style="font-weight:normal; color:#888; font-size:0.9em;">(optioneel)</span></h3>
+                <p class="form-hint">Extra uitdaging voor gevorderde deelnemers of een tweede ronde (bv. extra tijdsdruk, minder informatie, complexere situatie). Max 8 punten, elk max 200 tekens.</p>
+                {{ form.uitdagende_variant(style="display:none", id="uitdagende-variant-hidden") }}
+                <div class="dynamische-lijst" id="uitdagende-variant-lijst"
+                     data-hidden="uitdagende-variant-hidden" data-max="8"
+                     data-invoer="textarea" data-rows="2" data-maxlength="200"
+                     data-placeholder="Bijv. Voer dezelfde opdrachten uit maar in het donker met beperkte communicatie…"></div>
+                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="uitdagende-variant-lijst" style="margin-top: 0.5rem;">+ Variant toevoegen</button>
+                {% for error in form.uitdagende_variant.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            </div>
 
             {% endif %}
 
@@ -2320,11 +2375,11 @@
             <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de evaluatie invullen.</p>
             {% else %}
 
-            <p class="form-hint">Vragen of aandachtspunten voor de nabespreking van de oefening. Max 10 punten.</p>
+            <p class="form-hint">Vragen of aandachtspunten voor de nabespreking van de oefening. Max 10 punten, elk max 200 tekens.</p>
             {{ form.evaluatie(style="display:none", id="evaluatie-opdracht-hidden") }}
             <div class="dynamische-lijst" id="evaluatie-opdracht-lijst"
                  data-hidden="evaluatie-opdracht-hidden" data-max="10"
-                 data-invoer="textarea" data-rows="2"
+                 data-invoer="textarea" data-rows="2" data-maxlength="200"
                  data-placeholder="Bijv. Wat ging er goed?"></div>
             <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="evaluatie-opdracht-lijst" style="margin-top: 0.5rem;">+ Punt toevoegen</button>
             {% for error in form.evaluatie.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
@@ -2828,6 +2883,7 @@ setupCropper({
         // Standaard "input" → één regel (bv. oefenmiddelen).
         var invoer = container.dataset.invoer === 'textarea' ? 'textarea' : 'input';
         var rijHoogte = parseInt(container.dataset.rows) || 3;
+        var maxlength = parseInt(container.dataset.maxlength) || 0;   // 0 = geen limiet
         var hidden = document.getElementById(hiddenId);
         if (!hidden) return;
 
@@ -2848,6 +2904,7 @@ setupCropper({
             input.className = 'form-input';
             input.placeholder = placeholder;
             input.value = waarde || '';
+            if (maxlength > 0) input.maxLength = maxlength;
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'btn-verwijder';
@@ -3059,7 +3116,7 @@ setupCropper({
             { id: 'doelgroep-select', label: 'Doelgroep' },
             { id: 'oefenleider_aantal', label: 'Aantal oefenleiders' },
             { id: 'tijdsduur', label: 'Tijdsduur' },
-            { type: 'lijst', hidden: 'oefenmiddelen-hidden', label: 'Oefenmiddelen (minimaal 1)', min: 1 },
+            { type: 'json-lijst', hidden: 'oefenmiddelen-basis-hidden', label: 'Basis-oefenmiddelen (minimaal 1)', min: 1 },
             { id: 'aanleiding_doelen', label: 'Oefendoel' }
         ],
         'scenario': [
@@ -3432,6 +3489,43 @@ setupCropper({
                 knop.click();
             });
         });
+    });
+})();
+
+/* === Auto-teller op invoervelden met maxlength ===
+   Scant elke input[maxlength], textarea[maxlength] binnen .kaart-form en voegt
+   een teller-span toe die live meeloopt (bv. "142 / 500 tekens").
+   Waarschuwing bij >=80%, limiet-styling bij max. Skipt file-inputs en velden
+   die al een teller hebben. */
+(function() {
+    var form = document.querySelector('.kaart-form');
+    if (!form) return;
+    var velden = form.querySelectorAll('input[maxlength], textarea[maxlength]');
+    velden.forEach(function(el) {
+        if (el.type === 'file' || el.type === 'hidden') return;
+        var max = parseInt(el.getAttribute('maxlength'), 10);
+        if (!max || max < 1) return;
+        // Skip als er al een teller vlak na zit (bv. eigen teken-teller of eerder geplaatste auto-teller).
+        var nxt = el.nextElementSibling;
+        if (nxt && nxt.classList &&
+            (nxt.classList.contains('auto-teller') || nxt.classList.contains('teken-teller'))) return;
+
+        var teller = document.createElement('span');
+        teller.className = 'auto-teller form-hint';
+        teller.style.display = 'block';
+        teller.style.textAlign = 'right';
+        teller.style.marginTop = '0.15rem';
+
+        function vernieuw() {
+            var n = (el.value || '').length;
+            teller.textContent = n + ' / ' + max + ' tekens';
+            teller.classList.remove('is-waarschuwing', 'is-limiet');
+            if (n >= max) teller.classList.add('is-limiet');
+            else if (n >= max * 0.8) teller.classList.add('is-waarschuwing');
+        }
+        el.addEventListener('input', vernieuw);
+        el.parentNode.insertBefore(teller, el.nextSibling);
+        vernieuw();
     });
 })();
 </script>
@@ -4059,9 +4153,11 @@ setupCropper({
         var btn = body.querySelector('[data-rol="foto-add-btn"]');
         if (!btn) return;
         var n = fotoCountVoor(s);
-        btn.disabled = (n >= FOTOS_PER_STAP);
-        btn.textContent = (n === 0) ? '+ Foto toevoegen' :
-                          (n < FOTOS_PER_STAP ? '+ Nog een foto toevoegen' : 'Alle foto\'s toegevoegd');
+        // Bij max verbergen we de knop helemaal — anders wekt hij de suggestie
+        // dat er nóg een foto bij kan.
+        btn.style.display = (n >= FOTOS_PER_STAP) ? 'none' : '';
+        btn.disabled = false;
+        btn.textContent = (n === 0) ? '+ Foto toevoegen' : '+ Nog een foto toevoegen';
     }
 
     function bouwVrijeTekstEditor(s, body, container, tekstMax) {
@@ -4368,15 +4464,21 @@ setupCropper({
             }, 'image/jpeg', 0.92);
         }
 
+        // Vaste ratios voor 'breed', 'vierkant', 'vrij'. Voor 'liggend'/'staand' blijft
+        // de layout-aware ratio uit aspectRatioVoorLayout leidend (bepaalt cel-vorm in PDF).
+        var VASTE_RATIOS = { breed: 16/9, vierkant: 1, vrij: NaN };
+        var GELDIGE_ORIENTS = ['breed', 'liggend', 'vierkant', 'staand', 'vrij'];
+
         function updateUitleg() {
             if (!uitleg) return;
-            var lbl = (huidigeStap && huidigeStap.foto_orientatie === 'staand') ? 'staand' : 'liggend';
-            uitleg.textContent = 'Kies eerst de richting (liggend of staand). Sleep om te kiezen welk deel van ' +
-                'de foto in de PDF zichtbaar wordt. Huidige richting: ' + lbl + '.';
+            var lbl = (huidigeStap && huidigeStap.foto_orientatie) || 'liggend';
+            uitleg.textContent = 'Kies een verhouding (breed / liggend / vierkant / staand / vrij) en sleep om te ' +
+                'kiezen welk deel van de foto zichtbaar wordt. Huidige keuze: ' + lbl + '.';
         }
 
         function updateOrientKnoppen() {
-            var actiefLbl = (huidigeStap && huidigeStap.foto_orientatie === 'staand') ? 'staand' : 'liggend';
+            var actiefLbl = (huidigeStap && huidigeStap.foto_orientatie) || 'liggend';
+            if (GELDIGE_ORIENTS.indexOf(actiefLbl) === -1) actiefLbl = 'liggend';
             modal.querySelectorAll('[data-werkwijze-cropper-orient]').forEach(function(btn) {
                 var actief = btn.getAttribute('data-werkwijze-cropper-orient') === actiefLbl;
                 btn.classList.toggle('btn-primary', actief);
@@ -4386,12 +4488,20 @@ setupCropper({
 
         function setOrientatie(nieuw) {
             if (!huidigeStap) return;
-            huidigeStap.foto_orientatie = (nieuw === 'staand') ? 'staand' : 'liggend';
+            if (GELDIGE_ORIENTS.indexOf(nieuw) === -1) nieuw = 'liggend';
+            huidigeStap.foto_orientatie = nieuw;
             updateOrientKnoppen();
             updateUitleg();
-            var uit = effectieveLayout(huidigeStap);
-            var ratio = aspectRatioVoorLayout(uit, huidigeStap.foto_orientatie);
-            if (cropper && ratio) cropper.setAspectRatio(ratio);
+            // Ratio-bepaling: 'staand' en 'liggend' via layout; overige (breed/vierkant/vrij)
+            // via vaste ratios. Vrij = NaN → cropper heft de aspect-lock op.
+            var ratio;
+            if (nieuw in VASTE_RATIOS) {
+                ratio = VASTE_RATIOS[nieuw];
+            } else {
+                var uit = effectieveLayout(huidigeStap);
+                ratio = aspectRatioVoorLayout(uit, nieuw);
+            }
+            if (cropper) cropper.setAspectRatio(ratio);
             syncJson();
             if (huidigeBody) updatePreview(huidigeStap, huidigeBody);
         }
@@ -4886,9 +4996,9 @@ setupCropper({
 {% endif %}
 
 {# ============================================================ #}
-{# Opdrachtkaart: opdrachten-editor (titel + tekst + max 2 foto's) #}
+{# Oefenmiddelen keuze-lijst-editor: gedeeld tussen scenario- en opdrachtkaart #}
 {# ============================================================ #}
-{% if kaart_type == 'opdracht' %}
+{% if kaart_type == 'scenario' or kaart_type == 'opdracht' %}
 <script>
 /* === Oefenmiddelen: keuze-lijst-editor (dropdown per rij + 'Andere'-optie) ===
    - Vaste opties (niet-'anders') kunnen elk maar 1x gekozen worden in de lijst.
@@ -5096,7 +5206,7 @@ initKeuzeLijst({
     lijstId:  'oefenmiddelen-basis-lijst',
     toevoegBtnId: 'oefenmiddelen-basis-toevoegen',
     max: 10,
-    metAantal: false,
+    metAantal: true,
     opties: [
         { value: 'ts',             label: 'TS' },
         { value: 'basisoefenset',  label: 'Basisoefenset' },
@@ -5126,9 +5236,10 @@ initKeuzeLijst({
     if (!hiddenJson || !lijst || !nieuweBtn) return;
 
     var MAX_OPDRACHTEN = 10;
-    var MAX_FOTOS      = 2;
+    var MAX_FOTOS      = 3;
     var TITEL_MAX      = 60;
     var TEKST_MAX      = 500;
+    var BULLETS_MAX    = 6;
 
     function genId(prefix) {
         if (window.crypto && window.crypto.randomUUID) return prefix + '-' + window.crypto.randomUUID();
@@ -5210,93 +5321,186 @@ initKeuzeLijst({
         });
     }
 
+    // Vrije-tekst-editor: één textarea met tellertje.
+    function bouwOpdrachtVrijeTekstEditor(o, container, onInput) {
+        var ta = document.createElement('textarea');
+        ta.className = 'form-input form-textarea';
+        ta.rows = 3;
+        ta.maxLength = TEKST_MAX;
+        ta.placeholder = 'Wat moet er precies gebeuren?';
+        ta.value = o.tekst || '';
+        var teller = document.createElement('span');
+        teller.className = 'form-hint';
+        teller.style.display = 'block';
+        teller.style.textAlign = 'right';
+        function vernieuwTeller() { teller.textContent = ta.value.length + ' / ' + TEKST_MAX + ' tekens'; }
+        vernieuwTeller();
+        ta.addEventListener('input', function() {
+            o.tekst = ta.value;
+            syncJson();
+            vernieuwTeller();
+            if (onInput) onInput();
+        });
+        container.appendChild(ta);
+        container.appendChild(teller);
+    }
+
+    // Bullets-editor: één textarea per bulletpunt, met +/× knoppen.
+    function bouwOpdrachtBulletsEditor(o, container, onInput) {
+        var regels = (o.tekst || '').split('\n')
+            .map(function(r) { return r.replace(/\s+$/,''); })
+            .filter(function(r) { return r.length > 0; });
+        if (regels.length === 0) regels = [''];
+
+        var lijst = document.createElement('div');
+        lijst.className = 'werkwijze-bullets-lijst';
+        container.appendChild(lijst);
+
+        var toevoegKnop = document.createElement('button');
+        toevoegKnop.type = 'button';
+        toevoegKnop.className = 'btn btn-secondary btn-sm';
+        toevoegKnop.style.marginTop = '0.4rem';
+        toevoegKnop.textContent = '+ Regel toevoegen';
+        container.appendChild(toevoegKnop);
+
+        function syncTekst() {
+            var waardes = [];
+            lijst.querySelectorAll('textarea').forEach(function(ta) {
+                var w = (ta.value || '').replace(/\s*\n+\s*/g, ' ').trim();
+                if (w) waardes.push(w);
+            });
+            o.tekst = waardes.join('\n');
+            syncJson();
+            if (onInput) onInput();
+        }
+
+        function updateToevoegKnop() {
+            var aantal = lijst.querySelectorAll('.werkwijze-bullets-rij').length;
+            toevoegKnop.disabled = aantal >= BULLETS_MAX;
+        }
+
+        function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+        function maakRij(waarde) {
+            var rij = document.createElement('div');
+            rij.className = 'werkwijze-bullets-rij';
+            var bul = document.createElement('span');
+            bul.className = 'werkwijze-bullets-bullet';
+            bul.textContent = '●';
+            rij.appendChild(bul);
+            var ta = document.createElement('textarea');
+            ta.className = 'form-input werkwijze-bullets-input';
+            ta.rows = 1;
+            ta.placeholder = 'Bv. Sluit de slang aan op de hydrant';
+            ta.value = waarde || '';
+            ta.addEventListener('input', function() { autoGrow(this); syncTekst(); });
+            rij.appendChild(ta);
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn-verwijder werkwijze-bullets-rij-verwijder';
+            del.title = 'Regel verwijderen';
+            del.textContent = '✕';
+            del.addEventListener('click', function() {
+                if (lijst.querySelectorAll('.werkwijze-bullets-rij').length <= 1) {
+                    ta.value = ''; autoGrow(ta); syncTekst(); return;
+                }
+                rij.remove();
+                syncTekst();
+                updateToevoegKnop();
+            });
+            rij.appendChild(del);
+            setTimeout(function() { autoGrow(ta); }, 0);
+            return rij;
+        }
+
+        regels.forEach(function(r) { lijst.appendChild(maakRij(r)); });
+        updateToevoegKnop();
+
+        toevoegKnop.addEventListener('click', function() {
+            if (lijst.querySelectorAll('.werkwijze-bullets-rij').length >= BULLETS_MAX) return;
+            var rij = maakRij('');
+            lijst.appendChild(rij);
+            var ta = rij.querySelector('textarea');
+            if (ta) ta.focus();
+            updateToevoegKnop();
+            syncTekst();
+        });
+    }
+
+    // Compacte foto-slot (zoals werkwijze op instructiekaart): geen thumbnail, alleen
+    // bestandsnaam + verwijder-knop. De echte visuele preview zit in de mini-PDF-preview
+    // eronder — klik daarop om de foto opnieuw bij te snijden.
     function renderFotoSlot(o, foto, index) {
         var wrap = document.createElement('div');
-        wrap.className = 'opdracht-foto-slot';
+        wrap.className = 'werkwijze-foto-slot';
         wrap.dataset.slot = foto.slot;
 
         var heeftFoto = !!(foto.bestand || geCropteFiles[foto.slot]);
-        if (heeftFoto) wrap.classList.add('heeft-foto');
 
-        var previewImg = document.createElement('img');
-        previewImg.className = 'opdracht-foto-preview';
-        previewImg.alt = '';
-        if (geCropteFiles[foto.slot]) {
-            previewImg.src = URL.createObjectURL(geCropteFiles[foto.slot]);
-        } else if (foto.bestand) {
-            previewImg.src = '/media/' + foto.bestand;
-        } else {
-            previewImg.style.display = 'none';
-        }
-        wrap.appendChild(previewImg);
-
-        var lbl = document.createElement('div');
-        lbl.className = 'opdracht-foto-slot-label';
-        lbl.textContent = heeftFoto ? 'Foto ' + (index + 1) : 'Foto ' + (index + 1) + ' (leeg)';
-        wrap.appendChild(lbl);
-
-        // Verborgen file-inputs: crop-versie + origineel — die worden bij submit meegestuurd.
+        // Verborgen file-inputs — crop-versie én origineel. Beide worden bij submit
+        // meegestuurd; server-side verwerkt ze in verwerk_opdracht_fotos.
         var inpCrop = document.createElement('input');
         inpCrop.type = 'file';
         inpCrop.name = 'opdracht_foto_' + foto.slot;
         inpCrop.accept = 'image/jpeg,image/png,image/webp';
-        inpCrop.className = 'opdracht-foto-input-verborgen';
+        inpCrop.className = 'werkwijze-foto-input-verborgen';
         wrap.appendChild(inpCrop);
 
         var inpOrig = document.createElement('input');
         inpOrig.type = 'file';
         inpOrig.name = 'opdracht_orig_' + foto.slot;
         inpOrig.accept = 'image/jpeg,image/png,image/webp';
-        inpOrig.className = 'opdracht-foto-input-verborgen';
+        inpOrig.className = 'werkwijze-foto-input-verborgen';
         wrap.appendChild(inpOrig);
 
-        // Bewaar eerder geuploade files terug (bij re-render).
+        // Restore File-objecten uit cache bij re-render.
         if (geCropteFiles[foto.slot]) {
-            try {
-                var dt1 = new DataTransfer();
-                dt1.items.add(geCropteFiles[foto.slot]);
-                inpCrop.files = dt1.files;
-            } catch (_) {}
+            try { var dt1 = new DataTransfer(); dt1.items.add(geCropteFiles[foto.slot]); inpCrop.files = dt1.files; } catch (_) {}
         }
         if (origineleFiles[foto.slot]) {
-            try {
-                var dt2 = new DataTransfer();
-                dt2.items.add(origineleFiles[foto.slot]);
-                inpOrig.files = dt2.files;
-            } catch (_) {}
+            try { var dt2 = new DataTransfer(); dt2.items.add(origineleFiles[foto.slot]); inpOrig.files = dt2.files; } catch (_) {}
         }
 
-        // Zichtbare "Foto kiezen" / "Vervangen"
-        var acties = document.createElement('div');
-        acties.className = 'opdracht-foto-acties';
-
-        var kiezerLabel = document.createElement('label');
-        kiezerLabel.className = 'btn btn-secondary btn-sm';
-        kiezerLabel.style.margin = '0';
-        kiezerLabel.textContent = heeftFoto ? 'Vervangen' : '📷 Foto kiezen';
-        var kiezerInp = document.createElement('input');
-        kiezerInp.type = 'file';
-        kiezerInp.accept = 'image/jpeg,image/png,image/webp';
-        kiezerInp.style.display = 'none';
-        kiezerInp.addEventListener('change', function() {
-            var f = kiezerInp.files && kiezerInp.files[0];
+        // Wanneer "+ Foto toevoegen" op deze verborgen slot klikt, opent cropper.
+        inpCrop.addEventListener('change', function() {
+            var f = inpCrop.files && inpCrop.files[0];
             if (!f) return;
+            var ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (['jpg','jpeg','png','webp'].indexOf(ext) === -1) {
+                alert('Alleen JPG, PNG of WebP.');
+                inpCrop.value = '';
+                return;
+            }
+            if (f.size > 20 * 1024 * 1024) {
+                alert('Bestand te groot (max 20 MB).');
+                inpCrop.value = '';
+                return;
+            }
             openCropper(o.id, foto.slot, f);
         });
-        kiezerLabel.appendChild(kiezerInp);
-        acties.appendChild(kiezerLabel);
+
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'werkwijze-foto-slot-label';
+        var bron = geCropteFiles[foto.slot] || origineleFiles[foto.slot];
+        var naam = (bron && bron.name) || foto.bestand_origineel || foto.bestand || '';
+        labelSpan.textContent = heeftFoto ? ('📎 ' + naam) : 'Nog geen foto';
+        wrap.appendChild(labelSpan);
 
         if (heeftFoto) {
-            acties.appendChild(mkKnop('✕', 'Foto verwijderen', 'btn-verwijder', false, function() {
-                foto.bestand = '';
-                foto.bestand_origineel = '';
-                delete geCropteFiles[foto.slot];
-                delete origineleFiles[foto.slot];
-                syncJson();
-                herrenderOpdracht(o.id);
-            }));
+            wrap.appendChild(mkKnop('× Verwijderen', 'Foto verwijderen',
+                'btn btn-secondary btn-sm', false, function() {
+                    if (!confirm('Foto verwijderen?')) return;
+                    foto.bestand = '';
+                    foto.bestand_origineel = '';
+                    delete geCropteFiles[foto.slot];
+                    delete origineleFiles[foto.slot];
+                    syncJson();
+                    herrenderOpdracht(o.id);
+                }));
+        } else {
+            // Lege slots blijven verborgen — "+ Foto toevoegen" onthult de eerste lege.
+            wrap.style.display = 'none';
         }
-        wrap.appendChild(acties);
         return wrap;
     }
 
@@ -5397,39 +5601,338 @@ initKeuzeLijst({
         grpTitel.appendChild(inpTitel);
         body.appendChild(grpTitel);
 
+        // Opmaak-toggle: vrije tekst óf opsomming (bullets). Bepaalt hoe de uitleg
+        // opgemaakt wordt in de preview en op de PDF.
+        if (!o.tekst_opmaak) o.tekst_opmaak = 'vrij';
+        var opmaakGroup = document.createElement('div');
+        opmaakGroup.className = 'form-group werkwijze-opmaak-toggle';
+        var opmaakLabel = document.createElement('label');
+        opmaakLabel.className = 'form-label';
+        opmaakLabel.textContent = 'Opmaak van de uitleg';
+        opmaakGroup.appendChild(opmaakLabel);
+        var opmaakRij = document.createElement('div');
+        opmaakRij.className = 'werkwijze-opmaak-keuze';
+        ['vrij','lijst'].forEach(function(modus) {
+            var labelEl = document.createElement('label');
+            labelEl.className = 'werkwijze-opmaak-knop' + (o.tekst_opmaak === modus ? ' is-actief' : '');
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'opdracht-opmaak-' + o.id;
+            radio.value = modus;
+            radio.checked = (o.tekst_opmaak === modus);
+            radio.addEventListener('change', function() {
+                if (!this.checked) return;
+                o.tekst_opmaak = modus;
+                syncJson();
+                opmaakRij.querySelectorAll('.werkwijze-opmaak-knop').forEach(function(k) {
+                    k.classList.toggle('is-actief', k.querySelector('input').value === modus);
+                });
+                vernieuwTekstEditor();
+                updatePreviewNu();
+            });
+            var span = document.createElement('span');
+            span.textContent = (modus === 'vrij') ? 'Vrije tekst' : 'Opsomming (bullets)';
+            labelEl.appendChild(radio);
+            labelEl.appendChild(span);
+            opmaakRij.appendChild(labelEl);
+        });
+        opmaakGroup.appendChild(opmaakRij);
+        body.appendChild(opmaakGroup);
+
+        // Tekst-editor die switcht op basis van opmaak-keuze.
         var grpTekst = document.createElement('div');
         grpTekst.className = 'form-group';
         var lblTekst = document.createElement('label');
         lblTekst.className = 'form-label';
         lblTekst.textContent = 'Uitleg';
         grpTekst.appendChild(lblTekst);
-        var inpTekst = document.createElement('textarea');
-        inpTekst.className = 'form-input form-textarea';
-        inpTekst.rows = 3;
-        inpTekst.maxLength = TEKST_MAX;
-        inpTekst.placeholder = 'Wat moet er precies gebeuren?';
-        inpTekst.value = o.tekst || '';
-        inpTekst.addEventListener('input', function() {
-            o.tekst = inpTekst.value;
-            syncJson();
-        });
-        grpTekst.appendChild(inpTekst);
+        var tekstHint = document.createElement('span');
+        tekstHint.className = 'form-hint';
+        tekstHint.style.display = 'block';
+        grpTekst.appendChild(tekstHint);
+        var tekstEditorWrap = document.createElement('div');
+        grpTekst.appendChild(tekstEditorWrap);
         body.appendChild(grpTekst);
+
+        // Facade: één "inpTekst"-achtig object dat input-events doorpakt, zodat
+        // updatePreviewNu op zowel vrije-tekst als bullets-mode reageert.
+        var inpTekst = {
+            addEventListener: function(ev, cb) {
+                tekstEditorWrap._extraInputCb = cb;
+            }
+        };
+
+        function vernieuwTekstEditor() {
+            tekstEditorWrap.innerHTML = '';
+            if (o.tekst_opmaak === 'lijst') {
+                tekstHint.textContent = 'Één bulletpunt per regel, max ' + BULLETS_MAX + ' punten.';
+                bouwOpdrachtBulletsEditor(o, tekstEditorWrap, function() {
+                    if (tekstEditorWrap._extraInputCb) tekstEditorWrap._extraInputCb();
+                });
+            } else {
+                tekstHint.textContent = '';
+                bouwOpdrachtVrijeTekstEditor(o, tekstEditorWrap, function() {
+                    if (tekstEditorWrap._extraInputCb) tekstEditorWrap._extraInputCb();
+                });
+            }
+        }
+        vernieuwTekstEditor();
 
         var lblFotos = document.createElement('label');
         lblFotos.className = 'form-label';
-        lblFotos.textContent = 'Foto\'s (optioneel, max 2)';
+        lblFotos.textContent = 'Foto\'s bij deze opdracht (max ' + MAX_FOTOS + ')';
         body.appendChild(lblFotos);
 
+        var fotoHint = document.createElement('p');
+        fotoHint.className = 'form-hint';
+        fotoHint.style.margin = '0 0 0.5rem 0';
+        fotoHint.textContent = 'Voeg maximaal ' + MAX_FOTOS + ' foto\'s toe. De opmaak wordt automatisch bepaald door het aantal foto\'s. Klik op een foto in het voorbeeld hieronder om deze opnieuw bij te snijden.';
+        body.appendChild(fotoHint);
+
+        // Compacte foto-rij (lege slots verborgen). Rendert alle max-slots — user onthult ze via "+" knop.
         var fotoRij = document.createElement('div');
-        fotoRij.className = 'opdracht-fotos';
+        fotoRij.className = 'werkwijze-foto-rij';
         (o.fotos || []).forEach(function(f, i) {
             fotoRij.appendChild(renderFotoSlot(o, f, i));
         });
         body.appendChild(fotoRij);
 
+        // "+ Foto toevoegen" — klikt de verborgen file-input van het eerste lege slot.
+        var addFotoBtn = mkKnop('+ Foto toevoegen', 'Kies een foto uit je bestanden',
+            'btn btn-secondary btn-sm', false, function() {
+                var slotElts = fotoRij.querySelectorAll('.werkwijze-foto-slot');
+                for (var i = 0; i < slotElts.length; i++) {
+                    if (slotElts[i].style.display === 'none') {
+                        var inp = slotElts[i].querySelector('input[type="file"][name^="opdracht_foto_"]');
+                        if (inp) inp.click();
+                        return;
+                    }
+                }
+                alert('Je hebt al ' + MAX_FOTOS + ' foto\'s gekozen. Verwijder er eerst één.');
+            });
+        addFotoBtn.style.margin = '0 0 0.75rem 0';
+        body.appendChild(addFotoBtn);
+        // Verberg + knop als alle slots gevuld zijn — anders lijkt het alsof er nóg een foto bij kan.
+        var alleGevuld = true;
+        fotoRij.querySelectorAll('.werkwijze-foto-slot').forEach(function(s) {
+            if (s.style.display === 'none') alleGevuld = false;
+        });
+        if (alleGevuld) addFotoBtn.style.display = 'none';
+
+        // Foto-plaatsing: alleen zinvol bij precies 1 foto — small rechts of groot onder.
+        if (!o.foto_plaatsing) o.foto_plaatsing = 'rechts';
+        var plaatsingGroup = document.createElement('div');
+        plaatsingGroup.className = 'form-group werkwijze-plaatsing-keuze';
+        plaatsingGroup.style.marginTop = '0.5rem';
+        var plaatsingLabel = document.createElement('label');
+        plaatsingLabel.className = 'form-label';
+        plaatsingLabel.textContent = 'Plaatsing van de foto';
+        plaatsingGroup.appendChild(plaatsingLabel);
+        var plaatsingRij = document.createElement('div');
+        plaatsingRij.className = 'werkwijze-opmaak-keuze';
+        [
+            { key: 'rechts', label: 'Klein naast de tekst' },
+            { key: 'onder',  label: 'Groot onder de tekst' }
+        ].forEach(function(opt) {
+            var labelEl = document.createElement('label');
+            labelEl.className = 'werkwijze-opmaak-knop' + (o.foto_plaatsing === opt.key ? ' is-actief' : '');
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'opdracht-plaatsing-' + o.id;
+            radio.value = opt.key;
+            radio.checked = (o.foto_plaatsing === opt.key);
+            radio.addEventListener('change', function() {
+                if (!this.checked) return;
+                o.foto_plaatsing = opt.key;
+                syncJson();
+                plaatsingRij.querySelectorAll('.werkwijze-opmaak-knop').forEach(function(k) {
+                    k.classList.toggle('is-actief', k.querySelector('input').value === opt.key);
+                });
+                updatePreviewNu();
+            });
+            var span = document.createElement('span');
+            span.textContent = opt.label;
+            labelEl.appendChild(radio);
+            labelEl.appendChild(span);
+            plaatsingRij.appendChild(labelEl);
+        });
+        plaatsingGroup.appendChild(plaatsingRij);
+        body.appendChild(plaatsingGroup);
+        // Toon alleen bij precies 1 gevulde foto.
+        function updatePlaatsingZichtbaar() {
+            var gevuldAantal = gevuldeFotosVoor(o).length;
+            plaatsingGroup.style.display = (gevuldAantal === 1) ? '' : 'none';
+        }
+        updatePlaatsingZichtbaar();
+
+        // Live preview van hoe deze opdracht op de PDF komt (werkwijze-stijl).
+        var previewWrap = document.createElement('div');
+        previewWrap.className = 'werkwijze-preview-wrap';
+        var lblPreview = document.createElement('div');
+        lblPreview.className = 'form-hint';
+        lblPreview.style.margin = '0.5rem 0 0.3rem';
+        lblPreview.innerHTML = '<strong>Voorbeeld op de PDF</strong>';
+        previewWrap.appendChild(lblPreview);
+        var previewEl = document.createElement('div');
+        previewEl.className = 'werkwijze-preview';
+        previewWrap.appendChild(previewEl);
+        body.appendChild(previewWrap);
+
+        // Hook input-events om preview live te updaten.
+        function updatePreviewNu() { renderOpdrachtPreview(o, previewEl); }
+        inpTitel.addEventListener('input', updatePreviewNu);
+        inpTekst.addEventListener('input', updatePreviewNu);
+        // Klik op preview-foto → cropper opnieuw openen.
+        previewEl.addEventListener('click', function(e) {
+            var cel = e.target.closest('.werkwijze-preview-foto.is-klikbaar');
+            if (!cel) return;
+            var slot = cel.dataset.previewSlot;
+            if (slot) openCropperVanuitPreview(o, slot);
+        });
+        // Initiële render van de preview.
+        updatePreviewNu();
+
         blok.appendChild(body);
         return blok;
+    }
+
+    // ==================== Preview helpers ====================
+    var KERNTAAK_KLEUREN = {
+        'algemeen': '#CC9933',
+        'brand':    '#B6463D',
+        'thv':      '#4C7F52',
+        'ibgs':     '#DAB94F',
+        'water':    '#4B70A6'
+    };
+    function huidigeKerntaakKleur() {
+        var sel = document.getElementById('kerntaak');
+        var key = sel ? sel.value : '';
+        return KERNTAAK_KLEUREN[key] || '#B8B2A4';
+    }
+
+    function gevuldeFotosVoor(o) {
+        return (o.fotos || []).map(function(f) {
+            if (geCropteFiles[f.slot]) return { src: URL.createObjectURL(geCropteFiles[f.slot]), slot: f.slot, foto: f };
+            if (f.bestand) return { src: '/media/' + f.bestand, slot: f.slot, foto: f };
+            return null;
+        }).filter(function(x) { return !!x; });
+    }
+
+    function maakPreviewChevron(o, kleur, nummer) {
+        var kop = document.createElement('div');
+        kop.className = 'werkwijze-preview-kop';
+        var chev = document.createElement('span');
+        chev.className = 'werkwijze-preview-chevron';
+        var tekst = document.createElement('span');
+        tekst.className = 'werkwijze-preview-chevron-tekst';
+        tekst.textContent = (nummer + '. ') + (o.titel || '(titel)');
+        chev.appendChild(tekst);
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'werkwijze-preview-chevron-slant');
+        svg.setAttribute('viewBox', '0 0 2 7');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', '0,0 2,0 0.25,7');
+        poly.setAttribute('fill', kleur);
+        svg.appendChild(poly);
+        chev.appendChild(svg);
+        kop.appendChild(chev);
+        return kop;
+    }
+    function maakPreviewTekst(o) {
+        var t = document.createElement('div');
+        t.className = 'werkwijze-preview-tekst';
+        var ruwe = (o.tekst || '');
+        if (o.tekst_opmaak === 'lijst' && ruwe.trim()) {
+            var ul = document.createElement('ul');
+            ul.className = 'werkwijze-preview-bullets';
+            ruwe.split('\n').forEach(function(regel) {
+                var r = regel.trim();
+                if (!r) return;
+                var li = document.createElement('li');
+                li.textContent = r;
+                ul.appendChild(li);
+            });
+            t.appendChild(ul);
+        } else {
+            t.textContent = ruwe.trim() || '(uitleg)';
+        }
+        return t;
+    }
+    function maakPreviewFoto(src, slot) {
+        var f = document.createElement('div');
+        f.className = 'werkwijze-preview-foto';
+        if (src) {
+            var img = document.createElement('img');
+            img.src = src;
+            f.appendChild(img);
+            if (slot) {
+                f.classList.add('is-klikbaar');
+                f.title = 'Klik om deze foto opnieuw bij te snijden';
+                f.dataset.previewSlot = slot;
+            }
+        } else {
+            f.classList.add('leeg');
+            f.textContent = '(geen foto)';
+        }
+        return f;
+    }
+
+    function renderOpdrachtPreview(o, previewEl) {
+        previewEl.innerHTML = '';
+        var kleur = huidigeKerntaakKleur();
+        previewEl.style.setProperty('--preview-kerntaak', kleur);
+        var idx = vindIndex(o.id);
+        var nummer = (idx >= 0 ? idx + 1 : 1);
+        previewEl.appendChild(maakPreviewChevron(o, kleur, nummer));
+
+        var gevuld = gevuldeFotosVoor(o);
+        var inhoud = document.createElement('div');
+        if (gevuld.length === 0) {
+            inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-T';
+            inhoud.appendChild(maakPreviewTekst(o));
+        } else if (gevuld.length === 1) {
+            var plaatsing = o.foto_plaatsing || 'rechts';
+            if (plaatsing === 'onder') {
+                inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-D';
+                inhoud.appendChild(maakPreviewTekst(o));
+                inhoud.appendChild(maakPreviewFoto(gevuld[0].src, gevuld[0].slot));
+            } else {
+                inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-B';
+                inhoud.appendChild(maakPreviewTekst(o));
+                inhoud.appendChild(maakPreviewFoto(gevuld[0].src, gevuld[0].slot));
+            }
+        } else {
+            inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-C';
+            inhoud.appendChild(maakPreviewTekst(o));
+            var strip = document.createElement('div');
+            strip.className = 'werkwijze-preview-fotostrip';
+            var n = Math.min(gevuld.length, MAX_FOTOS);
+            strip.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+            gevuld.slice(0, MAX_FOTOS).forEach(function(item) {
+                strip.appendChild(maakPreviewFoto(item.src, item.slot));
+            });
+            inhoud.appendChild(strip);
+        }
+        previewEl.appendChild(inhoud);
+    }
+
+    // Klik op een preview-foto → open de cropper met het origineel.
+    function openCropperVanuitPreview(o, slot) {
+        var foto = (o.fotos || []).find(function(f) { return f.slot === slot; });
+        if (!foto) return;
+        // Prioriteit: in-memory origineel → server-side origineel → server-side bestand.
+        var origMem = origineleFiles[slot];
+        if (origMem) { openCropper(o.id, slot, origMem); return; }
+        var origServer = foto.bestand_origineel || foto.bestand;
+        if (!origServer) return;
+        fetch('/media/' + origServer)
+            .then(function(r) { return r.blob(); })
+            .then(function(blob) {
+                var fake = new File([blob], origServer, { type: blob.type || 'image/jpeg' });
+                openCropper(o.id, slot, fake);
+            })
+            .catch(function(err) { console.error('Kan origineel niet ophalen:', err); });
     }
 
     function herrenderOpdracht(id) {
@@ -5479,7 +5982,8 @@ initKeuzeLijst({
     var actieveOrient = 'liggend';
     var actieveOrigFile = null;
     var img = document.getElementById('opdracht-cropper-img');
-    var VERHOUDING = { liggend: 4/3, staand: 3/4 };
+    // Meer aspect-verhoudingen voor flexibiliteit; NaN = vrije verhouding.
+    var VERHOUDING = { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4, vrij: NaN };
 
     function openCropper(opdrachtId, slot, file) {
         actieveOpdrachtId = opdrachtId;
@@ -5579,6 +6083,19 @@ initKeuzeLijst({
 
     renderAlles();
     updateTeller();
+
+    // Kerntaak-wissel updatet de chevron-kleur in elke preview.
+    var kerntaakSel = document.getElementById('kerntaak');
+    if (kerntaakSel) {
+        kerntaakSel.addEventListener('change', function() {
+            opdrachten.forEach(function(o) {
+                var blok = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + o.id + '"]');
+                if (!blok) return;
+                var previewEl = blok.querySelector('.werkwijze-preview');
+                if (previewEl) renderOpdrachtPreview(o, previewEl);
+            });
+        });
+    }
 })();
 </script>
 {% endif %}

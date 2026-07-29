@@ -254,15 +254,9 @@ def genereer_pdf(kaart):
     oefenmiddelen_basis_labels = []
     oefenmiddelen_extra_labels = []
     opdracht_qrs = []
-    if kaart.type == 'opdracht':
-        for i in range(1, VEILIGHEID_MAX_ZINNEN + 1):
-            zin = (inhoud.get(f'veiligheid_zin_{i}') or '').strip()
-            if zin:
-                veiligheid_zinnen.append(zin)
-        lmra_url = current_app.config.get('LMRA_QR_URL') or ''
-        lmra_qr_data_uri = _url_qr_data_uri(lmra_url) if lmra_url else None
 
-        # Oefenmiddelen: JSON → labels
+    # Oefenmiddelen JSON → labels — gedeeld tussen scenario- en opdrachtkaart.
+    if kaart.type in ('scenario', 'opdracht'):
         BASIS_LABELS = {'ts': 'TS', 'basisoefenset': 'Basisoefenset'}
         EXTRA_LABELS = {'ademlucht': 'Ademlucht'}
         try:
@@ -274,12 +268,14 @@ def genereer_pdf(kaart):
                 if not isinstance(it, dict):
                     continue
                 t = (it.get('type') or '').strip()
+                aantal = (it.get('aantal') or '').strip()
                 if t == 'anders':
                     tekst = (it.get('tekst') or '').strip()
                     if tekst:
-                        oefenmiddelen_basis_labels.append(tekst)
+                        oefenmiddelen_basis_labels.append(f'{aantal} × {tekst}' if aantal else tekst)
                 elif t in BASIS_LABELS:
-                    oefenmiddelen_basis_labels.append(BASIS_LABELS[t])
+                    naam = BASIS_LABELS[t]
+                    oefenmiddelen_basis_labels.append(f'{aantal} × {naam}' if aantal else naam)
         try:
             extra_items = json.loads(inhoud.get('oefenmiddelen_extra') or '[]')
         except (ValueError, TypeError):
@@ -297,6 +293,14 @@ def genereer_pdf(kaart):
                 elif t in EXTRA_LABELS:
                     naam = EXTRA_LABELS[t]
                     oefenmiddelen_extra_labels.append(f'{aantal} × {naam}' if aantal else naam)
+
+    if kaart.type == 'opdracht':
+        for i in range(1, VEILIGHEID_MAX_ZINNEN + 1):
+            zin = (inhoud.get(f'veiligheid_zin_{i}') or '').strip()
+            if zin:
+                veiligheid_zinnen.append(zin)
+        lmra_url = current_app.config.get('LMRA_QR_URL') or ''
+        lmra_qr_data_uri = _url_qr_data_uri(lmra_url) if lmra_url else None
 
         try:
             opdracht_stappen = json.loads(inhoud.get('opdrachten_json') or '[]')

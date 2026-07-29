@@ -204,7 +204,7 @@ def verwerk_opdracht_fotos(json_string):
             continue
         fotos = opdr.get('fotos') or []
         nieuwe_fotos = []
-        for foto in fotos[:2]:  # veiligheidsklem: max 2 foto's per opdracht
+        for foto in fotos[:3]:  # veiligheidsklem: max 3 foto's per opdracht
             if not isinstance(foto, dict):
                 continue
             slot = (foto.get('slot') or '').strip()

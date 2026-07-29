@@ -221,7 +221,24 @@
     }
 
     /* === SECTIE-WRAPPER + TITEL (scenariokaart-stijl) === */
-    .pdf-sectie { margin-bottom: 5.5mm; }
+    /* page-break-inside: avoid — één onderwerp mag niet midden op een paginarand
+       worden afgekapt (CLAUDE.md-regel). Als een sectie langer is dan een pagina
+       verplaatst WeasyPrint 'm dan naar de volgende. Blijft display: block zodat
+       WeasyPrint het "keep together"-gedrag ook echt respecteert (flex/grid
+       schakelt het stil uit). */
+    .pdf-sectie {
+        margin-bottom: 5.5mm;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        display: block;
+    }
+    /* Uitzondering: secties met opeenvolgende stappen (werkwijze) mogen tussen
+       stappen splitsen — anders zou een lange lijst niet passen. Elke individuele
+       stap blijft afzonderlijk beschermd via .ik-stap. */
+    .pdf-sectie--stappen {
+        page-break-inside: auto;
+        break-inside: auto;
+    }
     .pdf-sectie-titel {
         page-break-after: avoid;
         break-after: avoid;
@@ -370,6 +387,25 @@
     }
     .ik-lmra-info { flex: 1; font-size: 9pt; color: #1B2A4A; }
     .ik-lmra-info strong { display: block; font-size: 10.5pt; margin-bottom: 1mm; color: #1B2A4A; }
+    /* Subkop tussen LMRA en aanvullende veiligheidspunten. LMRA blijft leidend,
+       maar de bulletpoints eronder vragen extra aandacht bij deze kaart. */
+    .ik-veiligheid-subkop {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 9pt;
+        font-weight: 700;
+        color: #1B2A4A;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin: 3mm 0 1.5mm 0;
+    }
+    .ik-veiligheid-subkop-noot {
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: normal;
+        color: #666;
+        font-style: italic;
+        font-size: 8.5pt;
+    }
 
     /* === IK: Werkwijze (vaste kaart-hoogtes per layout, chevron-titel IN de kaart) === */
     .ik-stap {
@@ -451,16 +487,22 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 1mm;
+        box-sizing: border-box;
     }
     .ik-stap-foto.leeg {
         font-style: italic;
         color: #aaa;
         font-size: 8pt;
     }
+    /* object-fit: contain zorgt dat vrij-gesneden foto's (breed, vierkant, vrij…)
+       volledig zichtbaar blijven — de kaderrand vult de overige ruimte. */
     .ik-stap-foto img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
     }
     .ik-stap-layout-T,
     .ik-stap-layout-B,
@@ -666,6 +708,7 @@
             </div>
         </div>
         {% if veiligheid_zinnen %}
+        <div class="ik-veiligheid-subkop">Extra aandachtspunten <span class="ik-veiligheid-subkop-noot">— LMRA blijft leidend</span></div>
         <ul class="ik-veiligheid-lijst">
             {% for zin in veiligheid_zinnen %}
             <li class="ik-veiligheid-item">
@@ -681,7 +724,7 @@
 
 {# ==================== WERKWIJZE ==================== #}
 {% if werkwijze_stappen %}
-<section class="pdf-sectie">
+<section class="pdf-sectie pdf-sectie--stappen">
     <div class="pdf-sectie-titel">Werkwijze</div>
     <div class="pdf-sectie-inhoud">
         {% for stap in werkwijze_stappen %}
