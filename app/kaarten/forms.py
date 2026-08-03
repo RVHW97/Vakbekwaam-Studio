@@ -180,7 +180,11 @@ class ScenariokaartForm(FlaskForm):
     menskenmerken = TextAreaField('Menskenmerken', validators=[Optional(), Length(max=180)])
     omgevingskenmerken = TextAreaField('Omgevingskenmerken', validators=[Optional(), Length(max=180)])
     interventiekenmerken = TextAreaField('Interventiekenmerken', validators=[Optional(), Length(max=180)])
-    ensceneringstips = TextAreaField('Ensceneringstips', validators=[Optional()])
+    # Ensceneringstips — JSON-lijst: [{"id": "<uuid>", "tekst": "...",
+    #                                  "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg",
+    #                                             "bestand_origineel": "yyy.jpg"}]}].
+    # Max 3 tips, elk met max 2 foto's (zelfde patroon als opdrachten_json).
+    ensceneringstips = StringField('Ensceneringstips', validators=[Optional()])
     evaluatie = TextAreaField('Evaluatie', validators=[Optional()])
     # Eigen verwijzingen (URL + label, max 5)
     verwijzing_url_1 = StringField('URL 1', validators=[Optional(), Length(max=200)])

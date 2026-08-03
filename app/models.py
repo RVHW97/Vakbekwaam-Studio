@@ -114,6 +114,7 @@ class Kaart(db.Model):
     kerntaak = db.Column(db.String(10), nullable=True)
     header_foto = db.Column(db.String(255), nullable=True)
     ensceneringstips_foto = db.Column(db.String(255), nullable=True)
+    ensceneringstips_foto_2 = db.Column(db.String(255), nullable=True)
     productfoto = db.Column(db.String(255), nullable=True)  # instructiekaart-materiaal: foto met markers
 
     auteur = db.relationship('User', foreign_keys=[auteur_id],
@@ -507,6 +508,10 @@ def migreer_schema():
         if 'ensceneringstips_foto' not in kolommen:
             with db.engine.begin() as conn:
                 conn.execute(text('ALTER TABLE kaarten ADD COLUMN ensceneringstips_foto VARCHAR(255)'))
+        kolommen = [c['name'] for c in inspector.get_columns('kaarten')]
+        if 'ensceneringstips_foto_2' not in kolommen:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE kaarten ADD COLUMN ensceneringstips_foto_2 VARCHAR(255)'))
         kolommen = [c['name'] for c in inspector.get_columns('kaarten')]
         if 'productfoto' not in kolommen:
             with db.engine.begin() as conn:

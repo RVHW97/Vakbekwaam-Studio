@@ -115,12 +115,46 @@ def genereer_pdf(kaart):
         if os.path.exists(pad):
             header_foto_pad = 'file://' + pad
 
-    # Ensceneringstips foto pad
+    # Ensceneringstips: JSON-lijst met max 3 tips × max 2 foto's per tip.
+    # Fallback: als de opgeslagen ensceneringstips-waarde nog oude tekst-vorm is
+    # (van vóór de tips-editor), converteer naar lijst van tekst-only tips.
+    tips_stappen = []
+    raw_tips = (inhoud.get('ensceneringstips') or '').strip()
+    if raw_tips:
+        try:
+            parsed = json.loads(raw_tips)
+            if isinstance(parsed, list):
+                tips_stappen = parsed
+        except (ValueError, TypeError):
+            # Oude text-vorm: elke niet-lege regel wordt 1 tip zonder foto.
+            for regel in raw_tips.split('\n'):
+                r = regel.strip()
+                if r:
+                    tips_stappen.append({'tekst': r, 'fotos': []})
+    # Foto-paden absoluut maken.
+    for tip in tips_stappen:
+        if not isinstance(tip, dict):
+            continue
+        for foto in (tip.get('fotos') or []):
+            bestand = (foto.get('bestand') or '').strip() if isinstance(foto, dict) else ''
+            if bestand:
+                pad = os.path.join(upload_folder, bestand)
+                foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+            else:
+                foto['pad'] = None
+
+    # Legacy: standalone ensceneringstips_foto(_2) blijven bruikbaar voor kaarten
+    # die nog geen tips-JSON hebben.
     tips_foto_pad = None
     if kaart.ensceneringstips_foto:
         pad = os.path.join(upload_folder, kaart.ensceneringstips_foto)
         if os.path.exists(pad):
             tips_foto_pad = 'file://' + pad
+    tips_foto_2_pad = None
+    if getattr(kaart, 'ensceneringstips_foto_2', None):
+        pad = os.path.join(upload_folder, kaart.ensceneringstips_foto_2)
+        if os.path.exists(pad):
+            tips_foto_2_pad = 'file://' + pad
 
     # Gekoppelde kaarten (handmatig gekoppeld via verwijzingen-tab)
     gekoppelde = []
@@ -350,6 +384,8 @@ def genereer_pdf(kaart):
                                   kerntaak_afk=kerntaak_afk,
                                   header_foto_pad=header_foto_pad,
                                   tips_foto_pad=tips_foto_pad,
+                                  tips_foto_2_pad=tips_foto_2_pad,
+                                  tips_stappen=tips_stappen,
                                   veiligheid_zinnen=veiligheid_zinnen,
                                   lmra_qr_data_uri=lmra_qr_data_uri,
                                   opdracht_stappen=opdracht_stappen,

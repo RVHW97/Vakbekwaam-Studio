@@ -182,6 +182,62 @@ def _kaart_naam_uit_request(request_form, kaart_type, fallback=''):
     return (request_form.get('naam') or fallback).strip() or fallback
 
 
+def verwerk_tips_fotos(json_string):
+    """Parse tips-JSON (max 3 tips, elk met max 2 foto's), upload nieuwe foto's per
+    slot-id, return bijgewerkte JSON.
+
+    Per tip.fotos[i] = {'slot': '<uuid>', 'bestand': '<filename>',
+                        'bestand_origineel': '<filename>'}.
+    File-inputs: 'tips_foto_<slot>' (gecropt) en 'tips_orig_<slot>' (origineel).
+    """
+    try:
+        tips = json.loads(json_string or '[]')
+    except (ValueError, TypeError):
+        return json_string or '[]'
+    if not isinstance(tips, list):
+        return json_string or '[]'
+
+    for tip in tips[:3]:  # veiligheidsklem: max 3 tips
+        if not isinstance(tip, dict):
+            continue
+        fotos = tip.get('fotos') or []
+        nieuwe_fotos = []
+        for foto in fotos[:2]:  # veiligheidsklem: max 2 foto's per tip
+            if not isinstance(foto, dict):
+                continue
+            slot = (foto.get('slot') or '').strip()
+            bestand = (foto.get('bestand') or '').strip()
+            bestand_origineel = (foto.get('bestand_origineel') or '').strip()
+            if slot:
+                orig_upload = request.files.get('tips_orig_' + slot)
+                if orig_upload and orig_upload.filename:
+                    orig_naam, orig_fout = save_foto(orig_upload, prefix='tips_orig', ratio=None)
+                    if orig_naam:
+                        if bestand_origineel:
+                            verwijder_bestand(bestand_origineel)
+                        bestand_origineel = orig_naam
+                    elif orig_fout:
+                        flash(f'Tips-foto (origineel): {orig_fout}', 'warning')
+                crop_upload = request.files.get('tips_foto_' + slot)
+                if crop_upload and crop_upload.filename:
+                    foto_naam, foto_fout = save_foto(crop_upload, prefix='tips', ratio=None)
+                    if foto_naam:
+                        if bestand:
+                            verwijder_bestand(bestand)
+                        bestand = foto_naam
+                    elif foto_fout:
+                        flash(f'Tips-foto: {foto_fout}', 'warning')
+                if bestand and not bestand_origineel:
+                    bestand_origineel = bestand
+            nieuwe_fotos.append({
+                'slot': slot,
+                'bestand': bestand,
+                'bestand_origineel': bestand_origineel,
+            })
+        tip['fotos'] = nieuwe_fotos
+    return json.dumps(tips[:3], ensure_ascii=False)
+
+
 def verwerk_opdracht_fotos(json_string):
     """Parse opdracht-JSON (platte lijst van opdrachten met max 2 foto's per opdracht),
     upload nieuwe foto's per slot-id, return bijgewerkte JSON.
@@ -517,6 +573,19 @@ def bewerken(kaart_id):
             db.session.commit()
             if hasattr(form, 'opdrachten_json'):
                 form.opdrachten_json.data = processed_opdracht_json
+
+    # Ensceneringstips-foto's (scenariokaart): idem — verwerk uploads per tip-slot.
+    processed_tips_json = None
+    if request.method == 'POST' and kaart.type == 'scenario':
+        _incoming_tips = request.form.get('ensceneringstips') or '[]'
+        processed_tips_json = verwerk_tips_fotos(_incoming_tips)
+        if processed_tips_json != _incoming_tips:
+            _inh = kaart.get_inhoud()
+            _inh['ensceneringstips'] = processed_tips_json
+            kaart.set_inhoud(_inh)
+            db.session.commit()
+            if hasattr(form, 'ensceneringstips'):
+                form.ensceneringstips.data = processed_tips_json
     # Toelichting is alleen vereist vanaf de tweede échte wijziging.
     # Telt het aantal 'Bewerkt'-records — als 0, dan slaat de gebruiker voor het eerst
     # echt op (na auto-saves bij tab-wissel) en hoeft hij/zij geen reden te geven.
@@ -538,6 +607,8 @@ def bewerken(kaart_id):
             inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
         if processed_opdracht_json is not None and 'opdrachten_json' in inhoud:
             inhoud['opdrachten_json'] = processed_opdracht_json
+        if processed_tips_json is not None and 'ensceneringstips' in inhoud:
+            inhoud['ensceneringstips'] = processed_tips_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -564,13 +635,29 @@ def bewerken(kaart_id):
 
         tips_foto = request.files.get('ensceneringstips_foto')
         if tips_foto and tips_foto.filename:
-            foto_naam, foto_fout = save_foto(tips_foto, prefix='tips', ratio=4/3)
+            # ratio=None: crop-aspect is client-side gekozen; server valideert alleen minimum-formaat.
+            foto_naam, foto_fout = save_foto(tips_foto, prefix='tips', ratio=None)
             if foto_fout:
                 flash(f'Tips-foto: {foto_fout}', 'warning')
             elif foto_naam:
                 if kaart.ensceneringstips_foto:
                     verwijder_bestand(kaart.ensceneringstips_foto)
                 kaart.ensceneringstips_foto = foto_naam
+
+        # Tweede ensceneringstips-foto (optioneel — max 2 per kaart).
+        if request.form.get('verwijder_ensceneringstips_foto_2') and kaart.ensceneringstips_foto_2:
+            verwijder_bestand(kaart.ensceneringstips_foto_2)
+            kaart.ensceneringstips_foto_2 = None
+
+        tips_foto_2 = request.files.get('ensceneringstips_foto_2')
+        if tips_foto_2 and tips_foto_2.filename:
+            foto_naam, foto_fout = save_foto(tips_foto_2, prefix='tips', ratio=None)
+            if foto_fout:
+                flash(f'Tweede tips-foto: {foto_fout}', 'warning')
+            elif foto_naam:
+                if kaart.ensceneringstips_foto_2:
+                    verwijder_bestand(kaart.ensceneringstips_foto_2)
+                kaart.ensceneringstips_foto_2 = foto_naam
 
         # Productfoto (instructiekaart-materiaal): geen vaste ratio, vrij formaat.
         if request.form.get('verwijder_productfoto') and kaart.productfoto:
@@ -649,6 +736,8 @@ def bewerken(kaart_id):
             inhoud['werkwijze_stappen_json'] = processed_werkwijze_json
         if processed_opdracht_json is not None and 'opdrachten_json' in inhoud:
             inhoud['opdrachten_json'] = processed_opdracht_json
+        if processed_tips_json is not None and 'ensceneringstips' in inhoud:
+            inhoud['ensceneringstips'] = processed_tips_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None
@@ -669,7 +758,7 @@ def bewerken(kaart_id):
                     verwijder_bestand(kaart.header_foto)
                 kaart.header_foto = foto_naam
 
-        # Ensceneringstips foto
+        # Ensceneringstips foto (1)
         if request.form.get('verwijder_ensceneringstips_foto'):
             if kaart.ensceneringstips_foto:
                 verwijder_bestand(kaart.ensceneringstips_foto)
@@ -677,13 +766,29 @@ def bewerken(kaart_id):
 
         tips_foto = request.files.get('ensceneringstips_foto')
         if tips_foto and tips_foto.filename:
-            foto_naam, foto_fout = save_foto(tips_foto, prefix='tips', ratio=4/3)
+            foto_naam, foto_fout = save_foto(tips_foto, prefix='tips', ratio=None)
             if foto_fout:
                 flash(f'Tips-foto: {foto_fout}', 'warning')
             else:
                 if kaart.ensceneringstips_foto:
                     verwijder_bestand(kaart.ensceneringstips_foto)
                 kaart.ensceneringstips_foto = foto_naam
+
+        # Ensceneringstips foto (2)
+        if request.form.get('verwijder_ensceneringstips_foto_2'):
+            if kaart.ensceneringstips_foto_2:
+                verwijder_bestand(kaart.ensceneringstips_foto_2)
+                kaart.ensceneringstips_foto_2 = None
+
+        tips_foto_2 = request.files.get('ensceneringstips_foto_2')
+        if tips_foto_2 and tips_foto_2.filename:
+            foto_naam, foto_fout = save_foto(tips_foto_2, prefix='tips', ratio=None)
+            if foto_fout:
+                flash(f'Tweede tips-foto: {foto_fout}', 'warning')
+            else:
+                if kaart.ensceneringstips_foto_2:
+                    verwijder_bestand(kaart.ensceneringstips_foto_2)
+                kaart.ensceneringstips_foto_2 = foto_naam
 
         # Productfoto (instructiekaart-materiaal): geen vaste ratio, vrij formaat.
         if request.form.get('verwijder_productfoto'):

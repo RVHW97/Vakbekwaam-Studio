@@ -1396,54 +1396,47 @@
     {% endmacro %}
 
     {% macro render_uitvoering_blok() %}
-    {# Ensceneringstips (+ foto) #}
+    {# Ensceneringstips — mini-werkwijze-editor: max 3 tips × 2 foto's per tip. #}
     <div class="form-groep-blok">
         <h3 class="form-groep-titel">Ensceneringstips</h3>
-        <p class="form-hint">Max 7 tips.</p>
-        {{ form.ensceneringstips(style="display:none", id="ensceneringstips-hidden") }}
-        <div class="dynamische-lijst" id="ensceneringstips-lijst" data-hidden="ensceneringstips-hidden" data-max="7" data-placeholder="Bijv. Rookmachine in hoek plaatsen"></div>
-        <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="ensceneringstips-lijst" style="margin-top: 0.5rem;">+ Tip toevoegen</button>
-        <div class="form-subgroep-blok">
-            <h4 class="form-subgroep-titel">Foto bij ensceneringstips (optioneel)</h4>
-            {% if bewerken and kaart and kaart.ensceneringstips_foto %}
-            <div class="bestaande-afbeeldingen" style="margin-bottom: 8px;">
-                <div class="bestaande-afbeelding">
-                    <img src="{{ url_for('main.media', pad=kaart.ensceneringstips_foto) }}"
-                         alt="Huidige foto" style="max-height: 120px;">
-                    <label class="verwijder-checkbox">
-                        <input type="checkbox" name="verwijder_ensceneringstips_foto" value="1">
-                        Verwijderen
-                    </label>
+        <p class="form-hint">Per tip een korte omschrijving en optioneel max 2 foto's. Max <strong>3</strong> tips — <span id="tips-teller">0 / 3</span>.</p>
+        <p class="form-hint">💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een tip — de tweede foto binnen dezelfde tip volgt automatisch dezelfde verhouding.</p>
+
+        {{ form.ensceneringstips(type="hidden", id="tips-json") }}
+        <div id="tips-lijst"></div>
+
+        <button type="button" id="tips-nieuwe-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+            + Tip toevoegen
+        </button>
+
+        {# Cropper-modal voor tips-foto's — hergebruikt voor elk foto-slot. #}
+        <div id="tips-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
+            <div class="werkwijze-cropper-modal-content">
+                <h3 style="margin-top:0;">Foto bijsnijden</h3>
+                <p class="form-hint" style="margin-top:0;">Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.</p>
+                <div id="tips-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
+                    ⚠️ <strong>Let op:</strong> er staan al andere foto's in deze tip. Als je hier een andere verhouding kiest, snij die dan ook even opnieuw bij zodat alle foto's dezelfde verhouding hebben.
                 </div>
-            </div>
-            {% endif %}
-            <div class="file-upload-area">
-                <input type="file" name="ensceneringstips_foto" class="form-file"
-                       accept="image/jpeg,image/png,image/webp" id="tips-foto-input">
-                <p class="form-hint">Liggend formaat (4:3). Je kunt na uploaden bijsnijden. Max 20 MB. (JPG, PNG, WebP)</p>
-            </div>
-            <div id="tips-cropper-paneel" style="display:none; margin-top: 1rem;">
-                <div class="form-subgroep-blok">
-                    <h4 class="form-subgroep-titel">Foto bijsnijden</h4>
-                    <p class="form-hint">Kies een verhouding en sleep om te verschuiven. Klik "Bevestig" als je tevreden bent.</p>
-                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="breed">🖼️ Breed</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="liggend">📷 Liggend</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="vierkant">🔲 Vierkant</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-aspect="staand">📱 Staand</button>
-                    </div>
-                    <div style="max-width: 100%; max-height: 350px; background: #1A1A1A; margin: 0.75rem 0;">
-                        <img id="tips-cropper-img" style="display:block; max-width:100%;">
-                    </div>
-                    <div class="cropper-knoppen">
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="zoom-in">Inzoomen +</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="zoom-uit">Uitzoomen −</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-tips-crop="reset">Reset</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="tips-crop-bevestig">Bevestig bijsnijden</button>
-                    </div>
-                    <div id="tips-crop-status" style="display:none; margin-top: 0.5rem; padding: 0.5rem; background: #d4edda; border-radius: 4px; color: #155724; font-size: 0.85rem;">
-                        Foto bijgesneden en klaar voor opslaan.
-                    </div>
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-orient="breed">🖼️ Breed</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-orient="liggend">📷 Liggend</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-orient="vierkant">🔲 Vierkant</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-orient="staand">📱 Staand</button>
+                </div>
+                <div class="werkwijze-cropper-canvas-wrap">
+                    <img id="tips-cropper-modal-img" alt="">
+                </div>
+                <div class="cropper-knoppen" style="margin-top: 0.75rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-actie="zoom-in">Inzoomen +</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-actie="zoom-uit">Uitzoomen −</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-actie="reset">Reset</button>
+                    <span style="flex: 1;"></span>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-actie="links">↺ Linksom</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-tips-modal-cropper-actie="rechts">↻ Rechtsom</button>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" data-tips-modal-cropper-actie="annuleer">Annuleren</button>
+                    <button type="button" class="btn btn-primary" data-tips-modal-cropper-actie="bevestig">Bijsnijden &amp; gebruiken</button>
                 </div>
             </div>
         </div>
@@ -2683,6 +2676,7 @@ function setupCropper(config) {
             cropper = new Cropper(img, cropperOpts);
             // Bij thema: verberg de "leeg" placeholder en de huidige bg-foto zodra de cropper overneemt
             if (config.onActivate) config.onActivate();
+            if (typeof config.onCropperReady === 'function') config.onCropperReady(cropper, paneel);
         };
         reader.readAsDataURL(file);
     }
@@ -2701,6 +2695,7 @@ function setupCropper(config) {
                     b.classList.toggle('btn-primary', actief);
                     b.classList.toggle('btn-secondary', !actief);
                 });
+                if (typeof config.onAspectChange === 'function') config.onAspectChange(key, ratio);
             }
         });
     }
@@ -2832,32 +2827,15 @@ setupCropper({
     processedKey: 'headerProcessed'
 });
 
-// Tips foto cropper — met 4 aspect-keuzes (breed / liggend / vierkant / staand).
-setupCropper({
-    inputId: 'tips-foto-input',
-    paneelId: 'tips-cropper-paneel',
-    imgId: 'tips-cropper-img',
-    bevestigId: 'tips-crop-bevestig',
-    statusId: 'tips-crop-status',
-    dataAttr: 'data-tips-crop',
-    aspectAttr: 'data-tips-aspect',
-    aspectRatios: { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4 },
-    ratio: 4 / 3,
-    rotatable: false,
-    maxW: 1200, maxH: 900,
-    minW: 200, minH: 200,
-    maxFileBytes: 20 * 1024 * 1024,
-    fillColor: '#fff',
-    prefix: 'tips',
-    label: 'ensceneringstips foto',
-    processedKey: 'tipsProcessed'
-});
+// Ensceneringstips-editor (tips-lijst met per-tip foto's + eigen cropper-modal)
+// wordt verderop in het scenariokaart-scriptblok gebouwd.
 
 /* === Foto-verwijderen-vinkjes: bevestig + direct opslaan === */
 (function() {
     var koppelingen = [
         { name: 'verwijder_header_foto', omschrijving: 'header-foto' },
-        { name: 'verwijder_ensceneringstips_foto', omschrijving: 'ensceneringstips-foto' },
+        { name: 'verwijder_ensceneringstips_foto', omschrijving: 'ensceneringstips-foto 1' },
+        { name: 'verwijder_ensceneringstips_foto_2', omschrijving: 'ensceneringstips-foto 2' },
         { name: 'verwijder_productfoto', omschrijving: 'productfoto' }
     ];
     koppelingen.forEach(function(k) {
@@ -3165,7 +3143,7 @@ setupCropper({
             { id: 'interventiekenmerken', label: 'Interventiekenmerken' }
         ],
         'uitvoering': [
-            { type: 'lijst', hidden: 'ensceneringstips-hidden', label: 'Ensceneringstips (minimaal 1)', min: 1 },
+            { type: 'json-lijst', hidden: 'tips-json', label: 'Ensceneringstips (minimaal 1)', min: 1 },
             { type: 'lijst', hidden: 'evaluatie-hidden', label: 'Evaluatie (minimaal 1)', min: 1 }
         ],
         'verwijzingen': [],
@@ -3611,6 +3589,552 @@ setupCropper({
                 });
         });
     });
+})();
+
+/* === Ensceneringstips-editor: max 3 tips × max 2 foto's per tip.
+   Zelfde patroon als opdrachten-editor: per tip een compacte foto-lijst
+   (verborgen slots + "+ Foto"), aspect-lock, mini-preview. === */
+(function() {
+    var hiddenJson = document.getElementById('tips-json');
+    var lijst      = document.getElementById('tips-lijst');
+    var nieuweBtn  = document.getElementById('tips-nieuwe-knop');
+    var teller     = document.getElementById('tips-teller');
+    var modal      = document.getElementById('tips-cropper-modal');
+    if (!hiddenJson || !lijst || !nieuweBtn) return;
+
+    var MAX_TIPS   = 3;
+    var MAX_FOTOS  = 2;
+    var TEKST_MAX  = 300;
+    var ASPECT_RATIOS = { breed: 16/9, liggend: 4/3, vierkant: 1, staand: 3/4 };
+    var KERNTAAK_KLEUREN_LOKAAL = {
+        'algemeen': '#CC9933', 'brand': '#B6463D', 'thv': '#4C7F52',
+        'ibgs': '#DAB94F', 'water': '#4B70A6'
+    };
+
+    function huidigeKerntaakKleur() {
+        var sel = document.getElementById('kerntaak');
+        var key = sel ? sel.value : '';
+        return KERNTAAK_KLEUREN_LOKAAL[key] || '#B8B2A4';
+    }
+
+    function genId(prefix) {
+        if (window.crypto && window.crypto.randomUUID) return prefix + '-' + window.crypto.randomUUID();
+        return prefix + '-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    // File-cache per slot (behoudt ongesavede uploads bij re-render).
+    var origineleFiles = {};
+    var geCropteFiles  = {};
+
+    // Bestaande text-lijst-migratie: oude ensceneringstips-data was newline-separated
+    // tekst; converteer naar één tip per regel (max 3), zonder foto's.
+    var tips = [];
+    (function initTips() {
+        var raw = hiddenJson.value || '';
+        raw = raw.trim();
+        if (!raw) return;
+        try {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) { tips = parsed; return; }
+        } catch (_) { /* niet JSON, val terug op text-migratie */ }
+        var regels = raw.split('\n').map(function(r) { return r.trim(); }).filter(Boolean);
+        regels.slice(0, MAX_TIPS).forEach(function(r) {
+            tips.push({ id: genId('tip'), tekst: r, fotos: [] });
+        });
+    })();
+    tips.forEach(function(t) {
+        if (!t.id) t.id = genId('tip');
+        if (!Array.isArray(t.fotos)) t.fotos = [];
+        while (t.fotos.length < MAX_FOTOS) t.fotos.push({ slot: genId('tfslot'), bestand: '', bestand_origineel: '' });
+        if (t.fotos.length > MAX_FOTOS) t.fotos.length = MAX_FOTOS;
+    });
+
+    function syncJson() {
+        hiddenJson.value = JSON.stringify(tips);
+        tips.forEach(function(t) {
+            var blok = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + t.id + '"]');
+            if (blok) updateSamenvatting(t, blok);
+        });
+        updateTeller();
+    }
+
+    function updateTeller() {
+        if (teller) teller.textContent = tips.length + ' / ' + MAX_TIPS;
+        nieuweBtn.disabled = tips.length >= MAX_TIPS;
+    }
+
+    function vindIndex(id) {
+        for (var i = 0; i < tips.length; i++) if (tips[i].id === id) return i;
+        return -1;
+    }
+
+    function slotIsGevuld(f) { return !!(f.bestand || geCropteFiles[f.slot]); }
+
+    function tipEersteGevuldeFoto(t) { return (t.fotos || []).find(slotIsGevuld); }
+    function tipAspectLock(t, huidigeSlot) {
+        var eerste = tipEersteGevuldeFoto(t);
+        if (!eerste || eerste.slot === huidigeSlot) return null;
+        return t.foto_aspect || null;
+    }
+    function tipHeeftAndereFotos(t, huidigeSlot) {
+        return (t.fotos || []).some(function(f) {
+            return f.slot !== huidigeSlot && slotIsGevuld(f);
+        });
+    }
+
+    function updateSamenvatting(t, blok) {
+        var samenv = blok.querySelector('.opdracht-samenvatting');
+        if (!samenv) return;
+        var tekst = (t.tekst || '').trim() || '(geen tekst)';
+        var fotoAantal = (t.fotos || []).filter(slotIsGevuld).length;
+        var fotoTxt = fotoAantal === 0 ? '' : ' — ' + fotoAantal + ' foto' + (fotoAantal === 1 ? '' : "'s");
+        samenv.textContent = (tekst.length > 60 ? tekst.slice(0, 60) + '…' : tekst) + fotoTxt;
+    }
+
+    function updateNummers() {
+        lijst.querySelectorAll('.opdracht-blok').forEach(function(b, i) {
+            var nr = b.querySelector('.opdracht-nummer');
+            if (nr) nr.textContent = 'Tip ' + (i + 1);
+            var up = b.querySelector('[data-rol="tip-up"]');
+            var dn = b.querySelector('[data-rol="tip-down"]');
+            if (up) up.disabled = (i === 0);
+            if (dn) dn.disabled = (i === tips.length - 1);
+        });
+    }
+
+    function mkKnop(tekst, titel, klasse, dis, onClick) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = klasse; b.textContent = tekst;
+        if (titel) b.title = titel;
+        if (dis) b.disabled = true;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    function renderFotoSlot(t, foto) {
+        var wrap = document.createElement('div');
+        wrap.className = 'werkwijze-foto-slot';
+        var heeftFoto = slotIsGevuld(foto);
+
+        var inpCrop = document.createElement('input');
+        inpCrop.type = 'file'; inpCrop.name = 'tips_foto_' + foto.slot;
+        inpCrop.accept = 'image/jpeg,image/png,image/webp';
+        inpCrop.className = 'werkwijze-foto-input-verborgen';
+        wrap.appendChild(inpCrop);
+
+        var inpOrig = document.createElement('input');
+        inpOrig.type = 'file'; inpOrig.name = 'tips_orig_' + foto.slot;
+        inpOrig.accept = 'image/jpeg,image/png,image/webp';
+        inpOrig.className = 'werkwijze-foto-input-verborgen';
+        wrap.appendChild(inpOrig);
+
+        if (geCropteFiles[foto.slot]) {
+            try { var dt1 = new DataTransfer(); dt1.items.add(geCropteFiles[foto.slot]); inpCrop.files = dt1.files; } catch (_) {}
+        }
+        if (origineleFiles[foto.slot]) {
+            try { var dt2 = new DataTransfer(); dt2.items.add(origineleFiles[foto.slot]); inpOrig.files = dt2.files; } catch (_) {}
+        }
+
+        inpCrop.addEventListener('change', function() {
+            var f = inpCrop.files && inpCrop.files[0];
+            if (!f) return;
+            var ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (['jpg','jpeg','png','webp'].indexOf(ext) === -1) { alert('Alleen JPG, PNG of WebP.'); inpCrop.value = ''; return; }
+            if (f.size > 20 * 1024 * 1024) { alert('Bestand te groot (max 20 MB).'); inpCrop.value = ''; return; }
+            openCropper(t.id, foto.slot, f);
+        });
+
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'werkwijze-foto-slot-label';
+        var bron = geCropteFiles[foto.slot] || origineleFiles[foto.slot];
+        var naam = (bron && bron.name) || foto.bestand_origineel || foto.bestand || '';
+        labelSpan.textContent = heeftFoto ? ('📎 ' + naam) : 'Nog geen foto';
+        wrap.appendChild(labelSpan);
+
+        if (heeftFoto) {
+            wrap.appendChild(mkKnop('× Verwijderen', 'Foto verwijderen',
+                'btn btn-secondary btn-sm', false, function() {
+                    if (!confirm('Foto verwijderen?')) return;
+                    foto.bestand = ''; foto.bestand_origineel = '';
+                    delete geCropteFiles[foto.slot];
+                    delete origineleFiles[foto.slot];
+                    var nogFotos = (t.fotos || []).some(slotIsGevuld);
+                    if (!nogFotos) delete t.foto_aspect;
+                    syncJson();
+                    herrenderTip(t.id);
+                }));
+        } else {
+            wrap.style.display = 'none';
+        }
+        return wrap;
+    }
+
+    function maakTipDOM(t) {
+        var blok = document.createElement('div');
+        blok.className = 'opdracht-blok';
+        blok.dataset.opdrachtId = t.id;
+
+        var hdr = document.createElement('div');
+        hdr.className = 'opdracht-header';
+        var toggle = document.createElement('button');
+        toggle.type = 'button'; toggle.className = 'opdracht-toggle';
+        toggle.setAttribute('aria-label', 'In-/uitklappen');
+        toggle.addEventListener('click', function(e) { e.stopPropagation(); blok.classList.toggle('is-ingeklapt'); });
+        hdr.appendChild(toggle);
+
+        var nr = document.createElement('span'); nr.className = 'opdracht-nummer';
+        hdr.appendChild(nr);
+        var samenv = document.createElement('span'); samenv.className = 'opdracht-samenvatting';
+        hdr.appendChild(samenv);
+
+        var acties = document.createElement('span'); acties.className = 'opdracht-header-acties';
+        acties.appendChild(mkKnop('↑', 'Omhoog', 'btn btn-secondary btn-sm', false, function(e) {
+            e.stopPropagation();
+            var idx = vindIndex(t.id);
+            if (idx > 0) { var tmp = tips[idx - 1]; tips[idx - 1] = tips[idx]; tips[idx] = tmp; renderAlles(); syncJson(); }
+        }));
+        acties.appendChild(mkKnop('↓', 'Omlaag', 'btn btn-secondary btn-sm', false, function(e) {
+            e.stopPropagation();
+            var idx = vindIndex(t.id);
+            if (idx >= 0 && idx < tips.length - 1) { var tmp = tips[idx + 1]; tips[idx + 1] = tips[idx]; tips[idx] = tmp; renderAlles(); syncJson(); }
+        }));
+        acties.appendChild(mkKnop('✕', 'Tip verwijderen', 'btn-verwijder', false, function(e) {
+            e.stopPropagation();
+            if (!confirm('Deze tip verwijderen?')) return;
+            var idx = vindIndex(t.id);
+            if (idx >= 0) {
+                (tips[idx].fotos || []).forEach(function(f) { delete geCropteFiles[f.slot]; delete origineleFiles[f.slot]; });
+                tips.splice(idx, 1);
+                renderAlles(); syncJson();
+            }
+        }));
+        // Merk de acties/knoppen: geef ze een rol zodat updateNummers ze vindt
+        var upBtn = acties.children[0]; if (upBtn) upBtn.dataset.rol = 'tip-up';
+        var dnBtn = acties.children[1]; if (dnBtn) dnBtn.dataset.rol = 'tip-down';
+        hdr.appendChild(acties);
+        hdr.addEventListener('click', function(e) {
+            if (e.target.closest('button')) return;
+            blok.classList.toggle('is-ingeklapt');
+        });
+        blok.appendChild(hdr);
+
+        var body = document.createElement('div'); body.className = 'opdracht-body';
+
+        var grpTekst = document.createElement('div'); grpTekst.className = 'form-group';
+        var lblTekst = document.createElement('label'); lblTekst.className = 'form-label';
+        lblTekst.textContent = 'Omschrijving van de tip';
+        grpTekst.appendChild(lblTekst);
+        var inpTekst = document.createElement('textarea');
+        inpTekst.className = 'form-input form-textarea'; inpTekst.rows = 2;
+        inpTekst.maxLength = TEKST_MAX;
+        inpTekst.placeholder = 'Bijv. Rookmachine in de hoek plaatsen';
+        inpTekst.value = t.tekst || '';
+        inpTekst.addEventListener('input', function() { t.tekst = inpTekst.value; syncJson(); updatePreviewNu(); });
+        grpTekst.appendChild(inpTekst);
+        body.appendChild(grpTekst);
+
+        var lblFotos = document.createElement('label'); lblFotos.className = 'form-label';
+        lblFotos.textContent = 'Foto\'s bij deze tip (max ' + MAX_FOTOS + ')';
+        body.appendChild(lblFotos);
+        var fotoHint = document.createElement('p'); fotoHint.className = 'form-hint';
+        fotoHint.style.margin = '0 0 0.5rem 0';
+        fotoHint.textContent = 'Klik op een foto in het voorbeeld hieronder om deze opnieuw bij te snijden.';
+        body.appendChild(fotoHint);
+
+        var fotoRij = document.createElement('div'); fotoRij.className = 'werkwijze-foto-rij';
+        (t.fotos || []).forEach(function(f) { fotoRij.appendChild(renderFotoSlot(t, f)); });
+        body.appendChild(fotoRij);
+
+        var addFotoBtn = mkKnop('+ Foto toevoegen', 'Kies een foto', 'btn btn-secondary btn-sm', false, function() {
+            var slots = fotoRij.querySelectorAll('.werkwijze-foto-slot');
+            for (var i = 0; i < slots.length; i++) {
+                if (slots[i].style.display === 'none') {
+                    var inp = slots[i].querySelector('input[type="file"][name^="tips_foto_"]');
+                    if (inp) inp.click();
+                    return;
+                }
+            }
+            alert('Je hebt al ' + MAX_FOTOS + ' foto\'s bij deze tip.');
+        });
+        addFotoBtn.style.margin = '0 0 0.75rem 0';
+        body.appendChild(addFotoBtn);
+        var alleGevuld = true;
+        fotoRij.querySelectorAll('.werkwijze-foto-slot').forEach(function(s) { if (s.style.display === 'none') alleGevuld = false; });
+        if (alleGevuld) addFotoBtn.style.display = 'none';
+
+        // Plaatsing bij precies 1 foto: klein rechts of groot onder de tekst.
+        if (!t.foto_plaatsing) t.foto_plaatsing = 'rechts';
+        var plaatsingGroup = document.createElement('div');
+        plaatsingGroup.className = 'form-group werkwijze-plaatsing-keuze';
+        plaatsingGroup.style.marginTop = '0.5rem';
+        var plaatsingLabel = document.createElement('label');
+        plaatsingLabel.className = 'form-label';
+        plaatsingLabel.textContent = 'Plaatsing van de foto';
+        plaatsingGroup.appendChild(plaatsingLabel);
+        var plaatsingRij = document.createElement('div');
+        plaatsingRij.className = 'werkwijze-opmaak-keuze';
+        [
+            { key: 'rechts', label: 'Klein naast de tekst' },
+            { key: 'onder',  label: 'Groot onder de tekst' }
+        ].forEach(function(opt) {
+            var labelEl = document.createElement('label');
+            labelEl.className = 'werkwijze-opmaak-knop' + (t.foto_plaatsing === opt.key ? ' is-actief' : '');
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'tip-plaatsing-' + t.id;
+            radio.value = opt.key;
+            radio.checked = (t.foto_plaatsing === opt.key);
+            radio.addEventListener('change', function() {
+                if (!this.checked) return;
+                t.foto_plaatsing = opt.key;
+                syncJson();
+                plaatsingRij.querySelectorAll('.werkwijze-opmaak-knop').forEach(function(k) {
+                    k.classList.toggle('is-actief', k.querySelector('input').value === opt.key);
+                });
+                updatePreviewNu();
+            });
+            var span = document.createElement('span');
+            span.textContent = opt.label;
+            labelEl.appendChild(radio);
+            labelEl.appendChild(span);
+            plaatsingRij.appendChild(labelEl);
+        });
+        plaatsingGroup.appendChild(plaatsingRij);
+        body.appendChild(plaatsingGroup);
+        function updatePlaatsingZichtbaar() {
+            var gevuldAantal = gevuldeFotosVoor(t).length;
+            plaatsingGroup.style.display = (gevuldAantal === 1) ? '' : 'none';
+        }
+        updatePlaatsingZichtbaar();
+
+        var previewWrap = document.createElement('div'); previewWrap.className = 'werkwijze-preview-wrap';
+        var lblPreview = document.createElement('div'); lblPreview.className = 'form-hint';
+        lblPreview.style.margin = '0.5rem 0 0.3rem';
+        lblPreview.innerHTML = '<strong>Voorbeeld op de PDF</strong>';
+        previewWrap.appendChild(lblPreview);
+        var previewEl = document.createElement('div'); previewEl.className = 'werkwijze-preview';
+        previewWrap.appendChild(previewEl);
+        body.appendChild(previewWrap);
+
+        function updatePreviewNu() { renderTipPreview(t, previewEl); }
+        previewEl.addEventListener('click', function(e) {
+            var cel = e.target.closest('.werkwijze-preview-foto.is-klikbaar');
+            if (!cel) return;
+            var slot = cel.dataset.previewSlot;
+            if (slot) openCropperVanuitPreview(t, slot);
+        });
+        updatePreviewNu();
+
+        blok.appendChild(body);
+        return blok;
+    }
+
+    function gevuldeFotosVoor(t) {
+        return (t.fotos || []).map(function(f) {
+            if (geCropteFiles[f.slot]) return { src: URL.createObjectURL(geCropteFiles[f.slot]), slot: f.slot };
+            if (f.bestand) return { src: '/media/' + f.bestand, slot: f.slot };
+            return null;
+        }).filter(Boolean);
+    }
+
+    function maakPreviewFoto(src, slot) {
+        var f = document.createElement('div'); f.className = 'werkwijze-preview-foto';
+        if (src) {
+            var img = document.createElement('img'); img.src = src; f.appendChild(img);
+            if (slot) { f.classList.add('is-klikbaar'); f.title = 'Klik om opnieuw bij te snijden'; f.dataset.previewSlot = slot; }
+        } else { f.classList.add('leeg'); f.textContent = '(geen foto)'; }
+        return f;
+    }
+    function maakPreviewTekst(t) {
+        var el = document.createElement('div'); el.className = 'werkwijze-preview-tekst';
+        el.textContent = (t.tekst || '').trim() || '(tip)';
+        return el;
+    }
+
+    function renderTipPreview(t, previewEl) {
+        previewEl.innerHTML = '';
+        var kleur = huidigeKerntaakKleur();
+        previewEl.style.setProperty('--preview-kerntaak', kleur);
+        var gevuld = gevuldeFotosVoor(t);
+        var inhoud = document.createElement('div');
+        if (gevuld.length === 0) {
+            inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-T';
+            inhoud.appendChild(maakPreviewTekst(t));
+        } else if (gevuld.length === 1) {
+            var plaatsing = t.foto_plaatsing || 'rechts';
+            inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-' + (plaatsing === 'onder' ? 'D' : 'B');
+            inhoud.appendChild(maakPreviewTekst(t));
+            inhoud.appendChild(maakPreviewFoto(gevuld[0].src, gevuld[0].slot));
+        } else {
+            inhoud.className = 'werkwijze-preview-layout werkwijze-preview-layout-C';
+            inhoud.appendChild(maakPreviewTekst(t));
+            var strip = document.createElement('div');
+            strip.className = 'werkwijze-preview-fotostrip';
+            strip.style.gridTemplateColumns = 'repeat(' + Math.min(gevuld.length, MAX_FOTOS) + ', 1fr)';
+            gevuld.slice(0, MAX_FOTOS).forEach(function(item) { strip.appendChild(maakPreviewFoto(item.src, item.slot)); });
+            inhoud.appendChild(strip);
+        }
+        previewEl.appendChild(inhoud);
+    }
+
+    function herrenderTip(id) {
+        var idx = vindIndex(id);
+        if (idx < 0) return;
+        var oud = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + id + '"]');
+        if (!oud) return;
+        var isIngeklapt = oud.classList.contains('is-ingeklapt');
+        var nieuw = maakTipDOM(tips[idx]);
+        if (isIngeklapt) nieuw.classList.add('is-ingeklapt');
+        oud.replaceWith(nieuw);
+        updateNummers();
+        updateSamenvatting(tips[idx], nieuw);
+    }
+
+    function renderAlles() {
+        lijst.innerHTML = '';
+        tips.forEach(function(t) {
+            var b = maakTipDOM(t);
+            b.classList.add('is-ingeklapt');
+            lijst.appendChild(b);
+            updateSamenvatting(t, b);
+        });
+        updateNummers();
+    }
+
+    nieuweBtn.addEventListener('click', function() {
+        if (tips.length >= MAX_TIPS) return;
+        var t = { id: genId('tip'), tekst: '', fotos: [] };
+        for (var i = 0; i < MAX_FOTOS; i++) t.fotos.push({ slot: genId('tfslot'), bestand: '', bestand_origineel: '' });
+        tips.push(t);
+        // alle andere sluiten
+        lijst.querySelectorAll('.opdracht-blok').forEach(function(b) { if (b.dataset.opdrachtId !== t.id) b.classList.add('is-ingeklapt'); });
+        var dom = maakTipDOM(t);
+        lijst.appendChild(dom);
+        updateNummers();
+        updateSamenvatting(t, dom);
+        syncJson();
+        try { dom.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    });
+
+    // === Cropper-modal (gedeeld voor alle tips-slots) ===
+    var cropper = null;
+    var actieveTipId = null, actieveSlot = null, actieveOrient = 'liggend', actieveOrigFile = null;
+    var img = document.getElementById('tips-cropper-modal-img');
+
+    function openCropperVanuitPreview(t, slot) {
+        var foto = (t.fotos || []).find(function(f) { return f.slot === slot; });
+        if (!foto) return;
+        var origMem = origineleFiles[slot];
+        if (origMem) { openCropper(t.id, slot, origMem); return; }
+        var origServer = foto.bestand_origineel || foto.bestand;
+        if (!origServer) return;
+        fetch('/media/' + origServer)
+            .then(function(r) { return r.blob(); })
+            .then(function(blob) {
+                var fake = new File([blob], origServer, { type: blob.type || 'image/jpeg' });
+                openCropper(t.id, slot, fake);
+            })
+            .catch(function(err) { console.error(err); });
+    }
+
+    function updateOrientKnoppenZichtbaarheid(lock) {
+        modal.querySelectorAll('[data-tips-modal-cropper-orient]').forEach(function(btn) {
+            var val = btn.getAttribute('data-tips-modal-cropper-orient');
+            btn.style.display = (lock && val !== lock) ? 'none' : '';
+        });
+    }
+
+    function openCropper(tipId, slot, file) {
+        actieveTipId = tipId; actieveSlot = slot; actieveOrigFile = file;
+        origineleFiles[slot] = file;
+        var idx = vindIndex(tipId);
+        var t = tips[idx];
+        var lock = tipAspectLock(t, slot);
+        var suggestie = t.foto_aspect || 'liggend';
+        actieveOrient = lock || suggestie;
+        updateOrientKnoppenZichtbaarheid(lock);
+        var waarsch = document.getElementById('tips-cropper-waarschuwing');
+        if (waarsch) {
+            var toon = !lock && tipHeeftAndereFotos(t, slot);
+            waarsch.style.display = toon ? '' : 'none';
+        }
+
+        var url = URL.createObjectURL(file);
+        img.src = url;
+        img.dataset.objectUrl = url;
+        modal.style.display = 'flex';
+        img.onload = function() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            cropper = new Cropper(img, {
+                aspectRatio: ASPECT_RATIOS[actieveOrient], viewMode: 1, autoCropArea: 0.9,
+                zoomable: true, movable: true, scalable: false, rotatable: true
+            });
+        };
+    }
+
+    function sluitModal() {
+        if (cropper) { cropper.destroy(); cropper = null; }
+        modal.style.display = 'none';
+        if (img.dataset.objectUrl) { try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (_) {} delete img.dataset.objectUrl; }
+        actieveTipId = null; actieveSlot = null; actieveOrigFile = null;
+    }
+
+    modal.querySelectorAll('[data-tips-modal-cropper-orient]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            actieveOrient = btn.getAttribute('data-tips-modal-cropper-orient');
+            if (cropper) cropper.setAspectRatio(ASPECT_RATIOS[actieveOrient]);
+        });
+    });
+
+    modal.querySelectorAll('[data-tips-modal-cropper-actie]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var actie = btn.getAttribute('data-tips-modal-cropper-actie');
+            if (!cropper && actie !== 'annuleer') return;
+            if (actie === 'zoom-in')  cropper.zoom(0.1);
+            if (actie === 'zoom-uit') cropper.zoom(-0.1);
+            if (actie === 'reset')    cropper.reset();
+            if (actie === 'links')    cropper.rotate(-90);
+            if (actie === 'rechts')   cropper.rotate(90);
+            if (actie === 'annuleer') sluitModal();
+            if (actie === 'bevestig') bevestigCrop();
+        });
+    });
+
+    function bevestigCrop() {
+        if (!cropper) return;
+        var canvas = cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingQuality: 'high', fillColor: '#fff' });
+        if (!canvas) { sluitModal(); return; }
+        canvas.toBlob(function(blob) {
+            var slot = actieveSlot;
+            var tipId = actieveTipId;
+            try {
+                var naam = (actieveOrigFile.name || 'tip').replace(/\.[^.]+$/, '') + '.jpg';
+                var croppedFile = new File([blob], naam, { type: 'image/jpeg' });
+                geCropteFiles[slot] = croppedFile;
+                if (actieveOrigFile) origineleFiles[slot] = actieveOrigFile;
+                var idx = vindIndex(tipId);
+                if (idx >= 0) tips[idx].foto_aspect = actieveOrient;
+                syncJson();
+                herrenderTip(tipId);
+            } catch (err) { console.error('Tips-cropper fout:', err); }
+            sluitModal();
+        }, 'image/jpeg', 0.9);
+    }
+
+    renderAlles();
+    updateTeller();
+
+    var kerntaakSel = document.getElementById('kerntaak');
+    if (kerntaakSel) {
+        kerntaakSel.addEventListener('change', function() {
+            tips.forEach(function(t) {
+                var blok = lijst.querySelector('.opdracht-blok[data-opdracht-id="' + t.id + '"]');
+                if (!blok) return;
+                var previewEl = blok.querySelector('.werkwijze-preview');
+                if (previewEl) renderTipPreview(t, previewEl);
+            });
+        });
+    }
 })();
 </script>
 {% endif %}
