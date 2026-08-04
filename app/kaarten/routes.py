@@ -182,6 +182,143 @@ def _kaart_naam_uit_request(request_form, kaart_type, fallback=''):
     return (request_form.get('naam') or fallback).strip() or fallback
 
 
+def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
+    """Extra 'verplichte veld'-checks per kaart-type bovenop WTForms-validators.
+
+    Uitgangspunt: alleen bij bewerken (expliciet 'Opslaan') — niet bij aanmaken
+    en niet bij auto-save. Voegt foutmeldingen toe aan form.<veld>.errors zodat
+    ze in de banner en per tab getoond worden. Geeft een lijst met de ontbrekende
+    labels terug (leeg = alles OK).
+    """
+    def _add_error(veld_naam, boodschap):
+        veld = getattr(form, veld_naam, None)
+        if veld is None:
+            return
+        veld.errors = list(veld.errors) + [boodschap]
+
+    def _tekst_leeg(veld_naam):
+        return not (request_form.get(veld_naam) or '').strip()
+
+    def _lijst_min(veld_naam, min_aantal=1):
+        val = request_form.get(veld_naam) or ''
+        regels = [r for r in val.split('\n') if r.strip()]
+        return len(regels) < min_aantal
+
+    def _json_lijst_min(veld_naam, min_aantal=1, key_check=None):
+        try:
+            data = json.loads(request_form.get(veld_naam) or '[]')
+        except (ValueError, TypeError):
+            data = []
+        if not isinstance(data, list):
+            return True
+        if key_check:
+            gevuld = [x for x in data if isinstance(x, dict) and key_check(x)]
+        else:
+            gevuld = [x for x in data if x]
+        return len(gevuld) < min_aantal
+
+    ontbrekend = []
+
+    if kaart_type == 'thema':
+        if _tekst_leeg('ondertitel'):
+            _add_error('ondertitel', 'Vul een ondertitel in.')
+            ontbrekend.append('Ondertitel')
+        tussentitels = [(request_form.get(f'tussentitel_{i}') or '').strip() for i in (1, 2, 3)]
+        if not any(tussentitels):
+            _add_error('tussentitel_1', 'Vul minstens 1 tussentitel in.')
+            ontbrekend.append('Tussentitel')
+        elif kaart is not None:
+            aantal_links = ThemaKaartLink.query.filter_by(kaart_id=kaart.id).count()
+            if aantal_links < 1:
+                _add_error('tussentitel_1', 'Koppel minstens 1 kaart onder een tussentitel.')
+                ontbrekend.append('Gekoppelde kaart')
+
+    elif kaart_type == 'instructie':
+        if _tekst_leeg('omschrijving'):
+            _add_error('omschrijving', 'Vul een omschrijving in.')
+            ontbrekend.append('Omschrijving')
+        try:
+            werkwijze = json.loads(request_form.get('werkwijze_stappen_json') or '[]')
+        except (ValueError, TypeError):
+            werkwijze = []
+        gevuld = [
+            s for s in werkwijze
+            if isinstance(s, dict) and (
+                (s.get('titel') or '').strip()
+                or (s.get('tekst') or '').strip()
+                or (s.get('fotos') or [])
+            )
+        ]
+        if len(gevuld) < 1:
+            _add_error('werkwijze_stappen_json', 'Voeg minstens 1 werkwijze-stap toe.')
+            ontbrekend.append('Werkwijze-stap')
+
+    elif kaart_type == 'scenario':
+        if _tekst_leeg('doelgroep'):
+            _add_error('doelgroep', 'Kies een doelgroep.')
+            ontbrekend.append('Doelgroep')
+        try:
+            oefenleider_n = int(request_form.get('oefenleider_aantal') or 0)
+        except (ValueError, TypeError):
+            oefenleider_n = 0
+        if oefenleider_n < 1:
+            _add_error('oefenleider_aantal', 'Minstens 1 oefenleider vereist.')
+            ontbrekend.append('Aantal oefenleiders')
+        if _tekst_leeg('tijdsduur'):
+            _add_error('tijdsduur', 'Kies een tijdsduur.')
+            ontbrekend.append('Tijdsduur')
+        if _tekst_leeg('aanleiding_doelen'):
+            _add_error('aanleiding_doelen', 'Vul een oefendoel in.')
+            ontbrekend.append('Oefendoel')
+        if _json_lijst_min('oefenmiddelen_basis', 1):
+            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 basis-oefenmiddel toe.')
+            ontbrekend.append('Basis-oefenmiddelen')
+        if _tekst_leeg('pager_prio'):
+            _add_error('pager_prio', 'Kies een prioriteit.')
+            ontbrekend.append('Pager-prioriteit')
+        if _tekst_leeg('pager_soort'):
+            _add_error('pager_soort', 'Kies een soort melding.')
+            ontbrekend.append('Pager-soort')
+        if _tekst_leeg('scenariobeschrijving'):
+            _add_error('scenariobeschrijving', 'Vul een scenariobeschrijving in.')
+            ontbrekend.append('Scenariobeschrijving')
+        for veld, label in [
+            ('kenmerken_kerntaak', 'Kerntaak-kenmerken'),
+            ('gebouwkenmerken', 'Gebouwkenmerken'),
+            ('menskenmerken', 'Menskenmerken'),
+            ('omgevingskenmerken', 'Omgevingskenmerken'),
+            ('interventiekenmerken', 'Interventiekenmerken'),
+        ]:
+            if _tekst_leeg(veld):
+                _add_error(veld, f'Vul {label.lower()} in.')
+                ontbrekend.append(label)
+        if _lijst_min('evaluatie', 1):
+            _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
+            ontbrekend.append('Evaluatie')
+
+    elif kaart_type == 'opdracht':
+        if _tekst_leeg('doelgroep'):
+            _add_error('doelgroep', 'Kies een doelgroep.')
+            ontbrekend.append('Doelgroep')
+        if _json_lijst_min('oefenmiddelen_basis', 1):
+            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 basis-oefenmiddel toe.')
+            ontbrekend.append('Basis-oefenmiddelen')
+        if _tekst_leeg('oefendoel'):
+            _add_error('oefendoel', 'Vul een oefendoel in.')
+            ontbrekend.append('Oefendoel')
+        if _json_lijst_min(
+                'opdrachten_json', 1,
+                key_check=lambda o: bool((o.get('titel') or '').strip()
+                                          or (o.get('tekst') or '').strip())):
+            _add_error('opdrachten_json', 'Voeg minstens 1 opdracht toe.')
+            ontbrekend.append('Opdracht')
+        if _lijst_min('evaluatie', 1):
+            _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
+            ontbrekend.append('Evaluatie')
+
+    return ontbrekend
+
+
 def verwerk_tips_fotos(json_string):
     """Parse tips-JSON (max 3 tips, elk met max 2 foto's), upload nieuwe foto's per
     slot-id, return bijgewerkte JSON.
@@ -725,7 +862,12 @@ def bewerken(kaart_id):
                 markers_fout = 'Marker ' + ', '.join(lege_nrs) + ' heeft nog geen beschrijving.'
                 form.productfoto_markers_json.errors = list(form.productfoto_markers_json.errors) + [markers_fout]
 
-    if is_valid and not toelichting_fout and not foto_fout_label and not markers_fout and not werkwijze_fout:
+    # Verplichte inhoud per kaart-type (bovenop WTForms) — alleen bij expliciete opslag.
+    ontbrekende_velden = []
+    if request.method == 'POST' and not is_auto_save:
+        ontbrekende_velden = _controleer_verplichte_velden(kaart.type, form, request.form, kaart=kaart)
+
+    if is_valid and not toelichting_fout and not foto_fout_label and not markers_fout and not werkwijze_fout and not ontbrekende_velden:
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart.type]:
             inhoud[veld] = getattr(form, veld).data or ''

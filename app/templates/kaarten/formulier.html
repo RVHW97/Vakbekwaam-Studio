@@ -1479,6 +1479,19 @@
     </div>
     {% endmacro %}
 
+    {# ==================== TAB-FOUT-MARKER ==================== #}
+    {# Onzichtbare .form-error-spans bovenaan elke tab. Zodra een form-veld op
+       die tab een server-side error heeft, verschijnt hier een marker. De
+       bestaande markeerFoutTabs()-JS pikt hem op en zet een oranje dot op de
+       tab-knop — óók als de foutmelding niet inline naast het veld staat. #}
+    {% macro tab_fout_marker(velden) %}
+        {% for veld_naam in velden %}
+            {% if veld_naam in form.errors %}
+            <span class="form-error tab-fout-marker" style="display:none;" aria-hidden="true"></span>
+            {% endif %}
+        {% endfor %}
+    {% endmacro %}
+
     <div class="form-card">
 
     {# ==================== ALGEMENE FOUTSAMENVATTING (server-side) ==================== #}
@@ -1512,6 +1525,7 @@
         </div>
 
         <div class="tab-paneel actief" data-tab="algemeen">
+            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
             {{ render_algemeen() }}
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
@@ -1520,6 +1534,9 @@
         </div>
 
         <div class="tab-paneel" data-tab="opzet">
+            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'oefenleider_aantal',
+                                 'oefenleider_rol', 'oefenleider_rol_anders', 'tijdsduur',
+                                 'oefenmiddelen_basis', 'oefenmiddelen_extra', 'aanleiding_doelen']) }}
             {{ render_opzet_blok() }}
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
@@ -1528,6 +1545,10 @@
         </div>
 
         <div class="tab-paneel" data-tab="scenario">
+            {{ tab_fout_marker(['pager_prio', 'pager_soort', 'pager_soort_anders',
+                                 'pager_voertuigen', 'scenariobeschrijving',
+                                 'kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken',
+                                 'omgevingskenmerken', 'interventiekenmerken']) }}
             {{ render_scenario_blok() }}
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="opzet">← Vorige</button>
@@ -1536,6 +1557,7 @@
         </div>
 
         <div class="tab-paneel" data-tab="uitvoering">
+            {{ tab_fout_marker(['ensceneringstips', 'evaluatie']) }}
             {{ render_uitvoering_blok() }}
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="scenario">← Vorige</button>
@@ -1619,6 +1641,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel actief" data-tab="algemeen">
+            {{ tab_fout_marker(['kerntaak', 'titel', 'ondertitel', 'header_foto']) }}
             {{ render_algemeen() }}
 
             <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Tekst op de kaart</h3>
@@ -1645,6 +1668,7 @@
 
         {# ---------------- TAB 2: SECTIES ---------------- #}
         <div class="tab-paneel" data-tab="secties">
+            {{ tab_fout_marker(['tussentitel_1', 'tussentitel_2', 'tussentitel_3']) }}
             {% if not (bewerken and kaart) %}
             <p class="form-hint" style="font-style: italic;">Sla eerst tab "Algemeen" op — daarna kun je tussentitels en kaarten koppelen.</p>
             {% else %}
@@ -1835,6 +1859,7 @@
 
         {# ---------------- TAB 0: TYPE INSTRUCTIEKAART ---------------- #}
         <div class="tab-paneel{% if not bewerken %} actief{% endif %}" data-tab="type">
+            {{ tab_fout_marker(['instructie_type']) }}
             <h2 class="form-section-title">Type instructiekaart</h2>
             <p class="form-hint">Kies eerst wat voor soort instructiekaart je gaat maken. De volgende stappen worden hierop aangepast.</p>
 
@@ -1860,6 +1885,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel{% if bewerken %} actief{% endif %}" data-tab="algemeen">
+            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
             {{ render_algemeen() }}
 
             <div class="tab-nav-footer">
@@ -1870,6 +1896,7 @@
 
         {# ---------------- TAB 2: PRODUCTINFO / OMSCHRIJVING ---------------- #}
         <div class="tab-paneel" data-tab="productinfo">
+            {{ tab_fout_marker(['omschrijving', 'productfoto_markers_json']) }}
             <h2 class="form-section-title"><span id="productinfo-titel">{{ productinfo_label }}</span></h2>
 
             {% if not (bewerken and kaart) %}
@@ -1936,6 +1963,8 @@
 
         {# ---------------- TAB 3: VEILIGHEID ---------------- #}
         <div class="tab-paneel" data-tab="veiligheid">
+            {{ tab_fout_marker(['veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
+                                 'veiligheid_zin_4', 'veiligheid_zin_5']) }}
             <h2 class="form-section-title">Veiligheid</h2>
 
             {% if not (bewerken and kaart) %}
@@ -1999,6 +2028,7 @@
 
         {# ---------------- TAB 4: WERKWIJZE ---------------- #}
         <div class="tab-paneel" data-tab="werkwijze">
+            {{ tab_fout_marker(['werkwijze_stappen_json']) }}
             <h2 class="form-section-title">Werkwijze</h2>
 
             {% if not (bewerken and kaart) %}
@@ -2138,6 +2168,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel actief" data-tab="algemeen">
+            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
             {{ render_algemeen() }}
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
@@ -2147,6 +2178,9 @@
 
         {# ---------------- TAB 2: VOORBEREIDING ---------------- #}
         <div class="tab-paneel" data-tab="voorbereiding">
+            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'oefenmiddelen_basis',
+                                 'oefenmiddelen_extra', 'veiligheid_zin_1', 'veiligheid_zin_2',
+                                 'veiligheid_zin_3', 'veiligheid_zin_4', 'veiligheid_zin_5']) }}
             <h2 class="form-section-title">Voorbereiding</h2>
 
             {% if not (bewerken and kaart) %}
@@ -2258,6 +2292,7 @@
 
         {# ---------------- TAB 3: OPDRACHTEN ---------------- #}
         <div class="tab-paneel" data-tab="opdrachten">
+            {{ tab_fout_marker(['oefendoel', 'opdrachten_json']) }}
             <h2 class="form-section-title">Opdrachten</h2>
 
             {% if not (bewerken and kaart) %}
@@ -2336,6 +2371,7 @@
 
         {# ---------------- TAB 4: VERDIEPING (verdiepende vragen + uitdagende variant) ---------------- #}
         <div class="tab-paneel" data-tab="verdieping">
+            {{ tab_fout_marker(['verdiepende_vragen', 'uitdagende_variant']) }}
             <h2 class="form-section-title">Verdieping</h2>
 
             {% if not (bewerken and kaart) %}
@@ -2376,6 +2412,7 @@
 
         {# ---------------- TAB 5: EVALUATIE ---------------- #}
         <div class="tab-paneel" data-tab="evaluatie">
+            {{ tab_fout_marker(['evaluatie']) }}
             <h2 class="form-section-title">Evaluatie</h2>
 
             {% if not (bewerken and kaart) %}
@@ -3315,6 +3352,17 @@ setupCropper({
             zetActief(gewenst);
         }
     }
+
+    // Rode rand op velden met een server-side error: zoek elke inline
+    // .form-error (die niet onze onzichtbare tab-fout-marker is), pak zijn
+    // form-group en zet veld-ontbreekt op de input/select/textarea erin.
+    document.querySelectorAll('.tab-paneel .form-error').forEach(function(err) {
+        if (err.classList.contains('tab-fout-marker')) return;
+        var groep = err.closest('.form-group, .veiligheid-rij, .form-groep-rij');
+        if (!groep) return;
+        var input = groep.querySelector('input:not([type="hidden"]), select, textarea');
+        if (input) input.classList.add('veld-ontbreekt');
+    });
 
     // Foutindicator: scan panelen op .form-error en zet heeft-fout op knoppen
     function markeerFoutTabs() {
