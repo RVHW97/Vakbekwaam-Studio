@@ -480,6 +480,158 @@ class QRKlik(db.Model):
         return f'<QRKlik qr={self.qr_code_id} {self.datum}>'
 
 
+# =========================================================================
+#   Nummering-schema (VGGM-stijl): XX-####
+#   XX  = kaart-type-letters (TK/IK/SK/OK/CK)
+#   #   = kerntaak-cijfer (0-9)
+#   #   = subcategorie-cijfer (0-9) binnen die kerntaak
+#   ## = volgnummer (01-99) binnen die combinatie
+#
+#   Kerntaken en subcategorieen leven in de DB (via /beheer/nummering) —
+#   NIET meer in de KERNTAKEN-constante hierboven (die blijft nog even
+#   staan als fallback / backward-compat tot fase 2/3 klaar is).
+# =========================================================================
+
+class Kerntaak(db.Model):
+    __tablename__ = 'kerntaken'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cijfer = db.Column(db.Integer, unique=True, nullable=False)
+    sleutel = db.Column(db.String(30), unique=True, nullable=False)
+    naam = db.Column(db.String(80), nullable=False)
+    afkorting = db.Column(db.String(10), nullable=False, default='')
+    kleur = db.Column(db.String(9), nullable=False, default='#B8B2A4')
+
+    subcategorieen = db.relationship('Subcategorie', backref='kerntaak',
+                                      lazy='dynamic', cascade='all, delete-orphan',
+                                      order_by='Subcategorie.cijfer')
+
+    def __repr__(self):
+        return f'<Kerntaak {self.cijfer} {self.naam}>'
+
+
+class Subcategorie(db.Model):
+    __tablename__ = 'subcategorieen'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kerntaak_id = db.Column(db.Integer, db.ForeignKey('kerntaken.id'), nullable=False, index=True)
+    cijfer = db.Column(db.Integer, nullable=False)
+    naam = db.Column(db.String(120), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('kerntaak_id', 'cijfer', name='uq_subcategorie_kerntaak_cijfer'),
+    )
+
+    def __repr__(self):
+        return f'<Subcategorie {self.kerntaak.cijfer if self.kerntaak else "?"}{self.cijfer} {self.naam}>'
+
+
+# Zaadgegevens uit Excel-schema (20260504_Nummering.xlsx). Placeholder-namen
+# ("Nog te bepalen — 31") en placeholder-kleuren voor nieuwe kerntaken kunnen
+# via /beheer/nummering door de admin worden aangepast — dit is de eerste vulling.
+KERNTAKEN_SEED = [
+    {'cijfer': 0, 'sleutel': 'algemeen',              'naam': 'Algemeen',                      'afkorting': 'ALG',  'kleur': '#CC9933'},
+    {'cijfer': 1, 'sleutel': 'water',                 'naam': 'Waterongevallen',               'afkorting': 'WO',   'kleur': '#4B70A6'},
+    {'cijfer': 2, 'sleutel': 'ibgs',                  'naam': 'IBGS',                          'afkorting': 'IBGS', 'kleur': '#DAB94F'},
+    {'cijfer': 3, 'sleutel': 'brand',                 'naam': 'Brand',                         'afkorting': 'BR',   'kleur': '#B6463D'},
+    {'cijfer': 4, 'sleutel': 'natuurbrand',           'naam': 'Natuurbrand',                   'afkorting': 'NB',   'kleur': '#228B22'},
+    {'cijfer': 5, 'sleutel': 'redvoertuig',           'naam': 'Redden van hoogte',             'afkorting': 'RV',   'kleur': '#F97316'},
+    {'cijfer': 6, 'sleutel': 'bijzondere_blusmiddelen','naam': 'Bijzondere blusmiddelen',      'afkorting': 'BM',   'kleur': '#7C3AED'},
+    {'cijfer': 7, 'sleutel': 'thv',                   'naam': 'Technische Hulpverlening',      'afkorting': 'THV',  'kleur': '#4C7F52'},
+    {'cijfer': 8, 'sleutel': 'overig',                'naam': 'Overig materieel',              'afkorting': 'OM',   'kleur': '#6B7280'},
+    {'cijfer': 9, 'sleutel': 'leiding_coordinatie',   'naam': 'Leiding & Coördinatie',         'afkorting': 'LC',   'kleur': '#1E40AF'},
+]
+
+# Subcategorieen per kerntaak-cijfer. Namen met "?" komen letterlijk uit de
+# Excel — bewust zo bewaard totdat de admin ze via de beheerpagina hernoemt.
+SUBCATEGORIEEN_SEED = {
+    0: [  # Algemeen
+        (0, 'Oefenmiddelen?'),
+        (1, 'Dienstvoertuigen?'),
+        (2, 'Communicatiemiddelen & Randapparatuur'),
+    ],
+    1: [  # Waterongevallen
+        (0, 'Waterongevallen (basis brandweerzorg)'),
+        (1, 'Schippers'),
+        (2, 'ORT'),
+        (3, 'Duikteam'),
+        (4, 'ROV'),
+    ],
+    2: [  # IBGS / Gevaarlijke stoffen
+        (0, 'Gevaarlijke stoffen (basis brandweerzorg)'),
+        (1, 'VKE'),
+        (2, 'GSE'),
+        (3, 'BOE'),
+    ],
+    3: [  # Brand
+        (0, 'Brand (basis brandweerzorg)'),
+        (1, 'Nog te bepalen — 31'),
+        (2, 'Nog te bepalen — 32'),
+        (3, 'Nog te bepalen — 33'),
+    ],
+    4: [  # Natuurbrand
+        (0, 'Natuurbrand (basis brandweerzorg)'),
+        (1, 'NBH'),
+        (2, 'Handcrew?'),
+    ],
+    5: [  # Redden van hoogte
+        (1, 'Redvoertuig'),
+    ],
+    6: [  # Bijzondere blusmiddelen
+        (1, 'Waterwagen'),
+        (2, 'SIV'),
+        (3, 'Grootwatertransport'),
+        (4, 'Schuimblusvoertuig'),
+        (5, 'SBE'),
+        (6, 'Robot'),
+    ],
+    7: [  # Technische Hulpverlening
+        (0, 'Technische Hulpverlening (basis brandweerzorg)'),
+        (1, 'SHE'),
+    ],
+    8: [  # Overig materieel
+        (0, 'Chauffeur TS?'),
+        (1, 'Haakarmchassis'),
+        (2, 'ABH'),
+        (3, 'Droneteam (Team Digitale Verkenning)?'),
+        (4, 'VZH'),
+        (5, 'Veilige Energietransitie?'),
+    ],
+    9: [  # Leiding & Coördinatie
+        (0, 'Bevelvoerders?'),
+        (1, 'MCU'),
+        (2, 'BCU'),
+        (3, 'LAC'),
+    ],
+}
+
+
+def seed_kerntaken_en_subcategorieen():
+    """Eenmalige vulling van kerntaken + subcategorieen uit de Excel-schema.
+
+    Idempotent — kan meerdere keren gedraaid worden zonder duplicaten. Voegt
+    alleen ontbrekende rijen toe. Wat de admin later via de beheerpagina
+    hernoemt/kleurt/verwijdert blijft staan (geen overschrijving van bestaande).
+    """
+    for kt_seed in KERNTAKEN_SEED:
+        bestaand = Kerntaak.query.filter_by(cijfer=kt_seed['cijfer']).first()
+        if bestaand is None:
+            kt = Kerntaak(**kt_seed)
+            db.session.add(kt)
+            db.session.flush()  # id nodig voor de subcategorieen
+        else:
+            kt = bestaand
+        for cijfer, naam in SUBCATEGORIEEN_SEED.get(kt.cijfer, []):
+            sub_bestaand = Subcategorie.query.filter_by(
+                kerntaak_id=kt.id, cijfer=cijfer
+            ).first()
+            if sub_bestaand is None:
+                db.session.add(Subcategorie(
+                    kerntaak_id=kt.id, cijfer=cijfer, naam=naam
+                ))
+    db.session.commit()
+
+
 def migreer_schema():
     """Eenvoudige in-place migratie: voeg ontbrekende kolommen toe aan bestaande SQLite-tabellen."""
     from sqlalchemy import text, inspect

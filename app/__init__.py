@@ -19,7 +19,7 @@ def _enable_sqlite_fk(dbapi_conn, _connection_record):
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.7.4'
+__version__ = '0.7.5'
 __version_date__ = '11 augustus 2026'
 
 db = SQLAlchemy()
@@ -66,10 +66,14 @@ def create_app():
     from app.qr import bp as qr_bp
     app.register_blueprint(qr_bp)
 
+    from app.beheer import bp as beheer_bp
+    app.register_blueprint(beheer_bp)
+
     with app.app_context():
         from app import models
         db.create_all()
         models.migreer_schema()
         models.seed_admin()
+        models.seed_kerntaken_en_subcategorieen()
 
     return app

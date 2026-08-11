@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}Nummering-beheer — Vakbekwaam Studio{% endblock %}
+
+{% block head_extra %}
+<style>
+    .nummering-uitleg {
+        background: #F8F7F3;
+        border-left: 4px solid #CC9933;
+        padding: 0.9rem 1.2rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    .nummering-uitleg code {
+        background: #fff;
+        padding: 0.05rem 0.35rem;
+        border-radius: 3px;
+        font-size: 0.9em;
+        border: 1px solid #E5E3DE;
+    }
+    .kerntaak-rij {
+        background: #fff;
+        border: 1px solid var(--kleur-rand);
+        border-radius: 6px;
+        margin-bottom: 0.8rem;
+        overflow: hidden;
+    }
+    .kerntaak-kop {
+        display: grid;
+        grid-template-columns: 60px 1fr 100px 90px auto;
+        gap: 0.6rem;
+        align-items: center;
+        padding: 0.6rem 0.9rem;
+        border-bottom: 1px solid var(--kleur-rand);
+    }
+    .kerntaak-cijfer-bol {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .kerntaak-form-inline,
+    .subcategorie-form-inline {
+        display: contents;
+    }
+    .kerntaak-form-inline .form-input,
+    .subcategorie-form-inline .form-input {
+        padding: 0.4rem 0.55rem;
+        font-size: 0.95rem;
+    }
+    .kerntaak-form-inline input[type="color"] {
+        width: 44px;
+        height: 36px;
+        padding: 2px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .kerntaak-form-inline .btn-groep,
+    .subcategorie-form-inline .btn-groep {
+        display: flex;
+        gap: 0.35rem;
+        justify-content: flex-end;
+    }
+    .btn-mini {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.85rem;
+        min-height: 36px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        background: #fff;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 600;
+    }
+    .btn-mini.btn-primary {
+        background: var(--kleur-blauw);
+        color: #fff;
+        border-color: var(--kleur-blauw);
+    }
+    .btn-mini.btn-danger {
+        background: #DC2626;
+        color: #fff;
+        border-color: #DC2626;
+    }
+    .btn-mini.btn-danger:hover { background: #B91C1C; }
+    .btn-mini.btn-primary:hover { background: #142033; }
+
+    .subcategorieen-blok {
+        padding: 0.6rem 0.9rem 0.9rem 0.9rem;
+        background: #fbfaf7;
+    }
+    .subcategorieen-blok h4 {
+        margin: 0 0 0.5rem 0;
+        color: #555;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .subcategorie-rij {
+        display: grid;
+        grid-template-columns: 60px 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px dashed #E5E3DE;
+    }
+    .subcategorie-rij:last-of-type { border-bottom: none; }
+    .subcategorie-nummer {
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+    .nieuw-blok {
+        background: #F8F7F3;
+        border: 1px dashed #CC9933;
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        margin-top: 0.6rem;
+    }
+    .nieuw-blok h4 {
+        margin: 0 0 0.5rem 0;
+        color: #7A6224;
+        font-size: 0.9rem;
+    }
+    .nieuw-blok-rij {
+        display: grid;
+        grid-template-columns: 80px 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .nieuw-kerntaak-blok {
+        background: #EDF4EE;
+        border: 1px dashed #4C7F52;
+        margin-top: 1.5rem;
+    }
+    .nieuw-kerntaak-blok h4 { color: #2F5033; }
+    .nieuw-kerntaak-rij {
+        display: grid;
+        grid-template-columns: 60px 1fr 110px 60px auto;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    details.subcategorie-toggle > summary {
+        cursor: pointer;
+        padding: 0.4rem 0.9rem;
+        color: #555;
+        font-size: 0.9rem;
+        font-weight: 600;
+        list-style: none;
+    }
+    details.subcategorie-toggle > summary::marker,
+    details.subcategorie-toggle > summary::-webkit-details-marker { display: none; }
+    details.subcategorie-toggle > summary::before {
+        content: '▸ ';
+        display: inline-block;
+        transition: transform 0.15s;
+    }
+    details.subcategorie-toggle[open] > summary::before {
+        transform: rotate(90deg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Nummering-beheer</h1>
+</div>
+
+<div class="nummering-uitleg">
+    <p style="margin:0 0 0.4rem 0;">
+        Elk kaartnummer bestaat uit <code>XX-####</code> — twee letters (kaart-type)
+        gevolgd door vier cijfers.
+    </p>
+    <ul style="margin:0.3rem 0 0 1.2rem; padding:0;">
+        <li><strong>1e cijfer</strong> = kerntaak (0-9)</li>
+        <li><strong>2e cijfer</strong> = subcategorie binnen die kerntaak (0-9)</li>
+        <li><strong>3e + 4e cijfer</strong> = volgnummer (01-99) binnen die combinatie</li>
+    </ul>
+    <p style="margin:0.5rem 0 0 0; color:#555;">
+        <em>Voorbeeld: <code>IK-1101</code> = Instructiekaart / Waterongevallen / Schippers / #01.</em>
+    </p>
+</div>
+
+<h2 style="margin-top: 1.5rem;">Kerntaken</h2>
+
+{% for kt in kerntaken %}
+<div class="kerntaak-rij">
+    <form method="POST" action="{{ url_for('beheer.kerntaak_opslaan', kerntaak_id=kt.id) }}" class="kerntaak-form-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="kerntaak-kop">
+            <div class="kerntaak-cijfer-bol" style="background: {{ kt.kleur }};">{{ kt.cijfer }}</div>
+            <input type="text" name="naam" value="{{ kt.naam }}" class="form-input" required maxlength="80" placeholder="Naam kerntaak">
+            <input type="text" name="afkorting" value="{{ kt.afkorting }}" class="form-input" maxlength="10" placeholder="AFK" style="text-transform:uppercase;">
+            <input type="color" name="kleur" value="{{ kt.kleur }}" title="Kleur">
+            <div class="btn-groep">
+                <button type="submit" class="btn-mini btn-primary">Opslaan</button>
+            </div>
+        </div>
+    </form>
+
+    <details class="subcategorie-toggle" {% if kt.subcategorieen.count() %}open{% endif %}>
+        <summary>{{ kt.subcategorieen.count() }} subcategorie{{ '' if kt.subcategorieen.count() == 1 else 'ën' }} onder deze kerntaak</summary>
+        <div class="subcategorieen-blok">
+            {% for sub in kt.subcategorieen %}
+            <div class="subcategorie-rij">
+                <span class="subcategorie-nummer">{{ kt.cijfer }}{{ sub.cijfer }}</span>
+                <form method="POST" action="{{ url_for('beheer.subcategorie_opslaan', sub_id=sub.id) }}"
+                      style="display:flex; gap:0.4rem; align-items:center;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="naam" value="{{ sub.naam }}" class="form-input" required maxlength="120" style="flex:1;">
+                    <button type="submit" class="btn-mini btn-primary">Opslaan</button>
+                </form>
+                <form method="POST" action="{{ url_for('beheer.subcategorie_verwijderen', sub_id=sub.id) }}"
+                      onsubmit="return confirm('Subcategorie {{ kt.cijfer }}{{ sub.cijfer }} verwijderen? Dit is niet ongedaan te maken.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-mini btn-danger" title="Verwijder subcategorie">×</button>
+                </form>
+            </div>
+            {% endfor %}
+
+            <form method="POST" action="{{ url_for('beheer.subcategorie_nieuw', kerntaak_id=kt.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="nieuw-blok">
+                    <h4>+ Nieuwe subcategorie onder {{ kt.naam }}</h4>
+                    <div class="nieuw-blok-rij">
+                        <select name="cijfer" class="form-input" required>
+                            <option value="">Cijfer</option>
+                            {% for c in range(10) %}
+                            <option value="{{ c }}">{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="naam" class="form-input" required maxlength="120" placeholder="Naam van de subcategorie">
+                        <button type="submit" class="btn-mini btn-primary">Toevoegen</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </details>
+
+    <form method="POST" action="{{ url_for('beheer.kerntaak_verwijderen', kerntaak_id=kt.id) }}"
+          onsubmit="return confirm('Kerntaak {{ kt.naam }} EN alle {{ kt.subcategorieen.count() }} subcategorieën verwijderen? Dit is niet ongedaan te maken.');"
+          style="padding: 0.5rem 0.9rem; text-align: right; border-top: 1px solid var(--kleur-rand); background: #fbfaf7;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-mini btn-danger">Verwijder deze kerntaak</button>
+    </form>
+</div>
+{% endfor %}
+
+<form method="POST" action="{{ url_for('beheer.kerntaak_nieuw') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="nieuw-blok nieuw-kerntaak-blok">
+        <h4>+ Nieuwe kerntaak toevoegen</h4>
+        <div class="nieuw-kerntaak-rij">
+            <select name="cijfer" class="form-input" required>
+                <option value="">Cijfer</option>
+                {% for c in range(10) %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="naam" class="form-input" required maxlength="80" placeholder="Naam kerntaak">
+            <input type="text" name="afkorting" class="form-input" maxlength="10" placeholder="AFK" style="text-transform:uppercase;">
+            <input type="color" name="kleur" value="#B8B2A4" title="Kleur">
+            <button type="submit" class="btn-mini btn-primary">Toevoegen</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

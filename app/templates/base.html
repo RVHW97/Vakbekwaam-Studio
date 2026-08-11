@@ -25,6 +25,7 @@
             <a href="{{ url_for('qr.overzicht') }}" class="nav-link">QR-codes</a>
             {% if current_user.is_beheerder %}
             <a href="{{ url_for('auth.gebruikers') }}" class="nav-link">Gebruikers</a>
+            <a href="{{ url_for('beheer.nummering') }}" class="nav-link">Nummering</a>
             {% endif %}
         </div>
         <form method="GET" action="{{ url_for('kaarten.zoeken') }}" class="nav-zoek">
