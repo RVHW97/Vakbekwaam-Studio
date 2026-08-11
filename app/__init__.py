@@ -19,8 +19,8 @@ def _enable_sqlite_fk(dbapi_conn, _connection_record):
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.7.3'
-__version_date__ = '4 augustus 2026'
+__version__ = '0.7.4'
+__version_date__ = '11 augustus 2026'
 
 db = SQLAlchemy()
 login_manager = LoginManager()

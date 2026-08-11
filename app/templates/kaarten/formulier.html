@@ -141,6 +141,67 @@
         border: 2px solid #DC2626 !important;
         background-color: #FEF2F2;
     }
+    /* Niet-opgeslagen-modal: compact met gekleurde knoppen */
+    .niet-opgeslagen-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+    }
+    .niet-opgeslagen-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+    }
+    .niet-opgeslagen-dialog {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        border-radius: 8px;
+        padding: 1.5rem 1.75rem;
+        max-width: 420px;
+        width: calc(100% - 2rem);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .niet-opgeslagen-dialog h3 {
+        margin: 0 0 0.5rem 0;
+        color: #1B2A4A;
+        font-size: 1.15rem;
+    }
+    .niet-opgeslagen-dialog p {
+        margin: 0 0 1.25rem 0;
+        color: #444;
+        font-size: 0.95rem;
+    }
+    .niet-opgeslagen-knoppen {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    .niet-opgeslagen-knoppen .btn {
+        min-height: 44px;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+    .niet-opgeslagen-blijven {
+        background: #16A34A;
+        color: #fff;
+    }
+    .niet-opgeslagen-blijven:hover { background: #15803D; }
+    .niet-opgeslagen-weg {
+        background: #DC2626;
+        color: #fff;
+    }
+    .niet-opgeslagen-weg:hover { background: #B91C1C; }
+
     /* Foto-validatie: directe melding bij ongeldige upload */
     .foto-validatie-fout {
         background: #FEE2E2;
@@ -2528,6 +2589,81 @@
 
 {# ==================== SCRIPTS ==================== #}
 <script>
+/* === Waarschuwing bij verlaten formulier met niet-opgeslagen wijzigingen === */
+(function() {
+    var form = document.querySelector('form.kaart-form');
+    if (!form) return;
+
+    var gewijzigd = false;
+    var actief = false;
+
+    function markeerGewijzigd() {
+        if (!actief || gewijzigd) return;
+        gewijzigd = true;
+    }
+
+    form.addEventListener('submit', function() { gewijzigd = false; });
+
+    // Eigen modal — compacter en met gekleurde knoppen (rood = weg, groen = blijven).
+    var modalEl = null;
+    function toonModal(bijOK) {
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.className = 'niet-opgeslagen-modal';
+            modalEl.innerHTML =
+                '<div class="niet-opgeslagen-backdrop"></div>' +
+                '<div class="niet-opgeslagen-dialog" role="alertdialog" aria-labelledby="niet-opgeslagen-titel">' +
+                    '<h3 id="niet-opgeslagen-titel">Niet-opgeslagen wijzigingen</h3>' +
+                    '<p>Je hebt iets aangepast maar nog niet opgeslagen.</p>' +
+                    '<div class="niet-opgeslagen-knoppen">' +
+                        '<button type="button" class="btn niet-opgeslagen-blijven">Blijven en opslaan</button>' +
+                        '<button type="button" class="btn niet-opgeslagen-weg">Verlaten zonder opslaan</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modalEl);
+        }
+        modalEl.style.display = 'block';
+        var blijven = modalEl.querySelector('.niet-opgeslagen-blijven');
+        var weg = modalEl.querySelector('.niet-opgeslagen-weg');
+        var backdrop = modalEl.querySelector('.niet-opgeslagen-backdrop');
+        function sluit() { modalEl.style.display = 'none'; }
+        blijven.onclick = function() { sluit(); };
+        backdrop.onclick = function() { sluit(); };
+        weg.onclick = function() { sluit(); gewijzigd = false; bijOK(); };
+        setTimeout(function() { blijven.focus(); }, 0);
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+        if (!gewijzigd) return;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!gewijzigd) return;
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        if (link.target === '_blank') return;
+        var href = link.getAttribute('href') || '';
+        if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        toonModal(function() { window.location.href = link.href; });
+    }, true);
+
+    function activeer() {
+        form.addEventListener('input', markeerGewijzigd, true);
+        form.addEventListener('change', markeerGewijzigd, true);
+        actief = true;
+    }
+    if (document.readyState === 'complete') {
+        setTimeout(activeer, 50);
+    } else {
+        window.addEventListener('load', function() { setTimeout(activeer, 50); });
+    }
+})();
+
 /* === Doelgroep "anders"-veld tonen/verbergen === */
 (function() {
     var sel = document.getElementById('doelgroep-select');
@@ -3117,24 +3253,13 @@ setupCropper({
 
     // Auto-save: zet hidden tab-doel en submit form
     function autoSaveEnSwitch(doelTab) {
+        // v0.7.3: geen auto-save meer — puur client-side switch. Werk blijft in
+        // de DOM; wat je typt bewaar je pas door expliciet op "Opslaan als concept"
+        // te klikken. De niet-opgeslagen-waarschuwing beschermt je tegen verlies
+        // wanneer je de pagina verlaat zonder op te slaan.
         var huidig = document.querySelector('.tab-paneel.actief');
-        // Als we al op de doeltab zijn, niets doen
         if (huidig && huidig.dataset.tab === doelTab) return;
-        var autoSaveInput = document.getElementById('auto-save-tab');
-        if (autoSaveInput) autoSaveInput.value = doelTab;
-        // Toelichting wijziging is bij auto-save niet vereist — HTML required tijdelijk weghalen
-        var toelichting = document.getElementById('wijziging_toelichting');
-        if (toelichting) toelichting.removeAttribute('required');
-        var form = document.querySelector('.kaart-form');
-        if (form) {
-            // requestSubmit respecteert submit-events (zoals safety-sync). Fallback: native
-            // submit via prototype, want form.submit kan overschaduwd zijn door <input name="submit">.
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-            } else {
-                HTMLFormElement.prototype.submit.call(form);
-            }
-        }
+        zetActief(doelTab);
     }
 
     // Tab-klik bovenaan → auto-save + switch. Uitzondering: vanuit de "type"-tab
