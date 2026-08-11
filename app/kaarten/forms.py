@@ -8,14 +8,15 @@ NAAM_VALIDATORS = [
     Length(max=NAAM_MAX, message=f'De titel mag maximaal {NAAM_MAX} tekens lang zijn (anders past hij niet in de header van de PDF).'),
 ]
 
-KERNTAAK_KEUZES = [
-    ('', '— kies een kerntaak —'),
-    ('algemeen', 'Algemeen'),
-    ('brand', 'Brand'),
-    ('thv',   'Hulpverlening (THV)'),
-    ('ibgs',  'IBGS'),
-    ('water', 'Waterongevallen'),
-]
+def _kerntaak_keuzes():
+    """Bouw KERNTAAK_KEUZES uit KERNTAKEN_SEED — 10 keuzes op cijfer-volgorde."""
+    from app.models import KERNTAKEN_SEED
+    return [('', '— kies een kerntaak —')] + [(kt['sleutel'], kt['naam']) for kt in KERNTAKEN_SEED]
+
+
+# Wordt in de routes opnieuw geset bij form-init (form.kerntaak.choices = ...),
+# maar zetten we hier alvast zodat de default-choices niet leeg zijn tijdens tests.
+KERNTAAK_KEUZES = _kerntaak_keuzes()
 KERNTAAK_VALIDATORS = [DataRequired(message='Kies een kerntaak.')]
 
 DOELGROEP_KEUZES = [
@@ -83,6 +84,8 @@ class ThemakaartForm(FlaskForm):
     # Themakaart heeft GEEN apart `naam` veld — de titel fungeert als naam intern
     # (voor overzichten en zoeken). Wordt server-side gekopieerd: kaart.naam = form.titel.data.
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
+    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
+                                    validators=[Optional()], validate_choice=False)
     header_foto = FileField('Achtergrondfoto')
 
     titel = StringField('Titel',
@@ -124,6 +127,8 @@ class InstructiekaartForm(FlaskForm):
     # De logische naam is óók de titel op de PDF (HOOFDLETTERS bovenaan).
     naam = StringField('Titel', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
+    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
+                                    validators=[Optional()], validate_choice=False)
     header_foto = FileField('Headerfoto')
     instructie_type = RadioField('Type instructiekaart',
                                   choices=INSTRUCTIE_TYPE_KEUZES,
@@ -151,6 +156,8 @@ class InstructiekaartForm(FlaskForm):
 class ScenariokaartForm(FlaskForm):
     naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
+    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
+                                    validators=[Optional()], validate_choice=False)
     header_foto = FileField('Headerfoto')
     # Gestructureerde velden: Doelgroep, Oefenstaf, Tijdsduur
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
@@ -208,6 +215,8 @@ SCENARIO_GROEP_VELDEN = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 
 class OpdrachtkaartForm(FlaskForm):
     naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
+    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
+                                    validators=[Optional()], validate_choice=False)
     header_foto = FileField('Headerfoto')
     # Voorbereiding
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])

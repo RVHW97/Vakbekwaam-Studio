@@ -8,10 +8,30 @@ from PIL import Image, ImageOps
 from app import db
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          ThemaKaartLink, ThemaQRLink, InstructieQRLink, QRCode,
+                         Kerntaak, Subcategorie,
                          KAART_TYPES, KERNTAKEN, QR_CATEGORIEEN, kenmerken_kerntaak_label,
                          THEMA_MAX_KAARTEN_TOTAAL, THEMA_MAX_QR_TOP, THEMA_MAX_QR_BOTTOM,
                          THEMA_QR_LABEL_MAX,
                          INSTRUCTIE_MAX_KAART_KOPPELINGEN, INSTRUCTIE_MAX_QR_KOPPELINGEN)
+
+
+def _subcategorieen_per_kerntaak_ctx():
+    """Voor JS: dict van kerntaak-sleutel → lijst met subcategorieën.
+
+    Wordt naar formulier.html gestuurd zodat de subcategorie-dropdown
+    dynamisch aangepast kan worden als de gebruiker een andere kerntaak kiest.
+    """
+    ctx = {}
+    for kt in Kerntaak.query.order_by(Kerntaak.cijfer).all():
+        subs = [{'id': s.id, 'cijfer': s.cijfer, 'naam': s.naam}
+                for s in kt.subcategorieen.order_by(Subcategorie.cijfer).all()]
+        ctx[kt.sleutel] = {
+            'cijfer': kt.cijfer,
+            'afkorting': kt.afkorting,
+            'kleur': kt.kleur,
+            'subs': subs,
+        }
+    return ctx
 from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
@@ -604,7 +624,8 @@ def aanmaken(kaart_type):
                                    type_info=type_info, bewerken=False, kaart=None,
                                    WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
                                    WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
-                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
+                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
+                                   subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
 
         inhoud = {}
         for veld in INHOUD_VELDEN[kaart_type]:
@@ -612,11 +633,13 @@ def aanmaken(kaart_type):
         for veld in INHOUD_LIJST_VELDEN.get(kaart_type, []):
             inhoud[veld] = getattr(form, veld).data or []
 
+        subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
         kaart = Kaart(
             type=kaart_type,
             nummer=Kaart.volgende_nummer(kaart_type),
             naam=_kaart_naam_uit_form(form, kaart_type),
             kerntaak=form.kerntaak.data or None,
+            subcategorie_id=int(subcat_raw) if subcat_raw.isdigit() else None,
             status='concept',
             auteur_id=current_user.id,
             bijgewerkt_door_id=current_user.id,
@@ -631,7 +654,8 @@ def aanmaken(kaart_type):
                                    type_info=type_info, bewerken=False, kaart=None,
                                    WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
                                    WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
-                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
+                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
+                                   subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
         kaart.header_foto = foto_naam
 
         db.session.add(kaart)
@@ -653,7 +677,8 @@ def aanmaken(kaart_type):
                            type_info=type_info, bewerken=False, kaart=None,
                            WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
                            WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
-                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX)
+                           WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
+                           subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
 
 
 @bp.route('/<int:kaart_id>/bewerken', methods=['GET', 'POST'])
@@ -670,7 +695,8 @@ def bewerken(kaart_id):
     else:
         # Prefill met huidige inhoud
         huidige = kaart.get_inhoud()
-        data = {'naam': kaart.naam, 'kerntaak': kaart.kerntaak or ''}
+        data = {'naam': kaart.naam, 'kerntaak': kaart.kerntaak or '',
+                'subcategorie_id': str(kaart.subcategorie_id) if kaart.subcategorie_id else ''}
         for veld in INHOUD_VELDEN[kaart.type]:
             data[veld] = huidige.get(veld, '')
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
@@ -883,6 +909,8 @@ def bewerken(kaart_id):
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         kaart.kerntaak = form.kerntaak.data or None
+        _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
+        kaart.subcategorie_id = int(_subcat_raw) if _subcat_raw.isdigit() else None
         kaart.set_inhoud(inhoud)
         kaart.bijgewerkt_door_id = current_user.id
 
@@ -1064,7 +1092,8 @@ def bewerken(kaart_id):
                            instructie_qr_links=instructie_qr_links,
                            instructie_beschikbare_qrs_per_categorie=instructie_beschikbare_qrs_per_categorie,
                            INSTRUCTIE_MAX_KAART_KOPPELINGEN=INSTRUCTIE_MAX_KAART_KOPPELINGEN,
-                           INSTRUCTIE_MAX_QR_KOPPELINGEN=INSTRUCTIE_MAX_QR_KOPPELINGEN)
+                           INSTRUCTIE_MAX_QR_KOPPELINGEN=INSTRUCTIE_MAX_QR_KOPPELINGEN,
+                           subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
 
 
 @bp.route('/<int:kaart_id>/koppel-actie', methods=['POST'])

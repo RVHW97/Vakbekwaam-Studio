@@ -22,24 +22,37 @@ ROLLEN = {
 
 ROL_KEUZES = [(k, v['naam']) for k, v in ROLLEN.items()]
 
-# Kerntaken van de brandweer — bepaalt kleur van zijbalk en badge
-KERNTAKEN = {
-    'algemeen': {'naam': 'Algemeen',     'afkorting': 'ALG',  'kleur': '#CC9933'},
-    'brand':    {'naam': 'Brand',        'afkorting': 'BR',   'kleur': '#B6463D'},
-    'thv':      {'naam': 'Hulpverlening','afkorting': 'THV',  'kleur': '#4C7F52'},
-    'ibgs':     {'naam': 'IBGS',         'afkorting': 'IBGS', 'kleur': '#DAB94F'},
-    'water':    {'naam': 'Waterongevallen','afkorting': 'WO', 'kleur': '#4B70A6'},
-}
+# Kerntaken van de brandweer — bepaalt kleur van zijbalk en badge.
+# Afgeleid van KERNTAKEN_SEED (bron van waarheid, verderop in dit bestand).
+# Sleutel = string (bv. 'brand', 'water'), waarde = dict met naam/afkorting/kleur.
+# Wordt ook naar de DB gemigreerd door seed_kerntaken_en_subcategorieen().
+def _kerntaken_map():
+    """Build the KERNTAKEN-dict from KERNTAKEN_SEED (zelfde vorm als de oude constant)."""
+    return {kt['sleutel']: {'naam': kt['naam'],
+                              'afkorting': kt['afkorting'],
+                              'kleur': kt['kleur']}
+             for kt in KERNTAKEN_SEED}
+
 
 # Dynamisch label voor het eerste kenmerkenveld op een scenariokaart,
-# afhankelijk van de gekozen kerntaak.
-KENMERKEN_KERNTAAK_LABELS = {
-    'algemeen': 'Algemene kenmerken',
-    'brand':    'Brandkenmerken',
-    'thv':      'THV-kenmerken',
-    'ibgs':     'IBGS-kenmerken',
-    'water':    'WO-kenmerken',
-}
+# afhankelijk van de gekozen kerntaak. Afgeleid van dezelfde seed, met
+# uitzonderingen voor natuurlijker Nederlandse labels bij enkele kerntaken.
+def _kenmerken_labels_map():
+    LEESBAAR = {
+        'algemeen':                'Algemene kenmerken',
+        'water':                   'Waterongevallenkenmerken',
+        'brand':                   'Brandkenmerken',
+        'natuurbrand':             'Natuurbrandkenmerken',
+        'redvoertuig':             'Redvoertuigkenmerken',
+        'bijzondere_blusmiddelen': 'Bijzondere-blusmiddel-kenmerken',
+        'overig':                  'Materieelkenmerken',
+        'leiding_coordinatie':     'Leidingskenmerken',
+    }
+    labels = {}
+    for kt in KERNTAKEN_SEED:
+        labels[kt['sleutel']] = LEESBAAR.get(kt['sleutel'], f"{kt['afkorting']}-kenmerken")
+    return labels
+
 
 def kenmerken_kerntaak_label(kerntaak):
     return KENMERKEN_KERNTAAK_LABELS.get(kerntaak or '', 'Kerntaak-kenmerken')
@@ -111,7 +124,8 @@ class Kaart(db.Model):
     bijgewerkt_op = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     versie = db.Column(db.Integer, default=0, nullable=False)
     versie_datum = db.Column(db.DateTime, nullable=True)
-    kerntaak = db.Column(db.String(10), nullable=True)
+    kerntaak = db.Column(db.String(30), nullable=True)
+    subcategorie_id = db.Column(db.Integer, db.ForeignKey('subcategorieen.id'), nullable=True)
     header_foto = db.Column(db.String(255), nullable=True)
     ensceneringstips_foto = db.Column(db.String(255), nullable=True)
     ensceneringstips_foto_2 = db.Column(db.String(255), nullable=True)
@@ -120,6 +134,7 @@ class Kaart(db.Model):
     auteur = db.relationship('User', foreign_keys=[auteur_id],
                              backref=db.backref('kaarten', lazy='dynamic'))
     bijgewerkt_door = db.relationship('User', foreign_keys=[bijgewerkt_door_id])
+    subcategorie = db.relationship('Subcategorie', foreign_keys=[subcategorie_id])
     afbeeldingen = db.relationship('KaartAfbeelding', backref='kaart', lazy='dynamic',
                                    cascade='all, delete-orphan')
     wijzigingen = db.relationship('KaartWijziging', backref='kaart', lazy='dynamic',
@@ -609,6 +624,12 @@ SUBCATEGORIEEN_SEED = {
 }
 
 
+# Module-constanten opgebouwd uit KERNTAKEN_SEED — deze worden op module-import-tijd
+# geëvalueerd (Kaart.kerntaak_info leest ze lazy op via `KERNTAKEN.get(...)`).
+KERNTAKEN = _kerntaken_map()
+KENMERKEN_KERNTAAK_LABELS = _kenmerken_labels_map()
+
+
 def seed_kerntaken_en_subcategorieen():
     """Vulling van kerntaken (VAST) + subcategorieen uit de Excel-schema.
 
@@ -679,6 +700,10 @@ def migreer_schema():
         if 'productfoto' not in kolommen:
             with db.engine.begin() as conn:
                 conn.execute(text('ALTER TABLE kaarten ADD COLUMN productfoto VARCHAR(255)'))
+        kolommen = [c['name'] for c in inspector.get_columns('kaarten')]
+        if 'subcategorie_id' not in kolommen:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE kaarten ADD COLUMN subcategorie_id INTEGER'))
 
     # Koppeling-toelichting
     if 'kaart_koppelingen' in inspector.get_table_names():

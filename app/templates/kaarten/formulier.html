@@ -1146,12 +1146,73 @@
     {% if form.kerntaak is defined %}
     <div class="form-group">
         {{ form.kerntaak.label(class="form-label") }}
-        {{ form.kerntaak(class="form-input form-select") }}
+        {{ form.kerntaak(class="form-input form-select", id="kerntaak-select") }}
         {% for error in form.kerntaak.errors %}
         <span class="form-error">{{ error }}</span>
         {% endfor %}
-        <p class="form-hint">Bepaalt de kleur van de zijbalk in de PDF en maakt filteren op kerntaak mogelijk.</p>
+        <p class="form-hint">Bepaalt de kleur van de zijbalk in de PDF én het 1e cijfer van het kaartnummer.</p>
     </div>
+
+    <div class="form-group">
+        {{ form.subcategorie_id.label(class="form-label") }}
+        {{ form.subcategorie_id(class="form-input form-select", id="subcategorie-select") }}
+        {% for error in form.subcategorie_id.errors %}
+        <span class="form-error">{{ error }}</span>
+        {% endfor %}
+        <p class="form-hint">Bepaalt het 2e cijfer van het kaartnummer. Wordt actief zodra je een kerntaak kiest.</p>
+    </div>
+
+    <script id="subcategorieen-json" type="application/json">{{ subcategorieen_per_kerntaak|tojson if subcategorieen_per_kerntaak is defined else '{}' }}</script>
+    <script>
+    (function() {
+        var kerntaakSel = document.getElementById('kerntaak-select');
+        var subSel = document.getElementById('subcategorie-select');
+        var jsonEl = document.getElementById('subcategorieen-json');
+        if (!kerntaakSel || !subSel || !jsonEl) return;
+
+        var data = {};
+        try { data = JSON.parse(jsonEl.textContent); } catch (_) {}
+
+        // Waarde onthouden voor de eerste render (bij bewerken)
+        var huidigeSub = subSel.value;
+
+        function vulSubs(sleutel, voorgekozenId) {
+            var info = data[sleutel];
+            subSel.innerHTML = '';
+            if (!info || !info.subs || info.subs.length === 0) {
+                var opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '— geen subcategorieën beschikbaar —';
+                subSel.appendChild(opt);
+                subSel.disabled = true;
+                return;
+            }
+            subSel.disabled = false;
+            var leeg = document.createElement('option');
+            leeg.value = '';
+            leeg.textContent = '— kies een subcategorie —';
+            subSel.appendChild(leeg);
+            info.subs.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = String(s.id);
+                opt.textContent = String(info.cijfer) + String(s.cijfer) + ' — ' + s.naam;
+                if (voorgekozenId && String(voorgekozenId) === String(s.id)) {
+                    opt.selected = true;
+                }
+                subSel.appendChild(opt);
+            });
+        }
+
+        kerntaakSel.addEventListener('change', function() {
+            vulSubs(kerntaakSel.value, null);
+        });
+
+        // Initieel: als er al een kerntaak gekozen is, subs vullen (voor bewerken).
+        if (kerntaakSel.value) {
+            vulSubs(kerntaakSel.value, huidigeSub);
+        }
+    })();
+    </script>
     {% endif %}
 
     {% if form.header_foto is defined %}

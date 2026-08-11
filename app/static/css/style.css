@@ -12,11 +12,13 @@
     --kleur-zwart: #000000;
     --kleur-wit: #FFFFFF;
 
-    /* Thematische kleuren */
+    /* Thematische kleuren — bron: huisstijl/Primaire kleuren.txt */
     --kleur-thv-groen: #4C7F52;
     --kleur-ibgs-geel: #DAB94F;
     --kleur-brand-rood: #B6463D;
     --kleur-water-blauw: #4B70A6;
+    --kleur-natuurbrand-groen: #2F5D3A;
+    /* Kerntaken zonder eigen huisstijl-kleur vallen terug op --kleur-goud (Brandweergoud) */
 
     /* UI kleuren */
     --kleur-achtergrond: #F4F3F0;
@@ -523,12 +525,17 @@ body {
     letter-spacing: 0.4px;
 }
 
-.badge-kerntaak-algemeen { background-color: var(--kleur-goud); }
-.badge-kerntaak-brand  { background-color: var(--kleur-brand-rood); }
-.badge-kerntaak-thv    { background-color: var(--kleur-thv-groen); }
-.badge-kerntaak-ibgs   { background-color: var(--kleur-ibgs-geel); color: #1A1A1A; }
-.badge-kerntaak-water  { background-color: var(--kleur-water-blauw); }
-.badge-kerntaak-leeg   { background-color: #B8B2A4; }
+.badge-kerntaak-algemeen                { background-color: var(--kleur-goud); }
+.badge-kerntaak-brand                    { background-color: var(--kleur-brand-rood); }
+.badge-kerntaak-thv                      { background-color: var(--kleur-thv-groen); }
+.badge-kerntaak-ibgs                     { background-color: var(--kleur-ibgs-geel); color: #1A1A1A; }
+.badge-kerntaak-water                    { background-color: var(--kleur-water-blauw); }
+.badge-kerntaak-natuurbrand              { background-color: var(--kleur-natuurbrand-groen); }
+.badge-kerntaak-redvoertuig              { background-color: var(--kleur-goud); }
+.badge-kerntaak-bijzondere_blusmiddelen  { background-color: var(--kleur-goud); }
+.badge-kerntaak-overig                   { background-color: var(--kleur-goud); }
+.badge-kerntaak-leiding_coordinatie      { background-color: var(--kleur-goud); }
+.badge-kerntaak-leeg                     { background-color: #B8B2A4; }
 
 /* === DASHBOARD === */
 .welcome {
