@@ -526,20 +526,23 @@ class Subcategorie(db.Model):
         return f'<Subcategorie {self.kerntaak.cijfer if self.kerntaak else "?"}{self.cijfer} {self.naam}>'
 
 
-# Zaadgegevens uit Excel-schema (20260504_Nummering.xlsx). Placeholder-namen
-# ("Nog te bepalen — 31") en placeholder-kleuren voor nieuwe kerntaken kunnen
-# via /beheer/nummering door de admin worden aangepast — dit is de eerste vulling.
+# VASTE kerntaken — deze lijst is de bron van waarheid. Naam/afkorting/kleur/cijfer
+# zijn niet via de UI te wijzigen (alleen subcategorieën zijn dat). Kleuren komen uit
+# huisstijl/Primaire kleuren.txt; kerntaken zonder eigen huisstijl-kleur krijgen het
+# Algemene Brandweergoud (#CC9933).
+KLEUR_ALGEMEEN = '#CC9933'  # Brandweergoud — fallback voor kerntaken zonder eigen kleur
+
 KERNTAKEN_SEED = [
-    {'cijfer': 0, 'sleutel': 'algemeen',              'naam': 'Algemeen',                      'afkorting': 'ALG',  'kleur': '#CC9933'},
-    {'cijfer': 1, 'sleutel': 'water',                 'naam': 'Waterongevallen',               'afkorting': 'WO',   'kleur': '#4B70A6'},
-    {'cijfer': 2, 'sleutel': 'ibgs',                  'naam': 'IBGS',                          'afkorting': 'IBGS', 'kleur': '#DAB94F'},
-    {'cijfer': 3, 'sleutel': 'brand',                 'naam': 'Brand',                         'afkorting': 'BR',   'kleur': '#B6463D'},
-    {'cijfer': 4, 'sleutel': 'natuurbrand',           'naam': 'Natuurbrand',                   'afkorting': 'NB',   'kleur': '#228B22'},
-    {'cijfer': 5, 'sleutel': 'redvoertuig',           'naam': 'Redden van hoogte',             'afkorting': 'RV',   'kleur': '#F97316'},
-    {'cijfer': 6, 'sleutel': 'bijzondere_blusmiddelen','naam': 'Bijzondere blusmiddelen',      'afkorting': 'BM',   'kleur': '#7C3AED'},
-    {'cijfer': 7, 'sleutel': 'thv',                   'naam': 'Technische Hulpverlening',      'afkorting': 'THV',  'kleur': '#4C7F52'},
-    {'cijfer': 8, 'sleutel': 'overig',                'naam': 'Overig materieel',              'afkorting': 'OM',   'kleur': '#6B7280'},
-    {'cijfer': 9, 'sleutel': 'leiding_coordinatie',   'naam': 'Leiding & Coördinatie',         'afkorting': 'LC',   'kleur': '#1E40AF'},
+    {'cijfer': 0, 'sleutel': 'algemeen',              'naam': 'Algemeen',                      'afkorting': 'ALG',  'kleur': KLEUR_ALGEMEEN},
+    {'cijfer': 1, 'sleutel': 'water',                 'naam': 'Waterongevallen',               'afkorting': 'WO',   'kleur': '#4B70A6'},  # Water Blauw
+    {'cijfer': 2, 'sleutel': 'ibgs',                  'naam': 'IBGS',                          'afkorting': 'IBGS', 'kleur': '#DAB94F'},  # IBGS Geel
+    {'cijfer': 3, 'sleutel': 'brand',                 'naam': 'Brand',                         'afkorting': 'BR',   'kleur': '#B6463D'},  # Brand Rood
+    {'cijfer': 4, 'sleutel': 'natuurbrand',           'naam': 'Natuurbrand',                   'afkorting': 'NB',   'kleur': '#2F5D3A'},  # Natuurbrand Groen
+    {'cijfer': 5, 'sleutel': 'redvoertuig',           'naam': 'Redvoertuig',                   'afkorting': 'RV',   'kleur': KLEUR_ALGEMEEN},
+    {'cijfer': 6, 'sleutel': 'bijzondere_blusmiddelen','naam': 'Bijzondere blusmiddelen',      'afkorting': 'BM',   'kleur': KLEUR_ALGEMEEN},
+    {'cijfer': 7, 'sleutel': 'thv',                   'naam': 'Technische Hulpverlening',      'afkorting': 'THV',  'kleur': '#4C7F52'},  # THV Groen
+    {'cijfer': 8, 'sleutel': 'overig',                'naam': 'Overig materieel',              'afkorting': 'OM',   'kleur': KLEUR_ALGEMEEN},
+    {'cijfer': 9, 'sleutel': 'leiding_coordinatie',   'naam': 'Leiding & Coördinatie',         'afkorting': 'LC',   'kleur': KLEUR_ALGEMEEN},
 ]
 
 # Subcategorieen per kerntaak-cijfer. Namen met "?" komen letterlijk uit de
@@ -607,20 +610,28 @@ SUBCATEGORIEEN_SEED = {
 
 
 def seed_kerntaken_en_subcategorieen():
-    """Eenmalige vulling van kerntaken + subcategorieen uit de Excel-schema.
+    """Vulling van kerntaken (VAST) + subcategorieen uit de Excel-schema.
 
-    Idempotent — kan meerdere keren gedraaid worden zonder duplicaten. Voegt
-    alleen ontbrekende rijen toe. Wat de admin later via de beheerpagina
-    hernoemt/kleurt/verwijdert blijft staan (geen overschrijving van bestaande).
+    Kerntaken zijn de bron van waarheid in de code — naam, afkorting én kleur
+    worden bij elke start FORCE-gesynchroniseerd naar de KERNTAKEN_SEED-lijst.
+    Zo blijft de UI-lijst altijd in lijn met huisstijl/Primaire kleuren.txt,
+    ook als de DB al gevuld is met oudere waarden.
+
+    Subcategorieën worden alleen toegevoegd als ze ontbreken — hun namen blijven
+    door de admin bewerkbaar via /beheer/nummering.
     """
     for kt_seed in KERNTAKEN_SEED:
         bestaand = Kerntaak.query.filter_by(cijfer=kt_seed['cijfer']).first()
         if bestaand is None:
             kt = Kerntaak(**kt_seed)
             db.session.add(kt)
-            db.session.flush()  # id nodig voor de subcategorieen
+            db.session.flush()
         else:
             kt = bestaand
+            kt.sleutel = kt_seed['sleutel']
+            kt.naam = kt_seed['naam']
+            kt.afkorting = kt_seed['afkorting']
+            kt.kleur = kt_seed['kleur']
         for cijfer, naam in SUBCATEGORIEEN_SEED.get(kt.cijfer, []):
             sub_bestaand = Subcategorie.query.filter_by(
                 kerntaak_id=kt.id, cijfer=cijfer

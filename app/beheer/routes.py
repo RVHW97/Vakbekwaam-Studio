@@ -1,18 +1,14 @@
 """Beheer-blueprint — admin-only pagina's voor systeeminstellingen.
 
-Nummering: kerntaken (0-9) en hun subcategorieen (0-9) beheren, met naam en kleur.
-Voedt fase 2 (formulier) en fase 3 (nummer-generator) van de nummering-refactor.
+Nummering: de 10 kerntaken (0-9) staan VAST in de code (KERNTAKEN_SEED in
+models.py) en zijn niet via de UI te wijzigen. Alleen subcategorieën zijn
+door de admin beheerbaar. Voedt fase 2 (formulier) en fase 3 (generator).
 """
-import re
-from flask import render_template, redirect, url_for, flash, request, abort
-from flask_login import current_user
+from flask import render_template, redirect, url_for, flash, request
 from app import db
 from app.beheer import bp
 from app.models import Kerntaak, Subcategorie
 from app.auth.routes import admin_required
-
-
-HEX_KLEUR_PAT = re.compile(r'^#[0-9A-Fa-f]{6}$')
 
 
 def _valideer_cijfer(waarde, veldnaam='cijfer'):
@@ -33,73 +29,6 @@ def _valideer_cijfer(waarde, veldnaam='cijfer'):
 def nummering():
     kerntaken = Kerntaak.query.order_by(Kerntaak.cijfer).all()
     return render_template('beheer/nummering.html', kerntaken=kerntaken)
-
-
-# ------------------------- Kerntaak-acties -------------------------
-
-@bp.route('/nummering/kerntaak/nieuw', methods=['POST'])
-@admin_required
-def kerntaak_nieuw():
-    cijfer, fout = _valideer_cijfer(request.form.get('cijfer'), 'cijfer')
-    if fout:
-        flash(fout, 'danger')
-        return redirect(url_for('beheer.nummering'))
-    if Kerntaak.query.filter_by(cijfer=cijfer).first():
-        flash(f'Er bestaat al een kerntaak met cijfer {cijfer}.', 'danger')
-        return redirect(url_for('beheer.nummering'))
-    naam = (request.form.get('naam') or '').strip()
-    if not naam:
-        flash('Naam is verplicht.', 'danger')
-        return redirect(url_for('beheer.nummering'))
-    afkorting = (request.form.get('afkorting') or '').strip().upper()[:10]
-    kleur = (request.form.get('kleur') or '').strip() or '#B8B2A4'
-    if not HEX_KLEUR_PAT.match(kleur):
-        kleur = '#B8B2A4'
-    # Slug op basis van naam; unieke suffix bij botsing.
-    basis_sleutel = re.sub(r'[^a-z0-9]+', '_', naam.lower()).strip('_') or f'kerntaak_{cijfer}'
-    sleutel = basis_sleutel
-    n = 2
-    while Kerntaak.query.filter_by(sleutel=sleutel).first():
-        sleutel = f'{basis_sleutel}_{n}'
-        n += 1
-    kt = Kerntaak(cijfer=cijfer, sleutel=sleutel, naam=naam,
-                  afkorting=afkorting or naam[:3].upper(), kleur=kleur)
-    db.session.add(kt)
-    db.session.commit()
-    flash(f'Kerntaak "{kt.naam}" toegevoegd.', 'success')
-    return redirect(url_for('beheer.nummering'))
-
-
-@bp.route('/nummering/kerntaak/<int:kerntaak_id>/opslaan', methods=['POST'])
-@admin_required
-def kerntaak_opslaan(kerntaak_id):
-    kt = Kerntaak.query.get_or_404(kerntaak_id)
-    naam = (request.form.get('naam') or '').strip()
-    if not naam:
-        flash('Naam is verplicht.', 'danger')
-        return redirect(url_for('beheer.nummering'))
-    afkorting = (request.form.get('afkorting') or '').strip().upper()[:10]
-    kleur = (request.form.get('kleur') or '').strip() or '#B8B2A4'
-    if not HEX_KLEUR_PAT.match(kleur):
-        flash(f'Ongeldige kleurcode "{kleur}" — moet #RRGGBB zijn.', 'danger')
-        return redirect(url_for('beheer.nummering'))
-    kt.naam = naam
-    kt.afkorting = afkorting or kt.afkorting
-    kt.kleur = kleur
-    db.session.commit()
-    flash(f'Kerntaak {kt.cijfer} — {kt.naam} bijgewerkt.', 'success')
-    return redirect(url_for('beheer.nummering'))
-
-
-@bp.route('/nummering/kerntaak/<int:kerntaak_id>/verwijderen', methods=['POST'])
-@admin_required
-def kerntaak_verwijderen(kerntaak_id):
-    kt = Kerntaak.query.get_or_404(kerntaak_id)
-    naam = kt.naam
-    db.session.delete(kt)  # cascade wist ook subcategorieen
-    db.session.commit()
-    flash(f'Kerntaak "{naam}" (en zijn subcategorieen) verwijderd.', 'info')
-    return redirect(url_for('beheer.nummering'))
 
 
 # ------------------------- Subcategorie-acties -------------------------
