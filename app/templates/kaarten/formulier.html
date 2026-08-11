@@ -1126,7 +1126,8 @@
     </div>
 </div>
 
-<form method="POST" enctype="multipart/form-data" class="kaart-form" novalidate>
+<form method="POST" enctype="multipart/form-data" class="kaart-form" novalidate
+      data-modus="{{ 'bewerken' if bewerken else 'aanmaken' }}">
     {{ form.hidden_tag() }}
     <input type="hidden" name="auto_save_tab" id="auto-save-tab" value="">
 
@@ -1156,6 +1157,10 @@
     <div class="form-group">
         {{ form.subcategorie_id.label(class="form-label") }}
         {{ form.subcategorie_id(class="form-input form-select", id="subcategorie-select") }}
+        {# Server-side gekozen subcategorie-id — nodig omdat WTForms de dummy-choices
+           gebruikt bij render (JS bouwt daarna de echte opties). Zonder deze hint
+           weet de client-side niet welke sub te preselecteren. #}
+        <input type="hidden" id="subcategorie-gewenst" value="{{ form.subcategorie_id.data or '' }}">
         {% for error in form.subcategorie_id.errors %}
         <span class="form-error">{{ error }}</span>
         {% endfor %}
@@ -1167,14 +1172,16 @@
     (function() {
         var kerntaakSel = document.getElementById('kerntaak-select');
         var subSel = document.getElementById('subcategorie-select');
+        var gewenstEl = document.getElementById('subcategorie-gewenst');
         var jsonEl = document.getElementById('subcategorieen-json');
         if (!kerntaakSel || !subSel || !jsonEl) return;
 
         var data = {};
         try { data = JSON.parse(jsonEl.textContent); } catch (_) {}
 
-        // Waarde onthouden voor de eerste render (bij bewerken)
-        var huidigeSub = subSel.value;
+        // Server-side gekozen sub-id: uit hidden-input i.p.v. subSel.value —
+        // omdat de select op page-load nog geen echte opties heeft.
+        var huidigeSub = gewenstEl ? gewenstEl.value : '';
 
         function vulSubs(sleutel, voorgekozenId) {
             var info = data[sleutel];
@@ -1647,7 +1654,7 @@
         </div>
 
         <div class="tab-paneel actief" data-tab="algemeen">
-            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
+            {{ tab_fout_marker(['naam', 'kerntaak', 'subcategorie_id', 'header_foto']) }}
             {{ render_algemeen() }}
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
@@ -1763,7 +1770,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel actief" data-tab="algemeen">
-            {{ tab_fout_marker(['kerntaak', 'titel', 'ondertitel', 'header_foto']) }}
+            {{ tab_fout_marker(['kerntaak', 'subcategorie_id', 'titel', 'ondertitel', 'header_foto']) }}
             {{ render_algemeen() }}
 
             <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Tekst op de kaart</h3>
@@ -2007,7 +2014,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel{% if bewerken %} actief{% endif %}" data-tab="algemeen">
-            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
+            {{ tab_fout_marker(['naam', 'kerntaak', 'subcategorie_id', 'header_foto']) }}
             {{ render_algemeen() }}
 
             <div class="tab-nav-footer">
@@ -2290,7 +2297,7 @@
 
         {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel actief" data-tab="algemeen">
-            {{ tab_fout_marker(['naam', 'kerntaak', 'header_foto']) }}
+            {{ tab_fout_marker(['naam', 'kerntaak', 'subcategorie_id', 'header_foto']) }}
             {{ render_algemeen() }}
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
@@ -3314,12 +3321,29 @@ setupCropper({
 
     // Auto-save: zet hidden tab-doel en submit form
     function autoSaveEnSwitch(doelTab) {
-        // v0.7.3: geen auto-save meer — puur client-side switch. Werk blijft in
-        // de DOM; wat je typt bewaar je pas door expliciet op "Opslaan als concept"
-        // te klikken. De niet-opgeslagen-waarschuwing beschermt je tegen verlies
-        // wanneer je de pagina verlaat zonder op te slaan.
+        // Sinds v0.7.4: tab-wissel in BEWERKEN-mode is puur client-side (geen
+        // save). In AANMAKEN-mode klikken we op Volgende → server-side submit:
+        // de kaart wordt aangemaakt en de gebruiker komt in bewerken op de
+        // gekozen tab uit. Zo hoef je niet éérst apart Opslaan te klikken voor
+        // je verder kan bouwen. WTForms-validatie voorkomt dat je een half-lege
+        // aanmaken-poging bewaart.
         var huidig = document.querySelector('.tab-paneel.actief');
         if (huidig && huidig.dataset.tab === doelTab) return;
+
+        var form = document.querySelector('.kaart-form');
+        var isAanmaken = form && form.dataset.modus === 'aanmaken';
+        if (isAanmaken) {
+            var autoSaveInput = document.getElementById('auto-save-tab');
+            if (autoSaveInput) autoSaveInput.value = doelTab;
+            if (form) {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    HTMLFormElement.prototype.submit.call(form);
+                }
+            }
+            return;
+        }
         zetActief(doelTab);
     }
 

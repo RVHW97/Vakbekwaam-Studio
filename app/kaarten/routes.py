@@ -15,6 +15,29 @@ from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          INSTRUCTIE_MAX_KAART_KOPPELINGEN, INSTRUCTIE_MAX_QR_KOPPELINGEN)
 
 
+def _hernummer_als_subcategorie_wijzigt(kaart):
+    """Update kaart.nummer als de kerntaak+subcategorie-prefix niet meer klopt.
+
+    Rebecca's keuze (v0.7.8): het nummer volgt ALTIJD de gekozen kerntaak +
+    subcategorie — ook bij gepubliceerde kaarten. Geprinte materialen kunnen
+    dan verouderd raken, dat is een bewust risico. Retourneert (oud, nieuw)
+    tuple wanneer er hernummerd is, anders (None, None).
+    """
+    if not kaart.subcategorie_id:
+        return None, None
+    sub = kaart.subcategorie
+    if sub is None or sub.kerntaak is None:
+        return None, None
+    letters = KAART_TYPES[kaart.type]['prefix']
+    verwachte_start = f'{letters}-{sub.kerntaak.cijfer}{sub.cijfer}'
+    if kaart.nummer and kaart.nummer.startswith(verwachte_start):
+        # Prefix klopt al — nummer blijft ongewijzigd
+        return None, None
+    oud_nummer = kaart.nummer
+    kaart.nummer = Kaart.volgende_nummer(kaart.type, sub.kerntaak.cijfer, sub.cijfer)
+    return oud_nummer, kaart.nummer
+
+
 def _subcategorieen_per_kerntaak_ctx():
     """Voor JS: dict van kerntaak-sleutel → lijst met subcategorieën.
 
@@ -238,6 +261,13 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         return len(gevuld) < min_aantal
 
     ontbrekend = []
+
+    # Verplicht voor élk kaart-type: subcategorie (bepaalt 2e cijfer van nummer).
+    subcat_raw = (request_form.get('subcategorie_id') or '').strip()
+    if not subcat_raw.isdigit():
+        _add_error('subcategorie_id',
+                    'Kies een subcategorie — die bepaalt de laatste 2 cijfers van het kaartnummer.')
+        ontbrekend.append('Subcategorie')
 
     if kaart_type == 'thema':
         if _tekst_leeg('ondertitel'):
@@ -633,13 +663,27 @@ def aanmaken(kaart_type):
         for veld in INHOUD_LIJST_VELDEN.get(kaart_type, []):
             inhoud[veld] = getattr(form, veld).data or []
 
+        # Subcategorie is verplicht om het XX-#### nummer te kunnen genereren.
         subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
+        subcat = Subcategorie.query.get(int(subcat_raw)) if subcat_raw.isdigit() else None
+        if subcat is None or subcat.kerntaak is None:
+            form.subcategorie_id.errors = list(form.subcategorie_id.errors) + [
+                'Kies een subcategorie — die bepaalt de laatste 2 cijfers van het kaartnummer.'
+            ]
+            type_info = KAART_TYPES[kaart_type]
+            return render_template('kaarten/formulier.html', form=form, kaart_type=kaart_type,
+                                   type_info=type_info, bewerken=False, kaart=None,
+                                   WERKWIJZE_MAX_STAPPEN=WERKWIJZE_MAX_STAPPEN,
+                                   WERKWIJZE_TITEL_MAX=WERKWIJZE_TITEL_MAX,
+                                   WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
+                                   subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
+
         kaart = Kaart(
             type=kaart_type,
-            nummer=Kaart.volgende_nummer(kaart_type),
+            nummer=Kaart.volgende_nummer(kaart_type, subcat.kerntaak.cijfer, subcat.cijfer),
             naam=_kaart_naam_uit_form(form, kaart_type),
             kerntaak=form.kerntaak.data or None,
-            subcategorie_id=int(subcat_raw) if subcat_raw.isdigit() else None,
+            subcategorie_id=subcat.id,
             status='concept',
             auteur_id=current_user.id,
             bijgewerkt_door_id=current_user.id,
@@ -749,11 +793,13 @@ def bewerken(kaart_id):
             db.session.commit()
             if hasattr(form, 'ensceneringstips'):
                 form.ensceneringstips.data = processed_tips_json
-    # Toelichting is alleen vereist vanaf de tweede échte wijziging.
-    # Telt het aantal 'Bewerkt'-records — als 0, dan slaat de gebruiker voor het eerst
-    # echt op (na auto-saves bij tab-wissel) en hoeft hij/zij geen reden te geven.
+    # Toelichting-wijziging is alleen vereist zodra de kaart ooit gepubliceerd is.
+    # Concept-fase = bouwen; publicatie = officieel; verandering ná publicatie =
+    # echte "wijziging" die een reden verdient. Zolang je nog in concept-fase zit
+    # (ook al klopt de kaart al 3× opgeslagen) hoef je geen reden op te geven.
     kaart_heeft_wijzigingen = (
-        KaartWijziging.query.filter_by(kaart_id=kaart.id, actie='Bewerkt').count() > 0
+        kaart.status == 'gepubliceerd'
+        or KaartWijziging.query.filter_by(kaart_id=kaart.id, actie='Gepubliceerd').count() > 0
     )
 
     # === AUTO-SAVE BIJ TAB-WISSEL ===
@@ -908,11 +954,22 @@ def bewerken(kaart_id):
             inhoud['ensceneringstips'] = processed_tips_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
-        kaart.kerntaak = form.kerntaak.data or None
         _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
         kaart.subcategorie_id = int(_subcat_raw) if _subcat_raw.isdigit() else None
+        # Subcategorie is autoritair voor de kerntaak-sleutel — zo raken de twee
+        # nooit uit sync. Alleen als er geen sub is (oude kaart, edge case) valt
+        # kerntaak terug op wat het formulier meestuurt.
+        if kaart.subcategorie and kaart.subcategorie.kerntaak:
+            kaart.kerntaak = kaart.subcategorie.kerntaak.sleutel
+        else:
+            kaart.kerntaak = form.kerntaak.data or None
         kaart.set_inhoud(inhoud)
         kaart.bijgewerkt_door_id = current_user.id
+        # Als kerntaak/subcategorie zijn gewijzigd → nieuw nummer volgens VGGM-schema.
+        oud_nummer, nieuw_nummer = _hernummer_als_subcategorie_wijzigt(kaart)
+        if oud_nummer and nieuw_nummer:
+            log_wijziging(kaart, 'Hernummerd', f'{oud_nummer} → {nieuw_nummer}')
+            flash(f'Kaartnummer aangepast aan de nieuwe kerntaak/subcategorie: {oud_nummer} → {nieuw_nummer}.', 'info')
 
         if request.form.get('verwijder_header_foto'):
             if kaart.header_foto:
@@ -1495,10 +1552,20 @@ def heractiveren(kaart_id):
 def kopieren(kaart_id):
     _vereis_aanmaken()
     origineel = Kaart.query.get_or_404(kaart_id)
+    # Voor het XX-#### nummer hebben we de subcategorie van het origineel nodig.
+    # Als die er niet is (kaarten van vóór de subcategorie-refactor) valt de kopie
+    # terug op 0/0 — een tijdelijk startnummer dat de gebruiker later kan verzetten.
+    if origineel.subcategorie and origineel.subcategorie.kerntaak:
+        kt_cijfer = origineel.subcategorie.kerntaak.cijfer
+        sub_cijfer = origineel.subcategorie.cijfer
+    else:
+        kt_cijfer, sub_cijfer = 0, 0
     nieuwe = Kaart(
         type=origineel.type,
-        nummer=Kaart.volgende_nummer(origineel.type),
+        nummer=Kaart.volgende_nummer(origineel.type, kt_cijfer, sub_cijfer),
         naam=f'{origineel.naam} (kopie)',
+        kerntaak=origineel.kerntaak,
+        subcategorie_id=origineel.subcategorie_id,
         status='concept',
         inhoud=origineel.inhoud,
         auteur_id=current_user.id,

@@ -10,6 +10,9 @@ KAART_TYPES = {
     'instructie': {'prefix': 'IK', 'naam': 'Instructiekaart'},
     'scenario': {'prefix': 'SK', 'naam': 'Scenariokaart'},
     'opdracht': {'prefix': 'OK', 'naam': 'Opdrachtkaart'},
+    # Checkkaart-letter is gereserveerd in het nummer-systeem (v0.7.8) —
+    # het kaarttype zelf (formulier + PDF) volgt in een latere fase.
+    'check':    {'prefix': 'CK', 'naam': 'Checkkaart'},
 }
 
 # Gebruikersrollen — volgorde = oplopend in rechten
@@ -239,20 +242,37 @@ class Kaart(db.Model):
         return Kaart.query.filter(Kaart.id.in_(ids)).order_by(Kaart.type, Kaart.nummer).all()
 
     @staticmethod
-    def volgende_nummer(kaart_type):
-        prefix = KAART_TYPES[kaart_type]['prefix']
-        kaarten = Kaart.query.filter_by(type=kaart_type).all()
+    def volgende_nummer(kaart_type, kerntaak_cijfer, subcat_cijfer):
+        """Bouw het volgende XX-#### nummer voor deze combinatie.
+
+        XX     = kaart-type-letters uit KAART_TYPES (TK/IK/SK/OK/CK).
+        1e #   = kerntaak-cijfer (0-9).
+        2e #   = subcategorie-cijfer (0-9) binnen die kerntaak.
+        3e+4e# = volgnummer 01-99, één hoger dan het hoogste bestaande
+                 nummer met dezelfde 4-cijfer-prefix.
+
+        Voorbeeld: volgende_nummer('instructie', 1, 1) → 'IK-1101' (of hoger
+        als er al IK-1101, IK-1102, … bestaan).
+        """
+        prefix_letters = KAART_TYPES[kaart_type]['prefix']
+        prefix_cijfers = f'{int(kerntaak_cijfer)}{int(subcat_cijfer)}'
+        zoek = f'{prefix_letters}-{prefix_cijfers}'
         max_nr = 0
-        for k in kaarten:
-            deel = (k.nummer or '').split('-', 1)
-            if len(deel) == 2:
-                try:
-                    n = int(deel[1])
-                    if n > max_nr:
-                        max_nr = n
-                except ValueError:
-                    continue  # niet-numerieke achtervoegsels (bv. SK-TEST) overslaan
-        return f'{prefix}-{max_nr + 1:03d}'
+        for k in Kaart.query.filter(
+            Kaart.type == kaart_type,
+            Kaart.nummer.like(f'{zoek}%'),
+        ).all():
+            suffix = (k.nummer or '')[len(zoek):]
+            # Strikt: exact 2 cijfers als volgnummer. Zo raken oude 3-cijfer
+            # nummers (TK-001, IK-042 uit v0.7.x) de nieuwe generator niet in
+            # de war. Fase 4 wist die oude records — daarna is dit onnodig,
+            # maar het is een goedkope safety-net.
+            if len(suffix) != 2 or not suffix.isdigit():
+                continue
+            n = int(suffix)
+            if n > max_nr:
+                max_nr = n
+        return f'{zoek}{max_nr + 1:02d}'
 
     def __repr__(self):
         return f'<Kaart {self.nummer} - {self.naam}>'
