@@ -33,5 +33,11 @@
         <h2>Opdrachtkaart</h2>
         <p>Doelen, opdrachten, randvoorwaarden en evaluatie.</p>
     </a>
+
+    <a href="{{ url_for('kaarten.aanmaken', kaart_type='kennis') }}" class="type-card">
+        <div class="type-icon">&#x1F4A1;</div>
+        <h2>Kenniskaart</h2>
+        <p>Achtergrondkennis en theorie — leerdoel, kernboodschap in stappen en verdieping.</p>
+    </a>
 </div>
 {% endblock %}

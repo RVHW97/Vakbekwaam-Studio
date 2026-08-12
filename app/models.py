@@ -10,6 +10,7 @@ KAART_TYPES = {
     'instructie': {'prefix': 'IK', 'naam': 'Instructiekaart'},
     'scenario': {'prefix': 'SK', 'naam': 'Scenariokaart'},
     'opdracht': {'prefix': 'OK', 'naam': 'Opdrachtkaart'},
+    'kennis':   {'prefix': 'KK', 'naam': 'Kenniskaart'},
     # Checkkaart-letter is gereserveerd in het nummer-systeem (v0.7.8) —
     # het kaarttype zelf (formulier + PDF) volgt in een latere fase.
     'check':    {'prefix': 'CK', 'naam': 'Checkkaart'},

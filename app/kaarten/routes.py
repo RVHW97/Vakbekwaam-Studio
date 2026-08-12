@@ -366,6 +366,17 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
             ontbrekend.append('Evaluatie')
 
+    elif kaart_type == 'kennis':
+        if _tekst_leeg('doelgroep'):
+            _add_error('doelgroep', 'Kies een doelgroep.')
+            ontbrekend.append('Doelgroep')
+        if _tekst_leeg('leerdoel'):
+            _add_error('leerdoel', 'Vul een leerdoel in.')
+            ontbrekend.append('Leerdoel')
+        # De rijke velden (kernboodschap-stappen, aandachtspunten, verdieping,
+        # evaluatie) worden pas in stap 2 verplicht — nu zijn ze optioneel
+        # zodat je vroeg kunt experimenteren met het nieuwe kaarttype.
+
     return ontbrekend
 
 
@@ -1603,6 +1614,11 @@ def kopieren(kaart_id):
 @login_required
 def download_pdf(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
+    # Kenniskaart-PDF komt in stap 3 (v0.7.10) — voor nu een vriendelijke stub.
+    if kaart.type == 'kennis':
+        flash('De PDF-template voor kenniskaarten wordt in een latere versie gemaakt. '
+              'Voor nu kun je de kaart wel bewerken en opslaan.', 'info')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
     from app.kaarten.pdf import genereer_pdf
     pdf = genereer_pdf(kaart)
     response = make_response(pdf)

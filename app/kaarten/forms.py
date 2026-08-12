@@ -245,11 +245,41 @@ class OpdrachtkaartForm(FlaskForm):
     submit = SubmitField('Opslaan als concept')
 
 
+class KenniskaartForm(FlaskForm):
+    """Kenniskaart — achtergrondkennis/theorie voor manschappen.
+
+    Structuur volgt gedeeltelijk de opdrachtkaart (doelgroep + leerdoel +
+    stap-voor-stap kernboodschap), plus aandachtspunten voor de oefenleider en
+    dezelfde verdieping+evaluatie-lijsten. Stap 1 (v0.7.9) heeft de basis-
+    velden; kernboodschap-stappen-editor komt in stap 2.
+    """
+    naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
+    kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
+    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
+                                    validators=[Optional()], validate_choice=False)
+    header_foto = FileField('Headerfoto')
+    doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
+    doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
+    leerdoel = TextAreaField('Leerdoel', validators=[Optional(), Length(max=500)])
+    # Kernboodschap in stappen — zelfde JSON-structuur als werkwijze op instructie:
+    #   [{"id": "<uuid>", "layout": "A|B|C|D", "titel": "...", "tekst": "...",
+    #     "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...]}]
+    # De editor daarvoor komt in stap 2 (v0.7.10). Voor nu een lege hidden.
+    kernboodschap_stappen_json = StringField('Kernboodschap', validators=[Optional()])
+    # Verdiepende vragen + evaluatie — beide dynamische lijsten (punten), net als
+    # bij de opdrachtkaart. Voor stap 1 zijn ze tekstvakken; stap 2 maakt er
+    # echte lijst-editors van.
+    verdiepende_vragen = TextAreaField('Verdiepende vragen', validators=[Optional(), Length(max=3000)])
+    evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
+    submit = SubmitField('Opslaan als concept')
+
+
 FORMULIEREN = {
     'thema': ThemakaartForm,
     'instructie': InstructiekaartForm,
     'scenario': ScenariokaartForm,
     'opdracht': OpdrachtkaartForm,
+    'kennis': KenniskaartForm,
 }
 
 # Velden per type die opgeslagen worden als inhoud (exclusief naam en afbeeldingen)
@@ -282,6 +312,10 @@ INHOUD_VELDEN = {
                  'veiligheid_zin_4', 'veiligheid_zin_5',
                  'oefendoel',
                  'opdrachten_json', 'uitdagende_variant',
+                 'verdiepende_vragen', 'evaluatie'],
+    'kennis':   ['doelgroep', 'doelgroep_anders',
+                 'leerdoel',
+                 'kernboodschap_stappen_json',
                  'verdiepende_vragen', 'evaluatie'],
 }
 

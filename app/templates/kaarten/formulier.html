@@ -2622,6 +2622,116 @@
                 <span class="tab-nav-spacer"></span>
             </div>
         </div>
+
+    {% elif kaart_type == 'kennis' %}
+        {# ============================================================ #}
+        {# KENNISKAART — stap 1 (v0.7.9): minimale tab-structuur.       #}
+        {# Kernboodschap-stappen-editor + rijke lijsten volgen in stap  #}
+        {# 2 (v0.7.10). Voor nu tekstvakken als placeholder zodat de    #}
+        {# volledige flow (opslaan / nummer / bewerken) getest kan.     #}
+        {# ============================================================ #}
+        <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
+            <button type="button" class="tab-knop" data-tab="inhoud">Inhoud</button>
+        </div>
+
+        <div class="tab-paneel actief" data-tab="algemeen">
+            {{ tab_fout_marker(['naam', 'kerntaak', 'subcategorie_id', 'header_foto']) }}
+            {{ render_algemeen() }}
+            <div class="tab-nav-footer">
+                <span class="tab-nav-spacer"></span>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="inhoud">Volgende →</button>
+            </div>
+        </div>
+
+        <div class="tab-paneel" data-tab="inhoud">
+            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'leerdoel',
+                                 'kernboodschap_stappen_json',
+                                 'verdiepende_vragen', 'evaluatie']) }}
+            <h2 class="form-section-title">Inhoud van de kenniskaart</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de inhoud invullen.</p>
+            {% else %}
+
+            {# Doelgroep #}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Doelgroep</h3>
+                <div class="form-groep-rij">
+                    <div class="form-groep-kolom">
+                        <div class="form-group">
+                            {{ form.doelgroep.label(class="form-label") }}
+                            {{ form.doelgroep(class="form-input form-select", id="doelgroep-select") }}
+                            {% for error in form.doelgroep.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-groep-kolom" id="doelgroep-anders-kolom" style="{% if form.doelgroep.data != 'anders' %}display:none;{% endif %}">
+                        <div class="form-group">
+                            {{ form.doelgroep_anders.label(class="form-label") }}
+                            {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
+                            {% for error in form.doelgroep_anders.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Leerdoel #}
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Leerdoel</h3>
+                <p class="form-hint">Wat moet de deelnemer weten of begrijpen na deze kenniskaart? Kort en concreet — max 500 tekens.</p>
+                <div class="form-group">
+                    {{ form.leerdoel(class="form-input form-textarea", rows=3, maxlength=500,
+                       placeholder="Bv. Deelnemer kent de werking van de C35-pager en herkent de vier prioriteiten.") }}
+                    {% for error in form.leerdoel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            {# Placeholders voor de rijke velden — komen in stap 2 als volwaardige editors #}
+            <div class="form-groep-blok" style="border-left: 4px solid #F59E0B; padding: 0.6rem 0.9rem; background: #FFFBEB; border-radius: 4px;">
+                <p style="margin: 0 0 0.4rem 0; color: #78350F; font-size: 0.9rem;">
+                    <strong>ℹ️ Stap 1 (v0.7.9):</strong> de kernboodschap-stappen-editor, verdiepende vragen en evaluatie zijn onderstaande tekstvakken.
+                    In stap 2 (volgende versie) worden dit dezelfde soort dynamische editors als bij de opdracht- en instructiekaart.
+                </p>
+            </div>
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Kernboodschap (stappen)</h3>
+                <p class="form-hint">Tijdelijk als tekstvak — één stap per regel. Wordt in stap 2 een echte editor met foto's per stap.</p>
+                <div class="form-group">
+                    {{ form.kernboodschap_stappen_json(class="form-input form-textarea", rows=6,
+                       placeholder="Stap 1: …\nStap 2: …\nStap 3: …") }}
+                    {% for error in form.kernboodschap_stappen_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Verdiepende vragen</h3>
+                <p class="form-hint">Punten die deelnemers laten nadenken over het onderwerp — één per regel.</p>
+                <div class="form-group">
+                    {{ form.verdiepende_vragen(class="form-input form-textarea", rows=4,
+                       placeholder="Bv. Waarom zou een prio 1-melding voorrang moeten krijgen boven een prio 2?") }}
+                    {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Evaluatie</h3>
+                <p class="form-hint">Punten voor de nabespreking — één per regel.</p>
+                <div class="form-group">
+                    {{ form.evaluatie(class="form-input form-textarea", rows=4,
+                       placeholder="Bv. Wat is het belangrijkste dat je meeneemt uit deze uitleg?") }}
+                    {% for error in form.evaluatie.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </div>
+            </div>
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <span class="tab-nav-spacer"></span>
+            </div>
+        </div>
+
     {% endif %}
 
     {# ==================== ALTIJD ZICHTBAAR ONDERAAN ==================== #}
