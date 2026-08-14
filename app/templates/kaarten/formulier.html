@@ -1254,62 +1254,34 @@
         background: #FBEBEB;
         border-color: #B6463D;
     }
-    .kk-hoofdstuk-fotos {
-        display: flex;
-        gap: 0.6rem;
-        flex-wrap: wrap;
+    /* Compacte slot-lijst — zelfde look als werkwijze/tips-editor. */
+    .kk-hoofdstuk-foto-label {
         margin-top: 0.75rem;
         padding-top: 0.6rem;
         border-top: 1px dashed #E5E2DA;
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #1B2A4A;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 0.4rem;
     }
-    .kk-hoofdstuk-foto-slot {
+    .kk-hoofdstuk-fotos { margin-top: 0; }
+    .kk-hoofdstuk-slot {
         position: relative;
-        width: 140px;
-        height: 105px;
-        background: #F5F5F1;
-        border: 1px solid #D6D2C7;
-        border-radius: 4px;
-        overflow: hidden;
     }
-    .kk-hoofdstuk-foto-slot img {
-        width: 100%;
-        height: 100%;
+    .werkwijze-foto-preview-thumb {
+        width: 36px;
+        height: 36px;
         object-fit: cover;
-        display: block;
-    }
-    .kk-hoofdstuk-foto-acties {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        display: flex;
-        gap: 0.25rem;
-    }
-    .kk-hoofdstuk-foto-actie {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid #C5C0B4;
-        color: #1B2A4A;
-        font-size: 0.7rem;
-        padding: 0.15rem 0.4rem;
         border-radius: 3px;
-        cursor: pointer;
+        border: 1px solid #D6D2C7;
+        flex: 0 0 auto;
+        background: #F5F5F1;
     }
-    .kk-hoofdstuk-foto-actie:hover { background: #FFF; border-color: #1B2A4A; }
-    .kk-hoofdstuk-foto-verwijder { color: #B6463D; font-size: 0.85rem; padding: 0.1rem 0.35rem; }
-    .kk-hoofdstuk-foto-toevoegen {
-        width: 140px;
-        height: 105px;
-        background: #FAFAF7;
-        border: 2px dashed #C5C0B4;
-        border-radius: 4px;
-        color: #666;
-        font-size: 0.9rem;
-        cursor: pointer;
-        font-family: 'Open Sans', sans-serif;
-    }
-    .kk-hoofdstuk-foto-toevoegen:hover {
-        border-color: #1B2A4A;
-        color: #1B2A4A;
-        background: #FFF;
+    .kk-hoofdstuk-foto-toevoegen-knop {
+        margin-top: 0.4rem;
     }
 
     /* === Foto-plaatsing keuze (onder / naast) === */
@@ -6553,28 +6525,17 @@ setupCropper({
             if (actie === 'rechts')   { cropperInstance.rotate(90); return; }
             if (actie === 'bevestig' && actieveFotoSlot) {
                 var canvas = cropperInstance.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600 });
-                var slot = actieveFotoSlot.fotoSlot;
+                var fotoSlot = actieveFotoSlot.fotoSlot;
+                var hoofdstukSlot = actieveFotoSlot.hoofdstukSlot;
                 canvas.toBlob(function(blob) {
                     if (!blob) return;
-                    var cropIn = document.querySelector('input[name="werkwijze_foto_' + slot + '"]');
-                    if (cropIn) {
-                        var dt = new DataTransfer();
-                        dt.items.add(new File([blob], 'crop.jpg', { type: 'image/jpeg' }));
-                        cropIn.files = dt.files;
+                    // Delegeer naar hoofdstuk-scoped handler die stabiel is (blijft
+                    // gebonden aan de originele slot-elementen — geen DOM-lookups
+                    // die na re-render kunnen falen).
+                    var h = data.find(function(x) { return x.slot === hoofdstukSlot; });
+                    if (h && typeof h.__setCropResultaat === 'function') {
+                        h.__setCropResultaat(fotoSlot, blob, cropperBronBestand);
                     }
-                    if (cropperBronBestand) {
-                        fetch(cropperBronBestand).then(function(r) { return r.blob(); }).then(function(origBlob) {
-                            var origIn = document.querySelector('input[name="werkwijze_orig_' + slot + '"]');
-                            if (origIn) {
-                                var dt2 = new DataTransfer();
-                                dt2.items.add(new File([origBlob], 'orig.jpg', { type: 'image/jpeg' }));
-                                origIn.files = dt2.files;
-                            }
-                        }).catch(function() {});
-                    }
-                    var preview = document.querySelector('[data-preview-slot="' + slot + '"]');
-                    if (preview) { preview.src = canvas.toDataURL('image/jpeg'); preview.style.display = ''; }
-                    sync();
                     sluitCropper();
                 }, 'image/jpeg', 0.9);
             }
@@ -6690,96 +6651,230 @@ setupCropper({
         });
         kaart.appendChild(plaatsingWrap);
 
+        // === Foto-slots — werkwijze-editor-patroon ===
+        // Belangrijke fix (v0.7.15): alle MAX_FOTOS slots worden bij INIT
+        // aangemaakt. Slots zonder foto zijn verborgen (display:none). Bij
+        // "+ Foto" wordt de eerste hidden slot getoond en zijn file-input
+        // aangeklikt. Zo worden de file-inputs NOOIT vervangen tijdens
+        // re-renders → File-objecten (net-gecropt) blijven bewaard.
+        //
+        // hoofdstuk.fotos wordt op MAX_FOTOS gehouden — lege slots hebben
+        // bestand=''. verwerk_kennis_hoofdstukken() aan de server-kant filtert
+        // die uit.
+        hoofdstuk.fotos = hoofdstuk.fotos || [];
+        while (hoofdstuk.fotos.length < MAX_FOTOS) {
+            hoofdstuk.fotos.push({ slot: slotId('f'), bestand: '', bestand_origineel: '' });
+        }
+
+        // File-cache: bewaart File-objecten buiten de DOM zodat een MutationObserver
+        // die de preview refresht niet toevallig een file-input reset.
+        var geCropteFiles = {};
+        var origineleFiles = {};
+
+        var fotoWrapLabel = document.createElement('div');
+        fotoWrapLabel.className = 'kk-hoofdstuk-foto-label';
+        fotoWrapLabel.textContent = 'Foto\'s (max ' + MAX_FOTOS + ')';
+        kaart.appendChild(fotoWrapLabel);
+
         var fotosWrap = document.createElement('div');
-        fotosWrap.className = 'kk-hoofdstuk-fotos';
-        function renderFotos() {
-            fotosWrap.innerHTML = '';
-            (hoofdstuk.fotos || []).forEach(function(foto, fIdx) {
-                var slot = document.createElement('div');
-                slot.className = 'kk-hoofdstuk-foto-slot';
+        fotosWrap.className = 'kk-hoofdstuk-fotos werkwijze-foto-rij';
 
-                var img = document.createElement('img');
-                img.dataset.previewSlot = foto.slot;
-                if (foto.bestand) img.src = fotoUrlVoor(foto.bestand);
-                else img.style.display = 'none';
-                slot.appendChild(img);
+        // Kleine helper — bouwt één slot-element (blijft altijd in DOM).
+        function bouwSlot(foto, slotIdx) {
+            var slot = document.createElement('div');
+            slot.className = 'werkwijze-foto-slot kk-hoofdstuk-slot';
+            slot.dataset.fotoSlot = foto.slot;
+            slot.dataset.slotIdx = String(slotIdx);
 
-                var acties = document.createElement('div');
-                acties.className = 'kk-hoofdstuk-foto-acties';
+            // Verborgen preview <img> — de preview onder in de hoofdstuk-kaart
+            // haalt hieruit z'n src (voor blob-URLs van net-gecropte foto's).
+            var previewImg = document.createElement('img');
+            previewImg.dataset.previewSlot = foto.slot;
+            previewImg.className = 'werkwijze-foto-preview-thumb';
+            if (foto.bestand) previewImg.src = fotoUrlVoor(foto.bestand);
+            else previewImg.style.display = 'none';
+            slot.appendChild(previewImg);
 
-                var recropBtn = document.createElement('button');
-                recropBtn.type = 'button';
-                recropBtn.className = 'kk-hoofdstuk-foto-actie';
-                recropBtn.textContent = '✂ Recrop';
-                recropBtn.addEventListener('click', function() {
-                    var bron = fotoUrlVoor(foto.bestand_origineel || foto.bestand);
-                    if (!bron && img.src) bron = img.src;
-                    if (!bron) { alert('Upload eerst een foto voor je hem kunt bijsnijden.'); return; }
-                    openCropper(hoofdstuk, foto, bron);
-                });
-                acties.appendChild(recropBtn);
+            var labelSpan = document.createElement('span');
+            labelSpan.className = 'werkwijze-foto-slot-label';
+            slot.appendChild(labelSpan);
 
-                var vBtn = document.createElement('button');
-                vBtn.type = 'button';
-                vBtn.className = 'kk-hoofdstuk-foto-actie kk-hoofdstuk-foto-verwijder';
-                vBtn.textContent = '✕';
-                vBtn.title = 'Foto verwijderen';
-                vBtn.addEventListener('click', function() {
-                    hoofdstuk.fotos.splice(fIdx, 1);
-                    sync();
-                    renderFotos();
-                });
-                acties.appendChild(vBtn);
+            // File-inputs — namen volgen werkwijze-conventie zodat
+            // verwerk_kennis_hoofdstukken() ze op de server oppikt.
+            var inpCrop = document.createElement('input');
+            inpCrop.type = 'file';
+            inpCrop.name = 'werkwijze_foto_' + foto.slot;
+            inpCrop.accept = 'image/jpeg,image/png,image/webp';
+            inpCrop.className = 'werkwijze-foto-input-verborgen';
+            slot.appendChild(inpCrop);
 
-                slot.appendChild(acties);
+            var inpOrig = document.createElement('input');
+            inpOrig.type = 'file';
+            inpOrig.name = 'werkwijze_orig_' + foto.slot;
+            inpOrig.accept = 'image/jpeg,image/png,image/webp';
+            inpOrig.className = 'werkwijze-foto-input-verborgen';
+            slot.appendChild(inpOrig);
 
-                var cropIn = document.createElement('input');
-                cropIn.type = 'file';
-                cropIn.name = 'werkwijze_foto_' + foto.slot;
-                cropIn.accept = 'image/*';
-                cropIn.style.display = 'none';
-                slot.appendChild(cropIn);
-
-                var origIn = document.createElement('input');
-                origIn.type = 'file';
-                origIn.name = 'werkwijze_orig_' + foto.slot;
-                origIn.accept = 'image/*';
-                origIn.style.display = 'none';
-                slot.appendChild(origIn);
-
-                fotosWrap.appendChild(slot);
+            // File-input: wordt geklikt wanneer gebruiker een NIEUWE foto wil
+            // uploaden in dit slot. Bij change → cropper openen.
+            inpCrop.addEventListener('change', function() {
+                var f = inpCrop.files && inpCrop.files[0];
+                if (!f) return;
+                var ext = (f.name.split('.').pop() || '').toLowerCase();
+                if (['jpg','jpeg','png','webp'].indexOf(ext) === -1) {
+                    alert('Alleen JPG, PNG of WebP.'); inpCrop.value = ''; return;
+                }
+                if (f.size > 20 * 1024 * 1024) {
+                    alert('Bestand te groot (max 20 MB).'); inpCrop.value = ''; return;
+                }
+                // Lees als data-URL en open cropper. inpCrop wordt straks
+                // OVERSCHREVEN door het cropper-resultaat (met DataTransfer).
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    // Zet ook originele file in inpOrig zodat re-crop mogelijk blijft.
+                    try {
+                        var dt = new DataTransfer();
+                        dt.items.add(f);
+                        inpOrig.files = dt.files;
+                        origineleFiles[foto.slot] = f;
+                    } catch (_) {}
+                    openCropper(hoofdstuk, foto, ev.target.result);
+                };
+                reader.readAsDataURL(f);
             });
 
-            if ((hoofdstuk.fotos || []).length < MAX_FOTOS) {
-                var addBtn = document.createElement('button');
-                addBtn.type = 'button';
-                addBtn.className = 'kk-hoofdstuk-foto-toevoegen';
-                addBtn.textContent = '+ Foto';
-                addBtn.addEventListener('click', function() {
-                    var picker = document.createElement('input');
-                    picker.type = 'file';
-                    picker.accept = 'image/*';
-                    picker.addEventListener('change', function() {
-                        if (!picker.files || !picker.files[0]) return;
-                        var reader = new FileReader();
-                        reader.onload = function(ev) {
-                            var nieuwe = { slot: slotId('f'), bestand: '', bestand_origineel: '' };
-                            hoofdstuk.fotos = hoofdstuk.fotos || [];
-                            hoofdstuk.fotos.push(nieuwe);
-                            renderFotos();
-                            setTimeout(function() {
-                                openCropper(hoofdstuk, nieuwe, ev.target.result);
-                            }, 30);
-                        };
-                        reader.readAsDataURL(picker.files[0]);
-                    });
-                    picker.click();
-                });
-                fotosWrap.appendChild(addBtn);
-            }
+            // Recrop-knop — opent cropper op bestaande bron.
+            var recropBtn = document.createElement('button');
+            recropBtn.type = 'button';
+            recropBtn.className = 'btn btn-secondary btn-sm';
+            recropBtn.textContent = '✂ Bijsnijden';
+            recropBtn.addEventListener('click', function() {
+                // Bron: laatst-gebruikte origineel (File in cache) → data-URL,
+                // anders bestaande bestand_origineel → /media/…, anders preview.
+                if (origineleFiles[foto.slot]) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        openCropper(hoofdstuk, foto, ev.target.result);
+                    };
+                    reader.readAsDataURL(origineleFiles[foto.slot]);
+                    return;
+                }
+                var bron = fotoUrlVoor(foto.bestand_origineel || foto.bestand);
+                if (!bron && previewImg.src) bron = previewImg.src;
+                if (!bron) { alert('Upload eerst een foto.'); return; }
+                openCropper(hoofdstuk, foto, bron);
+            });
+            slot.appendChild(recropBtn);
+
+            var verwBtn = document.createElement('button');
+            verwBtn.type = 'button';
+            verwBtn.className = 'btn btn-secondary btn-sm';
+            verwBtn.textContent = '✕ Verwijderen';
+            verwBtn.addEventListener('click', function() {
+                if (!confirm('Foto verwijderen?')) return;
+                foto.bestand = '';
+                foto.bestand_origineel = '';
+                delete geCropteFiles[foto.slot];
+                delete origineleFiles[foto.slot];
+                // Wis file-inputs (stabiel — element blijft in DOM, alleen files leeggemaakt).
+                try {
+                    inpCrop.value = '';
+                    inpOrig.value = '';
+                } catch (_) {}
+                previewImg.src = '';
+                previewImg.style.display = 'none';
+                labelSpan.textContent = 'Nog geen foto';
+                slot.style.display = 'none';
+                sync();
+                updateAddKnop();
+                if (typeof updatePreview === 'function') updatePreview();
+            });
+            slot.appendChild(verwBtn);
+
+            return { slot: slot, previewImg: previewImg, labelSpan: labelSpan,
+                     inpCrop: inpCrop, inpOrig: inpOrig, foto: foto };
         }
-        renderFotos();
+
+        var slotElts = [];
+        for (var i = 0; i < MAX_FOTOS; i++) {
+            var elt = bouwSlot(hoofdstuk.fotos[i], i);
+            slotElts.push(elt);
+            fotosWrap.appendChild(elt.slot);
+        }
+
+        // Toon slots met foto, verberg lege.
+        function updateSlotZichtbaarheid() {
+            slotElts.forEach(function(e) {
+                var heeftFoto = !!(e.foto.bestand || geCropteFiles[e.foto.slot]);
+                e.slot.style.display = heeftFoto ? '' : 'none';
+                if (heeftFoto) {
+                    e.labelSpan.textContent = '📎 Foto ' + (slotElts.indexOf(e) + 1);
+                }
+            });
+        }
+        updateSlotZichtbaarheid();
+
         kaart.appendChild(fotosWrap);
+
+        var addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn btn-secondary btn-sm kk-hoofdstuk-foto-toevoegen-knop';
+        addBtn.textContent = '+ Foto toevoegen';
+        function updateAddKnop() {
+            // Aantal zichtbare/gevulde slots
+            var vol = slotElts.filter(function(e) {
+                return !!(e.foto.bestand || geCropteFiles[e.foto.slot]);
+            }).length;
+            addBtn.disabled = vol >= MAX_FOTOS;
+            addBtn.textContent = vol >= MAX_FOTOS
+                ? 'Maximaal ' + MAX_FOTOS + ' foto\'s bereikt'
+                : '+ Foto toevoegen';
+        }
+        addBtn.addEventListener('click', function() {
+            // Zoek eerste hidden slot en klik zijn file-input.
+            for (var i = 0; i < slotElts.length; i++) {
+                var e = slotElts[i];
+                var heeftFoto = !!(e.foto.bestand || geCropteFiles[e.foto.slot]);
+                if (!heeftFoto) {
+                    e.inpCrop.click();
+                    return;
+                }
+            }
+        });
+        kaart.appendChild(addBtn);
+        updateAddKnop();
+
+        // Expose: cropper-callback zet crop-File hier neer + toont slot.
+        hoofdstuk.__setCropResultaat = function(fotoSlot, blob, origDataUrl) {
+            var e = slotElts.filter(function(x) { return x.foto.slot === fotoSlot; })[0];
+            if (!e) return;
+            try {
+                var dt = new DataTransfer();
+                dt.items.add(new File([blob], 'crop.jpg', { type: 'image/jpeg' }));
+                e.inpCrop.files = dt.files;
+                geCropteFiles[fotoSlot] = new File([blob], 'crop.jpg', { type: 'image/jpeg' });
+            } catch (_) {}
+            // Bewaar origineel als data-URL nog niet als File in cache staat.
+            if (origDataUrl && !origineleFiles[fotoSlot]) {
+                fetch(origDataUrl).then(function(r) { return r.blob(); }).then(function(origBlob) {
+                    try {
+                        var dt2 = new DataTransfer();
+                        dt2.items.add(new File([origBlob], 'orig.jpg', { type: 'image/jpeg' }));
+                        e.inpOrig.files = dt2.files;
+                        origineleFiles[fotoSlot] = new File([origBlob], 'orig.jpg', { type: 'image/jpeg' });
+                    } catch (_) {}
+                }).catch(function() {});
+            }
+            // Preview updaten.
+            var blobUrl = URL.createObjectURL(blob);
+            e.previewImg.src = blobUrl;
+            e.previewImg.style.display = '';
+            e.slot.style.display = '';
+            e.labelSpan.textContent = '📎 Foto ' + (slotElts.indexOf(e) + 1);
+            sync();
+            updateAddKnop();
+            if (typeof updatePreview === 'function') updatePreview();
+        };
 
         // Live preview onderaan — toont hoe dit hoofdstuk op de PDF komt.
         var previewWrap = document.createElement('div');
@@ -6841,10 +6936,8 @@ setupCropper({
         // Update-hooks: bij elke wijziging van editor/titel ook preview bijwerken.
         editor.addEventListener('input', updatePreview);
         titelIn.addEventListener('input', updatePreview);
-        // fotosWrap wordt vaak opnieuw gerenderd (foto toevoegen/verwijderen) →
-        // MutationObserver houdt de preview automatisch in sync.
-        var mo = new MutationObserver(updatePreview);
-        mo.observe(fotosWrap, { childList: true, subtree: true, attributes: true });
+        // Foto-mutaties triggeren __setCropResultaat / verwijder-handler die zelf
+        // updatePreview aanroepen. Geen MutationObserver nodig meer.
 
         kaart.appendChild(previewWrap);
         updatePreview();
