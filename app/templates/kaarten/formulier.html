@@ -2782,7 +2782,6 @@
             <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
             <button type="button" class="tab-knop" data-tab="inleiding">Inleiding</button>
             <button type="button" class="tab-knop" data-tab="kernboodschap">Kernboodschap</button>
-            <button type="button" class="tab-knop" data-tab="verdieping">Verdieping</button>
             <button type="button" class="tab-knop" data-tab="evaluatie">Evaluatie</button>
             <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
         </div>
@@ -2892,59 +2891,70 @@
             {{ form.kernboodschap_html(type="hidden", id="kernboodschap-html-hidden") }}
             {% for error in form.kernboodschap_html.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
 
-            {# ---------------- FOTOGALERIJ ---------------- #}
+            {# ---------------- FOTOGALERIJ (rijke editor + cropper) ---------------- #}
             <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Fotogalerij</h3>
             <p class="form-hint">
-                Voeg tot <strong>8</strong> foto's toe met een korte omschrijving. Ze verschijnen als
-                grid onderaan de kenniskaart-PDF — <span id="kennis-galerij-teller">0 / 8</span>.
+                Voeg foto-blokken toe onder de kernboodschap. Per blok kies je zelf 1, 2 of 3
+                foto's naast elkaar (crop per foto: breed / liggend / vierkant / staand), plus
+                een optioneel bijschrift en toelichting.
+                Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> blokken — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
+            </p>
+            <p class="form-hint">
+                💡 <strong>Tip:</strong> vul in het titel-veld het <strong>bijschrift</strong> in dat onder de foto's op de PDF komt. Het toelichting-veld is optioneel — laat leeg als je alleen foto's wilt tonen.
             </p>
 
-            {{ form.kernboodschap_fotos_json(type="hidden", id="kennis-galerij-json") }}
-            <div id="kennis-galerij-lijst"></div>
+            <div id="werkwijze-stappen-lijst"></div>
 
-            <button type="button" id="kennis-galerij-nieuw-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
-                + Foto toevoegen
+            <button type="button" id="werkwijze-nieuwe-stap-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                + Foto-blok toevoegen
             </button>
+
+            {{ form.kernboodschap_fotos_json(type="hidden", id="werkwijze-stappen-json") }}
             {% for error in form.kernboodschap_fotos_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+            {# Cropper-modal voor foto's — één modal die hergebruikt wordt voor elk slot. #}
+            <div id="werkwijze-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
+                <div class="werkwijze-cropper-modal-content">
+                    <h3 style="margin-top:0;">Foto bijsnijden</h3>
+                    <p class="form-hint" id="werkwijze-cropper-uitleg" style="margin-top:0;">
+                        Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
+                    </p>
+                    <div id="werkwijze-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
+                        ⚠️ <strong>Let op:</strong> er staan al andere foto's in dit blok. Kies dezelfde verhouding of snij ze ook opnieuw bij voor een strak resultaat.
+                    </div>
+                    <div class="werkwijze-cropper-orient-keuze" style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="breed">🖼️ Breed</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="liggend">📷 Liggend</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vierkant">🔲 Vierkant</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="staand">📱 Staand</button>
+                    </div>
+                    <div class="werkwijze-cropper-canvas-wrap">
+                        <img id="werkwijze-cropper-img" alt="">
+                    </div>
+                    <div class="cropper-knoppen" style="margin-top: 0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-in">Inzoomen +</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-uit">Uitzoomen −</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="reset">Reset</button>
+                        <span style="flex: 1;"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="links">↺ Linksom</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="rechts">↻ Rechtsom</button>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" data-werkwijze-cropper-actie="annuleer">Annuleren</button>
+                        <button type="button" class="btn btn-primary" data-werkwijze-cropper-actie="bevestig">Bijsnijden &amp; gebruiken</button>
+                    </div>
+                </div>
+            </div>
 
             {% endif %}
 
             <div class="tab-nav-footer">
                 <button type="button" class="btn btn-secondary tab-vorige" data-naar="inleiding">← Vorige</button>
-                <button type="button" class="btn btn-secondary tab-volgende" data-naar="verdieping">Volgende →</button>
-            </div>
-        </div>
-
-        {# ---------------- TAB 4: VERDIEPING ---------------- #}
-        <div class="tab-paneel" data-tab="verdieping">
-            {{ tab_fout_marker(['verdiepende_vragen']) }}
-            <h2 class="form-section-title">Verdieping</h2>
-
-            {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier verdiepende vragen invullen.</p>
-            {% else %}
-
-            <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Verdiepende vragen</h3>
-                <p class="form-hint">Vragen die deelnemers laten nadenken over het onderwerp. Max 10 vragen, elk max 200 tekens.</p>
-                {{ form.verdiepende_vragen(style="display:none", id="verdiepende-vragen-hidden") }}
-                <div class="dynamische-lijst" id="verdiepende-vragen-lijst"
-                     data-hidden="verdiepende-vragen-hidden" data-max="10"
-                     data-invoer="textarea" data-rows="2" data-maxlength="200"
-                     data-placeholder="Bijv. Waarom zou een prio 1-melding voorrang moeten krijgen boven een prio 2?"></div>
-                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="verdiepende-vragen-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
-                {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-            </div>
-
-            {% endif %}
-
-            <div class="tab-nav-footer">
-                <button type="button" class="btn btn-secondary tab-vorige" data-naar="kernboodschap">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="evaluatie">Volgende →</button>
             </div>
         </div>
 
-        {# ---------------- TAB 5: EVALUATIE ---------------- #}
+        {# ---------------- TAB 4: EVALUATIE ---------------- #}
         <div class="tab-paneel" data-tab="evaluatie">
             {{ tab_fout_marker(['evaluatie']) }}
             <h2 class="form-section-title">Evaluatie</h2>
@@ -2965,12 +2975,12 @@
             {% endif %}
 
             <div class="tab-nav-footer">
-                <button type="button" class="btn btn-secondary tab-vorige" data-naar="verdieping">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="kernboodschap">← Vorige</button>
                 <button type="button" class="btn btn-secondary tab-volgende" data-naar="achtergrond">Volgende →</button>
             </div>
         </div>
 
-        {# ---------------- TAB 6: ACHTERGROND ---------------- #}
+        {# ---------------- TAB 5: ACHTERGROND ---------------- #}
         <div class="tab-paneel" data-tab="achtergrond">
             <h2 class="form-section-title">Achtergrond</h2>
 
@@ -4859,16 +4869,17 @@ setupCropper({
     });
 })();
 
-/* Sluit het instructie-only script-blok — de werkwijze-editor volgt hier direct
-   maar zit nog steeds in het instructie-blok (kenniskaart heeft een eigen
-   rich-text-editor sinds v0.7.11). */
+/* Sluit het instructie-only script-blok — de werkwijze-editor draait ook
+   voor kenniskaart (v0.7.12): daar wordt hij als fotogalerij ingezet
+   onder de rich-text-editor. WTForms-veldnaam verschilt (kernboodschap_fotos_json)
+   maar de DOM-IDs zijn identiek. */
 </script>
 {% endif %}
 
-{% if kaart_type == 'instructie' %}
+{% if kaart_type == 'instructie' or kaart_type == 'kennis' %}
 <script>
-/* === Werkwijze (fase 4 herontwerp): platte stappen-lijst, layout-eerst, mini-preview.
-   Instructiekaart-specifiek. */
+/* === Werkwijze-editor / kenniskaart-fotogalerij: platte stappen-lijst met
+   layout-eerst, mini-preview en cropper. Gedeeld tussen beide kaarttypes. */
 (function() {
     var hiddenJson    = document.getElementById('werkwijze-stappen-json');
     var lijst         = document.getElementById('werkwijze-stappen-lijst');
@@ -6371,104 +6382,8 @@ setupCropper({
     });
 })();
 
-/* === Fotogalerij (kenniskaart) === */
-(function() {
-    var hidden = document.getElementById('kennis-galerij-json');
-    var lijst = document.getElementById('kennis-galerij-lijst');
-    var nieuwBtn = document.getElementById('kennis-galerij-nieuw-knop');
-    var teller = document.getElementById('kennis-galerij-teller');
-    if (!hidden || !lijst || !nieuwBtn) return;
-
-    var MAX_FOTOS = 8;
-    var BIJSCHRIFT_MAX = 120;
-
-    var data;
-    try { data = JSON.parse(hidden.value || '[]'); } catch (_) { data = []; }
-    if (!Array.isArray(data)) data = [];
-
-    function slotId() {
-        return 'gal_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
-    }
-    function sync() {
-        hidden.value = JSON.stringify(data);
-        if (teller) teller.textContent = data.length + ' / ' + MAX_FOTOS;
-        nieuwBtn.disabled = data.length >= MAX_FOTOS;
-    }
-    function fotoUrlVoor(bestand) {
-        if (!bestand) return '';
-        return '/media/' + bestand;
-    }
-    function render() {
-        lijst.innerHTML = '';
-        data.forEach(function(item, idx) {
-            var rij = document.createElement('div');
-            rij.className = 'kk-galerij-rij';
-
-            var wrap = document.createElement('div');
-            wrap.className = 'kk-galerij-foto-wrap';
-            if (item.bestand) {
-                var img = document.createElement('img');
-                img.src = fotoUrlVoor(item.bestand);
-                img.alt = '';
-                wrap.appendChild(img);
-            } else {
-                var lbl = document.createElement('span');
-                lbl.className = 'kk-galerij-foto-wrap-label';
-                lbl.textContent = 'nog geen foto';
-                wrap.appendChild(lbl);
-            }
-
-            var invoer = document.createElement('div');
-            invoer.className = 'kk-galerij-invoer';
-
-            var fileIn = document.createElement('input');
-            fileIn.type = 'file';
-            fileIn.accept = 'image/*';
-            fileIn.name = 'kennis_galerij_foto_' + item.slot;
-            fileIn.style.marginBottom = '0.5rem';
-            fileIn.addEventListener('change', function() {
-                if (!fileIn.files || !fileIn.files[0]) return;
-                // Preview lokaal — server slaat op bij submit.
-                var url = URL.createObjectURL(fileIn.files[0]);
-                wrap.innerHTML = '<img src="' + url + '" alt="">';
-            });
-            invoer.appendChild(fileIn);
-
-            var txt = document.createElement('input');
-            txt.type = 'text';
-            txt.maxLength = BIJSCHRIFT_MAX;
-            txt.placeholder = 'Bijschrift (optioneel, max ' + BIJSCHRIFT_MAX + ' tekens)';
-            txt.value = item.bijschrift || '';
-            txt.addEventListener('input', function() { item.bijschrift = txt.value; sync(); });
-            invoer.appendChild(txt);
-
-            var verw = document.createElement('button');
-            verw.type = 'button';
-            verw.className = 'kk-galerij-verwijder';
-            verw.title = 'Foto verwijderen';
-            verw.textContent = '✕';
-            verw.addEventListener('click', function() {
-                data.splice(idx, 1);
-                render();
-                sync();
-            });
-
-            rij.appendChild(wrap);
-            rij.appendChild(invoer);
-            rij.appendChild(verw);
-            lijst.appendChild(rij);
-        });
-        sync();
-    }
-
-    nieuwBtn.addEventListener('click', function() {
-        if (data.length >= MAX_FOTOS) return;
-        data.push({ slot: slotId(), bestand: '', bijschrift: '' });
-        render();
-    });
-
-    render();
-})();
+/* Kenniskaart-fotogalerij: sinds v0.7.12 hergebruikt via de werkwijze-editor
+   hierboven (gedeeld met instructiekaart). Geen aparte JS meer nodig. */
 </script>
 {% endif %}
 

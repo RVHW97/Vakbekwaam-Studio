@@ -107,8 +107,7 @@ from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
                                 WERKWIJZE_TEKST_MAX,
-                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX,
-                                KENNIS_GALERIJ_MAX_FOTOS, KENNIS_GALERIJ_BIJSCHRIFT_MAX)
+                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 20 * 1024 * 1024
@@ -432,9 +431,6 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             _add_error('kernboodschap_html',
                         'Vul een kernboodschap in (minstens ~20 tekens tekst).')
             ontbrekend.append('Kernboodschap')
-        if _lijst_min('verdiepende_vragen', 1):
-            _add_error('verdiepende_vragen', 'Voeg minstens 1 verdiepende vraag toe.')
-            ontbrekend.append('Verdiepende vraag')
         if _lijst_min('evaluatie', 1):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
             ontbrekend.append('Evaluatie')
@@ -554,42 +550,6 @@ def verwerk_opdracht_fotos(json_string):
             })
         opdr['fotos'] = nieuwe_fotos
     return json.dumps(opdrachten, ensure_ascii=False)
-
-
-def verwerk_kennis_galerij_fotos(json_string):
-    """Parse kenniskaart-fotogalerij-JSON, upload nieuwe foto's per slot en
-    return bijgewerkte JSON.
-
-    Per foto: {'slot': '<uuid>', 'bestand': '<filename>', 'bijschrift': '...'}
-    File-input: 'kennis_galerij_foto_<slot>' (nieuwe upload, ratio=None).
-    Max KENNIS_GALERIJ_MAX_FOTOS foto's — extra worden afgekapt.
-    """
-    try:
-        fotos = json.loads(json_string or '[]')
-    except (ValueError, TypeError):
-        return json_string or '[]'
-    if not isinstance(fotos, list):
-        return json_string or '[]'
-
-    nieuwe = []
-    for foto in fotos[:KENNIS_GALERIJ_MAX_FOTOS]:
-        if not isinstance(foto, dict):
-            continue
-        slot = (foto.get('slot') or '').strip()
-        bestand = (foto.get('bestand') or '').strip()
-        bijschrift = (foto.get('bijschrift') or '').strip()[:KENNIS_GALERIJ_BIJSCHRIFT_MAX]
-        if slot:
-            upload = request.files.get('kennis_galerij_foto_' + slot)
-            if upload and upload.filename:
-                foto_naam, foto_fout = save_foto(upload, prefix='kennis_gal', ratio=None)
-                if foto_naam:
-                    if bestand:
-                        verwijder_bestand(bestand)
-                    bestand = foto_naam
-                elif foto_fout:
-                    flash(f'Fotogalerij: {foto_fout}', 'warning')
-        nieuwe.append({'slot': slot, 'bestand': bestand, 'bijschrift': bijschrift})
-    return json.dumps(nieuwe, ensure_ascii=False)
 
 
 def verwerk_werkwijze_fotos(json_string):
@@ -877,13 +837,13 @@ def bewerken(kaart_id):
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
 
-    # Kenniskaart-fotogalerij: aparte lijst met foto's + bijschriften (max
-    # KENNIS_GALERIJ_MAX_FOTOS). Nieuwe uploads worden meteen op disk gezet;
-    # verwijderde slots worden ook fysiek opgeruimd.
+    # Kenniskaart-fotogalerij: hergebruikt de werkwijze-editor (dezelfde JSON-
+    # structuur en file-input-conventie werkwijze_foto_<slot>). Server-side
+    # veldnaam blijft kernboodschap_fotos_json — pipe door verwerk_werkwijze_fotos.
     processed_kennis_galerij_json = None
     if request.method == 'POST' and kaart.type == 'kennis':
         _incoming_gal = request.form.get('kernboodschap_fotos_json') or '[]'
-        processed_kennis_galerij_json = verwerk_kennis_galerij_fotos(_incoming_gal)
+        processed_kennis_galerij_json = verwerk_werkwijze_fotos(_incoming_gal)
         if processed_kennis_galerij_json != _incoming_gal:
             _inh = kaart.get_inhoud()
             _inh['kernboodschap_fotos_json'] = processed_kennis_galerij_json

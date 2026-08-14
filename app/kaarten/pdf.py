@@ -207,6 +207,8 @@ def genereer_pdf(kaart):
         # bij opslaan (bleach); hier wordt hij direct in de PDF gerenderd.
         kernboodschap_html = inhoud.get('kernboodschap_html') or ''
 
+        # Fotogalerij (v0.7.12): identieke JSON-vorm als werkwijze_stappen_json —
+        # lijst van blokken met {titel, tekst, fotos: [{bestand, ...}], foto_orientatie}.
         try:
             kennis_galerij = json.loads(inhoud.get('kernboodschap_fotos_json') or '[]')
             if not isinstance(kennis_galerij, list):
@@ -214,16 +216,18 @@ def genereer_pdf(kaart):
         except (ValueError, TypeError):
             kennis_galerij = []
 
-        # Foto-paden absoluut maken zodat WeasyPrint ze kan laden.
-        for foto in kennis_galerij:
-            if not isinstance(foto, dict):
+        for blok in kennis_galerij:
+            if not isinstance(blok, dict):
                 continue
-            bestand = (foto.get('bestand') or '').strip()
-            if bestand:
-                pad = os.path.join(upload_folder, bestand)
-                foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
-            else:
-                foto['pad'] = None
+            for foto in (blok.get('fotos') or []):
+                if not isinstance(foto, dict):
+                    continue
+                bestand = (foto.get('bestand') or '').strip()
+                if bestand:
+                    pad = os.path.join(upload_folder, bestand)
+                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+                else:
+                    foto['pad'] = None
 
         # Doelgroep-tekst: dropdown-keuze of vrije tekst bij 'anders'.
         _dg_keuzes = dict(DOELGROEP_KEUZES)
@@ -233,11 +237,11 @@ def genereer_pdf(kaart):
         else:
             doelgroep_tekst = _dg_keuzes.get(_dg_val, '') if _dg_val else ''
 
-        # Verdiepende vragen + evaluatie: regel-per-punt in het textarea.
+        # Evaluatie: regel-per-punt in het textarea (verdiepende vragen zijn
+        # sinds v0.7.12 uit de kenniskaart verwijderd).
         def _lijst_uit_tekst(veld):
             ruw = (inhoud.get(veld) or '').strip()
             return [r.strip() for r in ruw.split('\n') if r.strip()]
-        verdiepende_vragen = _lijst_uit_tekst('verdiepende_vragen')
         evaluatie_punten = _lijst_uit_tekst('evaluatie')
 
         # Gekoppelde QR-codes uit de bank (dezelfde tabel als instructie/opdracht).
@@ -257,7 +261,6 @@ def genereer_pdf(kaart):
                                       doelgroep_tekst=doelgroep_tekst,
                                       kernboodschap_html=kernboodschap_html,
                                       kennis_galerij=kennis_galerij,
-                                      verdiepende_vragen=verdiepende_vragen,
                                       evaluatie_punten=evaluatie_punten,
                                       kennis_qrs=kennis_qrs,
                                       header_foto_pad=header_foto_pad,

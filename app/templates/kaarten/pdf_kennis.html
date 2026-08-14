@@ -202,34 +202,54 @@
         background: #F0EFEC; text-align: left; font-weight: 700; color: #1B2A4A;
     }
 
-    /* === KK: Fotogalerij === 2-koloms grid, elk foto met kort bijschrift. */
-    .kk-galerij {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4mm;
-        margin-top: 2mm;
-    }
-    .kk-galerij-cel {
+    /* === KK: Fotogalerij === Rijke variant sinds v0.7.12: elk blok kan 1-3
+       foto's naast elkaar tonen (layouts B/C/D uit werkwijze-editor), met een
+       optioneel bijschrift eronder. Geen chevron-titel — de tekst leeft in de
+       rich-text-editor hierboven, deze sectie draait om beeld. */
+    .kk-galerij-blok {
+        margin: 4mm 0;
         page-break-inside: avoid;
         break-inside: avoid;
+        display: block;
     }
+    .kk-galerij-blok:first-child { margin-top: 0; }
+    .kk-galerij-fotorij {
+        display: grid;
+        gap: 3mm;
+    }
+    .kk-galerij-fotorij--1 { grid-template-columns: 1fr; }
+    .kk-galerij-fotorij--2 { grid-template-columns: 1fr 1fr; }
+    .kk-galerij-fotorij--3 { grid-template-columns: 1fr 1fr 1fr; }
     .kk-galerij-foto {
-        width: 100%;
-        height: 60mm;
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #F5F5F1;
+        box-sizing: border-box;
     }
     .kk-galerij-foto img {
         max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
     }
+    /* Standaard-hoogtes per aantal foto's — één grote is hoger dan een strip. */
+    .kk-galerij-fotorij--1 .kk-galerij-foto { height: 75mm; }
+    .kk-galerij-fotorij--2 .kk-galerij-foto,
+    .kk-galerij-fotorij--3 .kk-galerij-foto { height: 55mm; }
+    /* Staand-varianten: minder breed maar hoger. */
+    .kk-galerij-fotorij[data-foto-orientatie="staand"] .kk-galerij-foto { height: 85mm; }
     .kk-galerij-bijschrift {
-        font-size: 8.5pt;
-        color: #444;
-        margin-top: 1mm;
+        font-size: 9pt;
+        color: #1B2A4A;
+        margin-top: 1.5mm;
         line-height: 1.35;
+        font-style: italic;
+    }
+    .kk-galerij-toelichting {
+        font-size: 9pt;
+        color: #1A1A1A;
+        margin-top: 1mm;
+        line-height: 1.45;
+        white-space: pre-wrap;
     }
 
     /* === KK: Verdiepende vragen + Evaluatie (bullet-lijsten) === */
@@ -351,40 +371,37 @@
 </section>
 {% endif %}
 
-{# ==================== FOTOGALERIJ ==================== #}
+{# ==================== FOTOGALERIJ ====================
+    Elk blok in kennis_galerij komt uit de werkwijze-editor: {titel, tekst,
+    fotos: [...], foto_orientatie}. In de PDF vertaal je aantal-gevulde-foto's
+    naar 1/2/3-koloms strip; titel wordt bijschrift onder de foto's, tekst
+    (optioneel) als toelichting eronder. #}
 {% if kennis_galerij %}
 <section class="pdf-sectie">
     <div class="pdf-sectie-titel">Fotogalerij</div>
     <div class="pdf-sectie-inhoud">
-        <div class="kk-galerij">
-            {% for foto in kennis_galerij %}
-            {% if foto.pad %}
-            <div class="kk-galerij-cel">
-                <div class="kk-galerij-foto"><img src="{{ foto.pad }}" alt=""></div>
-                {% if foto.bijschrift %}
-                <div class="kk-galerij-bijschrift">{{ foto.bijschrift }}</div>
-                {% endif %}
+        {% for blok in kennis_galerij %}
+        {% set fotos = blok.fotos or [] %}
+        {% set gevuld = fotos | selectattr('pad') | list %}
+        {% set n = gevuld | length %}
+        {% if n > 0 %}
+        {% set kols = 3 if n >= 3 else n %}
+        {% set foto_orient = blok.foto_orientatie or 'liggend' %}
+        <div class="kk-galerij-blok">
+            <div class="kk-galerij-fotorij kk-galerij-fotorij--{{ kols }}" data-foto-orientatie="{{ foto_orient }}">
+                {% for f in gevuld[:kols] %}
+                <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
+                {% endfor %}
             </div>
+            {% if blok.titel %}
+            <div class="kk-galerij-bijschrift">{{ blok.titel }}</div>
             {% endif %}
-            {% endfor %}
+            {% if blok.tekst %}
+            <div class="kk-galerij-toelichting">{{ blok.tekst }}</div>
+            {% endif %}
         </div>
-    </div>
-</section>
-{% endif %}
-
-{# ==================== VERDIEPENDE VRAGEN ==================== #}
-{% if verdiepende_vragen %}
-<section class="pdf-sectie">
-    <div class="pdf-sectie-titel">Verdiepende vragen</div>
-    <div class="pdf-sectie-inhoud">
-        <ul class="kk-punt-lijst">
-            {% for punt in verdiepende_vragen %}
-            <li class="kk-punt-item">
-                <span class="kk-punt-bullet">●</span>
-                <span class="kk-punt-tekst">{{ punt }}</span>
-            </li>
-            {% endfor %}
-        </ul>
+        {% endif %}
+        {% endfor %}
     </div>
 </section>
 {% endif %}

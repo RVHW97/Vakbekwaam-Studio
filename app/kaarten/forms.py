@@ -266,17 +266,15 @@ class KenniskaartForm(FlaskForm):
     # H3/H4, ul/ol, tabel, 3 kleuren). Server-side gesanitized met bleach.
     # Grote limiet omdat een kenniskaart een echte uitleg mag zijn (max ~20 A4-alinea's).
     kernboodschap_html = StringField('Kernboodschap', validators=[Optional(), Length(max=50000)])
-    # Fotogalerij — aparte lijst met foto's + bijschriften, wordt onder de tekst
-    # gerenderd in de PDF (2-koloms grid). Max 8 foto's.
+    # Fotogalerij — rijkere editor (hergebruikt werkwijze-editor via gedeelde
+    # DOM-IDs). JSON-structuur is identiek aan werkwijze_stappen_json:
+    #   [{"id": "<uuid>", "layout": "A|B|C|D", "titel": "<bijschrift>",
+    #     "tekst": "<optionele toelichting>",
+    #     "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...]}]
+    # Op de PDF wordt titel als bijschrift onder de foto's gerenderd.
     kernboodschap_fotos_json = StringField('Fotogalerij', validators=[Optional()])
-    verdiepende_vragen = TextAreaField('Verdiepende vragen', validators=[Optional(), Length(max=3000)])
     evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
     submit = SubmitField('Opslaan als concept')
-
-
-# Max aantal foto's in de kenniskaart-fotogalerij.
-KENNIS_GALERIJ_MAX_FOTOS = 8
-KENNIS_GALERIJ_BIJSCHRIFT_MAX = 120
 
 
 FORMULIEREN = {
@@ -322,7 +320,7 @@ INHOUD_VELDEN = {
                  'leerdoel',
                  'kernboodschap_html',
                  'kernboodschap_fotos_json',
-                 'verdiepende_vragen', 'evaluatie'],
+                 'evaluatie'],
 }
 
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).
