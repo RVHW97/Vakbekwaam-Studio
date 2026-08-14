@@ -203,10 +203,25 @@
     }
 
     /* === KK: Fotogalerij per hoofdstuk === Sinds v0.7.14: elk hoofdstuk kan
-       foto's onder of naast de tekst plaatsen. */
+       foto's onder of naast de tekst plaatsen.
+
+       Fix v0.7.16: page-break-inside op de fotorij én op elke fotocel — anders
+       liep het grijze achtergrondvlak van .kk-galerij-foto over de paginarand
+       heen als een sectie te lang werd. */
+    /* Block-wrapper rond de grid: page-break-inside: avoid werkt betrouwbaarder
+       op display:block dan op display:grid (CLAUDE.md-regel). */
+    .kk-galerij-blok {
+        display: block;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-top: 3mm;
+    }
+    .kk-galerij-blok:first-child { margin-top: 0; }
     .kk-galerij-fotorij {
         display: grid;
         gap: 3mm;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
     .kk-galerij-fotorij--1 { grid-template-columns: 1fr; }
     .kk-galerij-fotorij--2 { grid-template-columns: 1fr 1fr; }
@@ -218,6 +233,8 @@
         justify-content: center;
         background: #F5F5F1;
         box-sizing: border-box;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
     .kk-galerij-foto img {
         max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
@@ -235,6 +252,8 @@
         grid-template-columns: 1.4fr 1fr;
         gap: 5mm;
         align-items: start;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
     .kk-hoofdstuk-naast .kk-galerij-foto { height: 65mm; }
     .kk-hoofdstuk-naast[data-foto-orientatie="staand"] {
@@ -382,12 +401,13 @@
         <div class="kk-rich">{{ hoofdstuk.tekst_html | safe }}</div>
         {% endif %}
         {% if n > 0 %}
-        <div class="kk-galerij-fotorij kk-galerij-fotorij--{{ kols }}"
-             data-foto-orientatie="{{ foto_orient }}"
-             style="margin-top: {{ '3mm' if heeft_tekst else '0' }};">
-            {% for f in gevuld[:kols] %}
-            <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
-            {% endfor %}
+        <div class="kk-galerij-blok" style="{% if not heeft_tekst %}margin-top: 0;{% endif %}">
+            <div class="kk-galerij-fotorij kk-galerij-fotorij--{{ kols }}"
+                 data-foto-orientatie="{{ foto_orient }}">
+                {% for f in gevuld[:kols] %}
+                <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
         {% endif %}
