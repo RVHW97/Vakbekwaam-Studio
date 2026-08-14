@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+{% macro stap_tekst(stap) -%}
+{%- set ruwe = stap.tekst or '' -%}
+{%- if stap.tekst_opmaak == 'lijst' and ruwe.strip() -%}
+<ul class="ik-stap-bullets">
+{%- for regel in ruwe.split('\n') -%}
+{%- set r = regel.strip() -%}
+{%- if r %}<li>{{ r }}</li>{% endif -%}
+{%- endfor -%}
+</ul>
+{%- else -%}
+{{ ruwe }}
+{%- endif -%}
+{%- endmacro %}
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>{{ kaart.nummer }} — {{ kaart.naam }}</title>
+<style>
+    /* === FONTS === Lokaal ingebed — geen externe fetch bij PDF-render. */
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_300 }}") format("woff2"); font-weight: 300; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_400 }}") format("woff2"); font-weight: 400; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_400_italic }}") format("woff2"); font-weight: 400; font-style: italic; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_600 }}") format("woff2"); font-weight: 600; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_700 }}") format("woff2"); font-weight: 700; }
+    @font-face { font-family: "Open Sans"; src: url("{{ font_paden.os_800 }}") format("woff2"); font-weight: 800; }
+
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.regular }}") format("truetype"); font-weight: 400; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.italic }}") format("truetype"); font-weight: 400; font-style: italic; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.bold }}") format("truetype"); font-weight: 700; }
+    @font-face { font-family: "Frutiger"; src: url("{{ font_paden.black }}") format("truetype"); font-weight: 900; }
+
+    /* === PAGINA === */
+    @page {
+        size: A4;
+        margin: 18mm 19mm 22mm 15mm;
+        @top-left { content: element(header-rest); }
+        @bottom-left { content: element(page-footer); }
+    }
+    @page :first {
+        margin-top: 42mm;
+        @top-left { content: element(header-first); }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: "Open Sans", sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.55;
+        color: #1A1A1A;
+    }
+    h1, h2, h3, .frutiger { font-family: "Frutiger", "Open Sans", sans-serif; }
+
+    /* === HEADER PAGINA 1 (grote variant) === */
+    .running-header-first { position: running(header-first); width: 210mm; margin-left: -15mm; }
+    .pdf-header-first { position: relative; width: 210mm; height: 40mm; }
+    .pdf-header-first svg { position: absolute; top: 0; left: 0; width: 210mm; height: 40mm; }
+    .pdf-header-first-titel {
+        position: absolute; top: 0; left: 29mm; right: 15mm; height: 23mm; line-height: 23mm;
+        color: #FFFFFF; font-family: "Frutiger", "Open Sans", sans-serif; font-weight: 900;
+        font-size: 14pt; text-transform: uppercase; letter-spacing: 0.5px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pdf-header-first-nummer {
+        position: absolute; top: 23mm; left: 3mm; width: 52mm; height: 15mm; line-height: 15mm;
+        color: #FFFFFF; font-family: "Frutiger", "Open Sans", sans-serif; font-weight: 700;
+        font-size: 11pt; text-align: center; letter-spacing: 0.5px;
+    }
+
+    /* === HEADER PAGINA 2+ (compacte variant) === */
+    .running-header-rest { position: running(header-rest); width: 210mm; margin-left: -15mm; }
+    .pdf-header-rest { position: relative; width: 210mm; height: 14mm; }
+    .pdf-header-rest svg { position: absolute; top: 0; left: 0; width: 210mm; height: 14mm; }
+    .pdf-header-rest-titel {
+        position: absolute; top: 0; left: 70mm; right: 20mm; height: 14mm; line-height: 14mm;
+        color: #FFFFFF; font-family: "Frutiger", "Open Sans", sans-serif; font-weight: 900;
+        font-size: 11pt; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pdf-header-rest-nummer {
+        position: absolute; top: 0; left: 33mm; width: 50mm; height: 8mm; line-height: 8mm;
+        color: #FFFFFF; font-family: "Frutiger", "Open Sans", sans-serif; font-weight: 700;
+        font-size: 8pt; text-align: left; letter-spacing: 0.5px;
+    }
+
+    /* === ZIJBALK === */
+    .pdf-zijbalk { position: fixed; top: -3mm; left: 177.5mm; width: 14.5mm; height: 176mm; }
+    .pdf-zijbalk svg { position: absolute; top: 0; left: 0; width: 14.5mm; height: 176mm; }
+    .pdf-zijbalk-label {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-90deg);
+        color: #FFFFFF; font-family: "Frutiger", "Open Sans", sans-serif; font-weight: 900;
+        font-size: 13pt; letter-spacing: 3px; white-space: nowrap; text-transform: uppercase;
+    }
+
+    /* === FOOTER (running) === */
+    .running-footer { position: running(page-footer); width: 210mm; margin-left: -15mm; }
+    .pdf-footer {
+        background-color: #1B2A4A; height: 16mm; padding: 0 6mm;
+        display: table; width: 100%; color: #FFFFFF; font-family: "Open Sans", sans-serif; font-size: 8pt;
+    }
+    .pdf-footer-cel { display: table-cell; vertical-align: middle; height: 16mm; }
+    .pdf-footer-links { text-align: left; width: 33%; }
+    .pdf-footer-links img { height: 11mm; width: auto; display: block; }
+    .pdf-footer-midden { text-align: center; width: 34%; font-weight: 600; line-height: 1.2; }
+    .pdf-footer-midden .datum { display: block; font-size: 8pt; }
+    .pdf-footer-midden .versie { display: block; font-size: 8pt; font-weight: 700; }
+    .pdf-footer-rechts { text-align: right; width: 33%; line-height: 1; }
+    .pdf-footer-pagina::after { content: "Pagina " counter(page) " van " counter(pages); }
+
+    /* === HEADERFOTO (pagina 1) === */
+    .pdf-headerfoto {
+        width: 204mm; height: 55mm; overflow: hidden; position: relative;
+        margin-left: -12mm; margin-top: -20mm; margin-bottom: 4mm;
+    }
+    .pdf-headerfoto img { width: 204mm; height: 55mm; display: block; }
+    .pdf-headerfoto-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.40); }
+
+    /* === SECTIE-WRAPPER + TITEL === */
+    .pdf-sectie { margin-bottom: 5.5mm; page-break-inside: avoid; break-inside: avoid; display: block; }
+    .pdf-sectie--stappen { page-break-inside: auto; break-inside: auto; }
+    .pdf-sectie-titel {
+        page-break-after: avoid; break-after: avoid;
+        font-family: "Frutiger", "Open Sans", sans-serif; font-size: 10pt; font-weight: 700;
+        color: #1B2A4A; background-color: #F0EFEC;
+        padding: 1.5mm 4mm 1.5mm 6mm; margin-bottom: 2.5mm;
+        border-left: 1.5mm solid {{ kerntaak_kleur }};
+        text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .pdf-sectie-inhoud {
+        font-family: "Open Sans", sans-serif; font-size: 9.5pt; line-height: 1.65;
+        padding: 0 1mm 1mm 1mm; orphans: 3; widows: 3;
+    }
+
+    /* === KK: Inleiding (doelgroep + leerdoel op één rij) === */
+    .kk-inleiding {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+    .kk-inleiding-cel {
+        display: table-cell;
+        vertical-align: top;
+        padding-right: 6mm;
+    }
+    .kk-inleiding-cel:last-child { padding-right: 0; padding-left: 6mm; border-left: 0.4mm solid #E5E2DA; }
+    .kk-inleiding-label {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 8.5pt; font-weight: 700; color: {{ kerntaak_kleur }};
+        text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 1mm;
+    }
+    .kk-inleiding-tekst { font-size: 9.5pt; color: #1A1A1A; white-space: pre-wrap; }
+
+    /* === KK: Kernboodschap-stappen — hergebruikt ik-stap styling === */
+    .ik-stap {
+        background: #FAFAF8;
+        padding: 2mm 5mm 4mm 5mm;
+        margin: 3mm 0;
+        box-sizing: border-box;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        display: block;
+        width: 100%;
+    }
+    .ik-stap-kop { margin: 0 0 0.5mm -8mm; line-height: 0; }
+    .ik-stap-titel-chevron {
+        display: inline-flex; align-items: stretch; width: 78mm; height: 7mm;
+        font-weight: 700; font-size: 10pt; letter-spacing: 0.3px; line-height: 1;
+    }
+    .ik-stap-titel-tekst {
+        background: {{ kerntaak_kleur }}; color: #fff;
+        padding: 0 1mm 0 4mm;
+        display: flex; align-items: center;
+        flex: 1 1 auto; overflow: hidden; white-space: nowrap;
+        margin-right: -0.25mm;
+    }
+    .ik-stap-titel-slant { width: 2mm; height: 7mm; flex: 0 0 auto; display: block; }
+    .ik-stap-tekst { white-space: pre-wrap; font-size: 9.5pt; margin-top: 1mm; color: #1A1A1A; overflow: hidden; }
+    .ik-stap-bullets { list-style: none; padding: 0; margin: 0; }
+    .ik-stap-bullets li {
+        position: relative; padding-left: 4mm; margin-bottom: 0.8mm; line-height: 1.3;
+    }
+    .ik-stap-bullets li::before {
+        content: '●'; position: absolute; left: 0; top: 0;
+        color: {{ kerntaak_kleur }}; font-size: 1em; line-height: 1.3;
+    }
+    .ik-stap-foto {
+        overflow: hidden; display: flex; align-items: center; justify-content: center;
+        box-sizing: border-box;
+    }
+    .ik-stap-foto.leeg { font-style: italic; color: #aaa; font-size: 8pt; }
+    .ik-stap-foto img {
+        max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
+    }
+    .ik-stap-layout-T, .ik-stap-layout-B, .ik-stap-layout-C, .ik-stap-layout-D { width: 100%; }
+    .ik-stap-layout-T { display: block; }
+    .ik-stap-layout-T .ik-stap-tekst { width: 100%; display: block; }
+    .ik-stap-layout-B { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: center; }
+    .ik-stap-layout-B .ik-stap-foto { height: 60mm; }
+    .ik-stap-layout-B .ik-stap-tekst { margin-top: 0; }
+    .ik-stap-layout-D .ik-stap-foto { width: 100%; height: 60mm; margin-top: 2mm; }
+    .ik-stap-layout-C { width: 100%; }
+    .ik-stap-layout-C .ik-stap-tekst { width: 100%; display: block; }
+    .ik-stap-layout-C .ik-stap-fotostrip { display: grid; gap: 3mm; margin-top: 2mm; width: 100%; }
+    .ik-stap-layout-C .ik-stap-foto { height: 45mm; }
+    .ik-stap-layout-B[data-foto-orientatie="staand"] { grid-template-columns: 1.5fr 1fr; }
+    .ik-stap-layout-B[data-foto-orientatie="staand"] .ik-stap-foto { height: 80mm; }
+    .ik-stap-layout-C[data-foto-orientatie="staand"] .ik-stap-foto { height: 65mm; }
+    .ik-stap-layout-D[data-foto-orientatie="staand"] .ik-stap-foto {
+        width: 60mm; height: 80mm; margin-left: auto; margin-right: auto;
+    }
+
+    /* === KK: Verdiepende vragen + Evaluatie (bullet-lijsten) === */
+    .kk-punt-lijst { list-style: none; padding: 0; margin: 0; }
+    .kk-punt-item {
+        padding: 1mm 0; font-size: 9.5pt; color: #1A1A1A;
+        display: flex; align-items: flex-start; gap: 2mm;
+        page-break-inside: avoid; break-inside: avoid;
+    }
+    .kk-punt-bullet {
+        flex: 0 0 auto; font-weight: 700; color: {{ kerntaak_kleur }};
+        line-height: 1; font-size: 11pt;
+    }
+    .kk-punt-tekst { flex: 1; line-height: 1.4; white-space: pre-wrap; }
+
+    /* === KK: Achtergrond (QR-codes) — identiek aan instructiekaart === */
+    .ik-achtergrond-subtitel {
+        font-family: "Frutiger", "Open Sans", sans-serif; font-size: 9pt; font-weight: 700;
+        color: #1B2A4A; text-transform: uppercase; letter-spacing: 0.3px; margin: 2.5mm 0 1.5mm 0;
+    }
+    .ik-qr-rij { display: flex; gap: 4mm; flex-wrap: wrap; margin-top: 1mm; }
+    .ik-qr-blok {
+        flex: 0 0 auto; width: 32mm; text-align: center;
+        page-break-inside: avoid; break-inside: avoid;
+    }
+    .ik-qr-blok img { width: 28mm; height: 28mm; background: #fff; border: 0.3mm solid #ddd; padding: 1mm; }
+    .ik-qr-label { font-size: 8pt; margin-top: 1mm; color: #1B2A4A; font-weight: 700; word-break: break-word; }
+    .ik-qr-cat { font-size: 7pt; color: #888; }
+</style>
+</head>
+<body>
+
+<!-- HEADER PAGINA 1 -->
+<div class="running-header-first">
+    <div class="pdf-header-first">
+        <svg viewBox="0 0 510 94" xmlns="http://www.w3.org/2000/svg">
+            <polygon fill="#1B2A4A" points="18,0 503,0 503,56 151,56 41,56"/>
+            <polygon fill="{{ kerntaak_kleur }}" points="7,0 18,0 41,56 151,56 148,68 141,94 7,94"/>
+        </svg>
+        <div class="pdf-header-first-titel">{{ kaart.naam }}</div>
+        <div class="pdf-header-first-nummer">{{ kaart.nummer }}</div>
+    </div>
+</div>
+
+<!-- HEADER PAGINA 2+ -->
+<div class="running-header-rest">
+    <div class="pdf-header-rest">
+        <svg viewBox="0 0 510 34" xmlns="http://www.w3.org/2000/svg">
+            <polygon fill="#1B2A4A" points="98,0 503,0 503,34 209,34 117,34"/>
+            <polygon fill="{{ kerntaak_kleur }}" points="7,0 165,0 160,20 126,20 7,20"/>
+        </svg>
+        <div class="pdf-header-rest-titel">{{ kaart.naam }}</div>
+        <div class="pdf-header-rest-nummer">{{ kaart.nummer }}</div>
+    </div>
+</div>
+
+<!-- KERNTAAK ZIJBALK -->
+{% if kerntaak_afk %}
+<div class="pdf-zijbalk">
+    <svg viewBox="0 0 14.5 176" xmlns="http://www.w3.org/2000/svg">
+        <polygon fill="{{ kerntaak_kleur }}" points="0,0 14.5,0 14.5,176 0,169"/>
+    </svg>
+    <span class="pdf-zijbalk-label">{{ kerntaak_afk }}</span>
+</div>
+{% endif %}
+
+<!-- RUNNING FOOTER -->
+<div class="running-footer">
+    <div class="pdf-footer">
+        <div class="pdf-footer-cel pdf-footer-links">
+            <img src="{{ logo_wit_pad }}" alt="Brandweer Limburg-Noord">
+        </div>
+        <div class="pdf-footer-cel pdf-footer-midden">
+            <span class="datum">{{ versie_datum_tekst }}</span>
+            <span class="versie">{{ versie_tekst }}</span>
+        </div>
+        <div class="pdf-footer-cel pdf-footer-rechts pdf-footer-pagina"></div>
+    </div>
+</div>
+
+<!-- HEADERFOTO (alleen pagina 1) -->
+{% if header_foto_pad %}
+<div class="pdf-headerfoto">
+    <img src="{{ header_foto_pad }}" alt="">
+    <div class="pdf-headerfoto-overlay"></div>
+</div>
+{% endif %}
+
+{# ==================== INLEIDING (doelgroep + leerdoel) ==================== #}
+{% if doelgroep_tekst or inhoud.leerdoel %}
+<section class="pdf-sectie">
+    <div class="pdf-sectie-titel">Inleiding</div>
+    <div class="pdf-sectie-inhoud">
+        <div class="kk-inleiding">
+            {% if doelgroep_tekst %}
+            <div class="kk-inleiding-cel">
+                <div class="kk-inleiding-label">Doelgroep</div>
+                <div class="kk-inleiding-tekst">{{ doelgroep_tekst }}</div>
+            </div>
+            {% endif %}
+            {% if inhoud.leerdoel %}
+            <div class="kk-inleiding-cel">
+                <div class="kk-inleiding-label">Leerdoel</div>
+                <div class="kk-inleiding-tekst">{{ inhoud.leerdoel }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== KERNBOODSCHAP (stappen) ==================== #}
+{% if kernboodschap_stappen %}
+<section class="pdf-sectie pdf-sectie--stappen">
+    <div class="pdf-sectie-titel">Kernboodschap</div>
+    <div class="pdf-sectie-inhoud">
+        {% for stap in kernboodschap_stappen %}
+        {% set fotos = stap.fotos or [] %}
+        {% set gevulde_fotos = fotos | selectattr('pad') | list %}
+        {% set gevuld_n = gevulde_fotos | length %}
+        {% if gevuld_n == 0 %}
+            {% set layout = 'T' %}
+        {% elif gevuld_n == 1 %}
+            {% set plaatsing = stap.foto_plaatsing or ('onder' if stap.layout == 'D' else 'rechts') %}
+            {% set layout = 'D' if plaatsing == 'onder' else 'B' %}
+        {% else %}
+            {% set layout = 'C' %}
+        {% endif %}
+        {% set strip_cols = gevuld_n if gevuld_n in (2, 3) else 3 %}
+        {% set foto_orient = stap.foto_orientatie or 'liggend' %}
+        <div class="ik-stap ik-stap--{{ layout }}">
+            <div class="ik-stap-kop">
+                <span class="ik-stap-titel-chevron"><span class="ik-stap-titel-tekst">{{ stap.titel or '' }}</span><svg class="ik-stap-titel-slant" viewBox="0 0 2 7" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon fill="{{ kerntaak_kleur }}" points="0,0 2,0 0.25,7"/></svg></span>
+            </div>
+            {% if layout == 'T' %}
+            <div class="ik-stap-layout-T">
+                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
+            </div>
+            {% elif layout == 'B' %}
+            <div class="ik-stap-layout-B" data-foto-orientatie="{{ foto_orient }}">
+                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
+                <div class="ik-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
+            </div>
+            {% elif layout == 'C' %}
+            <div class="ik-stap-layout-C" data-foto-orientatie="{{ foto_orient }}">
+                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
+                <div class="ik-stap-fotostrip" style="grid-template-columns: repeat({{ strip_cols }}, 1fr);">
+                    {% for f in gevulde_fotos[:strip_cols] %}
+                    <div class="ik-stap-foto"><img src="{{ f.pad }}" alt=""></div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif layout == 'D' %}
+            <div class="ik-stap-layout-D" data-foto-orientatie="{{ foto_orient }}">
+                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
+                <div class="ik-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ==================== VERDIEPENDE VRAGEN ==================== #}
+{% if verdiepende_vragen %}
+<section class="pdf-sectie">
+    <div class="pdf-sectie-titel">Verdiepende vragen</div>
+    <div class="pdf-sectie-inhoud">
+        <ul class="kk-punt-lijst">
+            {% for punt in verdiepende_vragen %}
+            <li class="kk-punt-item">
+                <span class="kk-punt-bullet">●</span>
+                <span class="kk-punt-tekst">{{ punt }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== EVALUATIE ==================== #}
+{% if evaluatie_punten %}
+<section class="pdf-sectie">
+    <div class="pdf-sectie-titel">Evaluatie</div>
+    <div class="pdf-sectie-inhoud">
+        <ul class="kk-punt-lijst">
+            {% for punt in evaluatie_punten %}
+            <li class="kk-punt-item">
+                <span class="kk-punt-bullet">●</span>
+                <span class="kk-punt-tekst">{{ punt }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== ACHTERGROND (QR-codes) ==================== #}
+{% if kennis_qrs %}
+<section class="pdf-sectie">
+    <div class="pdf-sectie-titel">Achtergrond</div>
+    <div class="pdf-sectie-inhoud">
+        <div class="ik-achtergrond-subtitel">Meer informatie</div>
+        <div class="ik-qr-rij">
+            {% for q in kennis_qrs %}
+            <div class="ik-qr-blok">
+                <img src="{{ q.data_uri }}" alt="QR">
+                <div class="ik-qr-label">{{ q.naam }}</div>
+                <div class="ik-qr-cat">{{ q.categorie }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+</body>
+</html>

@@ -2625,33 +2625,38 @@
 
     {% elif kaart_type == 'kennis' %}
         {# ============================================================ #}
-        {# KENNISKAART — stap 1 (v0.7.9): minimale tab-structuur.       #}
-        {# Kernboodschap-stappen-editor + rijke lijsten volgen in stap  #}
-        {# 2 (v0.7.10). Voor nu tekstvakken als placeholder zodat de    #}
-        {# volledige flow (opslaan / nummer / bewerken) getest kan.     #}
+        {# KENNISKAART — stap 2 (v0.7.10): rijke editors + achtergrond.  #}
+        {# Structuur: Algemeen / Inleiding / Kernboodschap / Verdieping /#}
+        {# Evaluatie / Achtergrond. De kernboodschap-editor hergebruikt  #}
+        {# de werkwijze-editor via dezelfde IDs (het WTForms-veld heet   #}
+        {# alleen anders — kernboodschap_stappen_json).                  #}
         {# ============================================================ #}
         <div class="tabs-nav" role="tablist">
             <button type="button" class="tab-knop actief" data-tab="algemeen">Algemeen</button>
-            <button type="button" class="tab-knop" data-tab="inhoud">Inhoud</button>
+            <button type="button" class="tab-knop" data-tab="inleiding">Inleiding</button>
+            <button type="button" class="tab-knop" data-tab="kernboodschap">Kernboodschap</button>
+            <button type="button" class="tab-knop" data-tab="verdieping">Verdieping</button>
+            <button type="button" class="tab-knop" data-tab="evaluatie">Evaluatie</button>
+            <button type="button" class="tab-knop" data-tab="achtergrond">Achtergrond</button>
         </div>
 
+        {# ---------------- TAB 1: ALGEMEEN ---------------- #}
         <div class="tab-paneel actief" data-tab="algemeen">
             {{ tab_fout_marker(['naam', 'kerntaak', 'subcategorie_id', 'header_foto']) }}
             {{ render_algemeen() }}
             <div class="tab-nav-footer">
                 <span class="tab-nav-spacer"></span>
-                <button type="button" class="btn btn-secondary tab-volgende" data-naar="inhoud">Volgende →</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="inleiding">Volgende →</button>
             </div>
         </div>
 
-        <div class="tab-paneel" data-tab="inhoud">
-            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'leerdoel',
-                                 'kernboodschap_stappen_json',
-                                 'verdiepende_vragen', 'evaluatie']) }}
-            <h2 class="form-section-title">Inhoud van de kenniskaart</h2>
+        {# ---------------- TAB 2: INLEIDING (doelgroep + leerdoel) ---------------- #}
+        <div class="tab-paneel" data-tab="inleiding">
+            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'leerdoel']) }}
+            <h2 class="form-section-title">Inleiding</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de inhoud invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier doelgroep en leerdoel invullen.</p>
             {% else %}
 
             {# Doelgroep #}
@@ -2686,48 +2691,191 @@
                 </div>
             </div>
 
-            {# Placeholders voor de rijke velden — komen in stap 2 als volwaardige editors #}
-            <div class="form-groep-blok" style="border-left: 4px solid #F59E0B; padding: 0.6rem 0.9rem; background: #FFFBEB; border-radius: 4px;">
-                <p style="margin: 0 0 0.4rem 0; color: #78350F; font-size: 0.9rem;">
-                    <strong>ℹ️ Stap 1 (v0.7.9):</strong> de kernboodschap-stappen-editor, verdiepende vragen en evaluatie zijn onderstaande tekstvakken.
-                    In stap 2 (volgende versie) worden dit dezelfde soort dynamische editors als bij de opdracht- en instructiekaart.
-                </p>
-            </div>
+            {% endif %}
 
-            <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Kernboodschap (stappen)</h3>
-                <p class="form-hint">Tijdelijk als tekstvak — één stap per regel. Wordt in stap 2 een echte editor met foto's per stap.</p>
-                <div class="form-group">
-                    {{ form.kernboodschap_stappen_json(class="form-input form-textarea", rows=6,
-                       placeholder="Stap 1: …\nStap 2: …\nStap 3: …") }}
-                    {% for error in form.kernboodschap_stappen_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                </div>
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="kernboodschap">Volgende →</button>
             </div>
+        </div>
 
-            <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Verdiepende vragen</h3>
-                <p class="form-hint">Punten die deelnemers laten nadenken over het onderwerp — één per regel.</p>
-                <div class="form-group">
-                    {{ form.verdiepende_vragen(class="form-input form-textarea", rows=4,
-                       placeholder="Bv. Waarom zou een prio 1-melding voorrang moeten krijgen boven een prio 2?") }}
-                    {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                </div>
-            </div>
+        {# ---------------- TAB 3: KERNBOODSCHAP (stappen-editor) ---------------- #}
+        <div class="tab-paneel" data-tab="kernboodschap">
+            {{ tab_fout_marker(['kernboodschap_stappen_json']) }}
+            <h2 class="form-section-title">Kernboodschap</h2>
 
-            <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Evaluatie</h3>
-                <p class="form-hint">Punten voor de nabespreking — één per regel.</p>
-                <div class="form-group">
-                    {{ form.evaluatie(class="form-input form-textarea", rows=4,
-                       placeholder="Bv. Wat is het belangrijkste dat je meeneemt uit deze uitleg?") }}
-                    {% for error in form.evaluatie.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de kernboodschap-stappen invullen.</p>
+            {% else %}
+
+            <p class="form-hint">
+                Deel de kernboodschap op in stappen — één stap per kernidee dat je wilt overbrengen.
+                Per stap vul je een titel en uitleg in, en voeg je eventueel foto's toe.
+                Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> stappen — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
+            </p>
+            <p class="form-hint">
+                💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een stap — de volgende foto's binnen die stap volgen automatisch dezelfde verhouding voor een strak eindresultaat.
+            </p>
+
+            <div id="werkwijze-stappen-lijst"></div>
+
+            <button type="button" id="werkwijze-nieuwe-stap-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
+                + Stap toevoegen
+            </button>
+
+            {{ form.kernboodschap_stappen_json(type="hidden", id="werkwijze-stappen-json") }}
+
+            {# Cropper-modal voor werkwijze-foto's — één modal hergebruikt voor elk slot. #}
+            <div id="werkwijze-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
+                <div class="werkwijze-cropper-modal-content">
+                    <h3 style="margin-top:0;">Foto bijsnijden</h3>
+                    <p class="form-hint" id="werkwijze-cropper-uitleg" style="margin-top:0;">
+                        Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
+                    </p>
+                    <div id="werkwijze-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
+                        ⚠️ <strong>Let op:</strong> er staan al andere foto's in deze stap. Als je hier een andere verhouding kiest, snij die dan ook even opnieuw bij zodat alle foto's dezelfde verhouding hebben.
+                    </div>
+                    <div class="werkwijze-cropper-orient-keuze" style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="breed">🖼️ Breed</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="liggend">📷 Liggend</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="vierkant">🔲 Vierkant</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="staand">📱 Staand</button>
+                    </div>
+                    <div class="werkwijze-cropper-canvas-wrap">
+                        <img id="werkwijze-cropper-img" alt="">
+                    </div>
+                    <div class="cropper-knoppen" style="margin-top: 0.75rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-in">Inzoomen +</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="zoom-uit">Uitzoomen −</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="reset">Reset</button>
+                        <span style="flex: 1;"></span>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="links">↺ Linksom</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-actie="rechts">↻ Rechtsom</button>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" data-werkwijze-cropper-actie="annuleer">Annuleren</button>
+                        <button type="button" class="btn btn-primary" data-werkwijze-cropper-actie="bevestig">Bijsnijden &amp; gebruiken</button>
+                    </div>
                 </div>
             </div>
 
             {% endif %}
 
             <div class="tab-nav-footer">
-                <button type="button" class="btn btn-secondary tab-vorige" data-naar="algemeen">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="inleiding">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="verdieping">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 4: VERDIEPING ---------------- #}
+        <div class="tab-paneel" data-tab="verdieping">
+            {{ tab_fout_marker(['verdiepende_vragen']) }}
+            <h2 class="form-section-title">Verdieping</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier verdiepende vragen invullen.</p>
+            {% else %}
+
+            <div class="form-groep-blok">
+                <h3 class="form-groep-titel">Verdiepende vragen</h3>
+                <p class="form-hint">Vragen die deelnemers laten nadenken over het onderwerp. Max 10 vragen, elk max 200 tekens.</p>
+                {{ form.verdiepende_vragen(style="display:none", id="verdiepende-vragen-hidden") }}
+                <div class="dynamische-lijst" id="verdiepende-vragen-lijst"
+                     data-hidden="verdiepende-vragen-hidden" data-max="10"
+                     data-invoer="textarea" data-rows="2" data-maxlength="200"
+                     data-placeholder="Bijv. Waarom zou een prio 1-melding voorrang moeten krijgen boven een prio 2?"></div>
+                <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="verdiepende-vragen-lijst" style="margin-top: 0.5rem;">+ Vraag toevoegen</button>
+                {% for error in form.verdiepende_vragen.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            </div>
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="kernboodschap">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="evaluatie">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 5: EVALUATIE ---------------- #}
+        <div class="tab-paneel" data-tab="evaluatie">
+            {{ tab_fout_marker(['evaluatie']) }}
+            <h2 class="form-section-title">Evaluatie</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de evaluatie invullen.</p>
+            {% else %}
+
+            <p class="form-hint">Punten voor de nabespreking. Max 10 punten, elk max 200 tekens.</p>
+            {{ form.evaluatie(style="display:none", id="evaluatie-opdracht-hidden") }}
+            <div class="dynamische-lijst" id="evaluatie-opdracht-lijst"
+                 data-hidden="evaluatie-opdracht-hidden" data-max="10"
+                 data-invoer="textarea" data-rows="2" data-maxlength="200"
+                 data-placeholder="Bijv. Wat is het belangrijkste dat je meeneemt uit deze uitleg?"></div>
+            <button type="button" class="btn btn-secondary btn-sm dynamische-lijst-toevoegen" data-lijst="evaluatie-opdracht-lijst" style="margin-top: 0.5rem;">+ Punt toevoegen</button>
+            {% for error in form.evaluatie.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="verdieping">← Vorige</button>
+                <button type="button" class="btn btn-secondary tab-volgende" data-naar="achtergrond">Volgende →</button>
+            </div>
+        </div>
+
+        {# ---------------- TAB 6: ACHTERGROND ---------------- #}
+        <div class="tab-paneel" data-tab="achtergrond">
+            <h2 class="form-section-title">Achtergrond</h2>
+
+            {% if not (bewerken and kaart) %}
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier QR-codes koppelen.</p>
+            {% else %}
+
+            {# === QR-codes uit de bank === #}
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">QR-codes</h3>
+            <p class="form-hint">Koppel QR-codes uit de QR-bank. Op de PDF verschijnen ze onderaan als "Meer informatie". Maximaal {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} koppelingen.</p>
+
+            {% if instructie_qr_links %}
+            <ul style="list-style:none; padding:0; margin: 0 0 0.75rem 0;">
+                {% for link in instructie_qr_links %}
+                <li class="dynamische-lijst-item" style="background: #f8f8f8; padding: 0.4rem 0.6rem; border-radius: 4px; margin-bottom: 0.3rem;">
+                    <span class="badge" style="background:#1B2A4A; color:#fff;">{{ link.qr_code.categorie_naam }}</span>
+                    <strong>{{ link.qr_code.slug }}</strong>
+                    <span style="flex:1;">{{ link.qr_code.naam }}</span>
+                    <button type="button" class="btn-verwijder instructie-actie-knop" title="QR-koppeling verwijderen"
+                            data-instructie-url="{{ url_for('kaarten.instructie_qr_link_verwijderen', kaart_id=kaart.id, link_id=link.id) }}">✕</button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="form-hint" style="font-style:italic; margin-bottom: 0.75rem;">Nog geen QR-codes gekoppeld.</p>
+            {% endif %}
+
+            {% if instructie_beschikbare_qrs_per_categorie and instructie_qr_links|length < INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <div class="instructie-koppel-blok koppel-form"
+                 data-instructie-url="{{ url_for('kaarten.instructie_qr_link_toevoegen', kaart_id=kaart.id) }}"
+                 style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <select name="qr_id" class="form-input form-select" style="flex:1; min-width:220px;">
+                    <option value="">— kies een QR-code uit de bank —</option>
+                    {% for cat_key, blok in instructie_beschikbare_qrs_per_categorie.items() %}
+                    <optgroup label="{{ blok.naam }}">
+                        {% for q in blok.qrs %}
+                        <option value="{{ q.id }}">{{ q.slug }} — {{ q.naam }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm instructie-actie-knop" data-instructie-veld-blok>+ Koppelen</button>
+            </div>
+            {% elif instructie_qr_links|length >= INSTRUCTIE_MAX_QR_KOPPELINGEN %}
+            <p class="form-hint" style="color:#b6463d;">Maximum van {{ INSTRUCTIE_MAX_QR_KOPPELINGEN }} QR-koppelingen bereikt.</p>
+            {% else %}
+            <p class="form-hint">Geen beschikbare QR-codes meer (of maak er eerst een aan via het QR-codes-menu).</p>
+            {% endif %}
+
+            {% endif %}
+
+            <div class="tab-nav-footer">
+                <button type="button" class="btn btn-secondary tab-vorige" data-naar="evaluatie">← Vorige</button>
                 <span class="tab-nav-spacer"></span>
             </div>
         </div>
@@ -4563,7 +4711,16 @@ setupCropper({
     });
 })();
 
-/* === Werkwijze (fase 4 herontwerp): platte stappen-lijst, layout-eerst, mini-preview === */
+/* Sluit het instructie-only script-blok — de werkwijze-editor draait ook
+   voor kenniskaart (dezelfde IDs, andere WTForms-veldnaam). */
+</script>
+{% endif %}
+
+{% if kaart_type == 'instructie' or kaart_type == 'kennis' %}
+<script>
+/* === Werkwijze (fase 4 herontwerp): platte stappen-lijst, layout-eerst, mini-preview.
+   Gedeeld tussen instructiekaart (werkwijze_stappen_json) en kenniskaart
+   (kernboodschap_stappen_json) — beide velden krijgen id="werkwijze-stappen-json". */
 (function() {
     var hiddenJson    = document.getElementById('werkwijze-stappen-json');
     var lijst         = document.getElementById('werkwijze-stappen-lijst');
@@ -5757,6 +5914,12 @@ setupCropper({
     }
 })();
 
+/* Sluit werkwijze-editor-blok; markers-editor is weer instructie-only. */
+</script>
+{% endif %}
+
+{% if kaart_type == 'instructie' %}
+<script>
 /* === Productfoto-markers: klik om toe te voegen, slepen, verwijderen, hernummeren === */
 (function() {
     var canvas = document.getElementById('productfoto-canvas');
@@ -5914,10 +6077,10 @@ setupCropper({
 {% endif %}
 
 {# ============================================================ #}
-{# Instructie/opdrachtkaart-achtergrond: QR-koppel-knoppen       #}
+{# Instructie/opdracht/kennis-achtergrond: QR-koppel-knoppen     #}
 {# (fetch + reload, geen nested form) — gedeeld tussen types.    #}
 {# ============================================================ #}
-{% if kaart_type == 'instructie' or kaart_type == 'opdracht' %}
+{% if kaart_type == 'instructie' or kaart_type == 'opdracht' or kaart_type == 'kennis' %}
 <script>
 (function() {
     var knoppen = document.querySelectorAll('.instructie-actie-knop');

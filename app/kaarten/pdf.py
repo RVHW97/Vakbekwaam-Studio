@@ -4,7 +4,7 @@ import os
 from flask import current_app, render_template
 from weasyprint import HTML
 from app.models import KAART_TYPES, KERNTAKEN, kenmerken_kerntaak_label
-from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, VEILIGHEID_MAX_ZINNEN
+from app.kaarten.forms import FORMULIEREN, INHOUD_VELDEN, VEILIGHEID_MAX_ZINNEN, DOELGROEP_KEUZES
 
 
 def _qr_data_uri(qr, met_tekst=False):
@@ -195,6 +195,73 @@ def genereer_pdf(kaart):
                                       header_foto_pad=header_foto_pad,
                                       logo_wit_pad=logo_wit_pad,
                                       kerntaak_kleur=kerntaak_kleur,
+                                      versie_tekst=versie_tekst,
+                                      versie_datum_tekst=versie_datum_tekst,
+                                      font_paden=font_paden)
+        return HTML(string=html_string).write_pdf()
+
+    # === KENNISKAART: A4-staand multi-page layout ===
+    if kaart.type == 'kennis':
+        try:
+            kernboodschap_stappen = json.loads(inhoud.get('kernboodschap_stappen_json') or '[]')
+            if not isinstance(kernboodschap_stappen, list):
+                kernboodschap_stappen = []
+        except (ValueError, TypeError):
+            kernboodschap_stappen = []
+
+        # Foto-paden in kernboodschap-stappen omzetten naar file://.
+        for stap in kernboodschap_stappen:
+            if not isinstance(stap, dict):
+                continue
+            for foto in (stap.get('fotos') or []):
+                if not isinstance(foto, dict):
+                    continue
+                bestand = (foto.get('bestand') or '').strip()
+                if bestand:
+                    pad = os.path.join(upload_folder, bestand)
+                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+                else:
+                    foto['pad'] = None
+
+        # Doelgroep-tekst: dropdown-keuze of vrije tekst bij 'anders'.
+        _dg_keuzes = dict(DOELGROEP_KEUZES)
+        _dg_val = (inhoud.get('doelgroep') or '').strip()
+        if _dg_val == 'anders':
+            doelgroep_tekst = (inhoud.get('doelgroep_anders') or '').strip()
+        else:
+            doelgroep_tekst = _dg_keuzes.get(_dg_val, '') if _dg_val else ''
+
+        # Verdiepende vragen + evaluatie: regel-per-punt in het textarea.
+        def _lijst_uit_tekst(veld):
+            ruw = (inhoud.get(veld) or '').strip()
+            return [r.strip() for r in ruw.split('\n') if r.strip()]
+        verdiepende_vragen = _lijst_uit_tekst('verdiepende_vragen')
+        evaluatie_punten = _lijst_uit_tekst('evaluatie')
+
+        # Gekoppelde QR-codes uit de bank (dezelfde tabel als instructie/opdracht).
+        kennis_qrs = []
+        for link in kaart.get_instructie_qr_links():
+            if link.qr_code is None:
+                continue
+            kennis_qrs.append({
+                'data_uri': _qr_data_uri(link.qr_code),
+                'naam': link.qr_code.naam,
+                'categorie': link.qr_code.categorie_naam,
+            })
+
+        html_string = render_template('kaarten/pdf_kennis.html',
+                                      kaart=kaart,
+                                      inhoud=inhoud,
+                                      doelgroep_tekst=doelgroep_tekst,
+                                      kernboodschap_stappen=kernboodschap_stappen,
+                                      verdiepende_vragen=verdiepende_vragen,
+                                      evaluatie_punten=evaluatie_punten,
+                                      kennis_qrs=kennis_qrs,
+                                      header_foto_pad=header_foto_pad,
+                                      logo_pad=logo_pad,
+                                      logo_wit_pad=logo_wit_pad,
+                                      kerntaak_kleur=kerntaak_kleur,
+                                      kerntaak_afk=kerntaak_afk,
                                       versie_tekst=versie_tekst,
                                       versie_datum_tekst=versie_datum_tekst,
                                       font_paden=font_paden)

@@ -373,9 +373,29 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('leerdoel'):
             _add_error('leerdoel', 'Vul een leerdoel in.')
             ontbrekend.append('Leerdoel')
-        # De rijke velden (kernboodschap-stappen, aandachtspunten, verdieping,
-        # evaluatie) worden pas in stap 2 verplicht — nu zijn ze optioneel
-        # zodat je vroeg kunt experimenteren met het nieuwe kaarttype.
+        # Minstens 1 kernboodschap-stap met tekst/titel/foto verplicht — een
+        # kenniskaart zonder inhoud heeft geen waarde in het PDF.
+        try:
+            kb_stappen = json.loads(request_form.get('kernboodschap_stappen_json') or '[]')
+        except (ValueError, TypeError):
+            kb_stappen = []
+        kb_gevuld = [
+            s for s in kb_stappen
+            if isinstance(s, dict) and (
+                (s.get('titel') or '').strip()
+                or (s.get('tekst') or '').strip()
+                or (s.get('fotos') or [])
+            )
+        ]
+        if len(kb_gevuld) < 1:
+            _add_error('kernboodschap_stappen_json', 'Voeg minstens 1 kernboodschap-stap toe.')
+            ontbrekend.append('Kernboodschap-stap')
+        if _lijst_min('verdiepende_vragen', 1):
+            _add_error('verdiepende_vragen', 'Voeg minstens 1 verdiepende vraag toe.')
+            ontbrekend.append('Verdiepende vraag')
+        if _lijst_min('evaluatie', 1):
+            _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
+            ontbrekend.append('Evaluatie')
 
     return ontbrekend
 
@@ -779,6 +799,21 @@ def bewerken(kaart_id):
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
 
+    # Kernboodschap-foto's (kenniskaart): zelfde patroon als werkwijze. De editor
+    # gebruikt bewust dezelfde IDs (werkwijze-stappen-json / werkwijze-foto-<slot>)
+    # zodat we de JS hoeven te dupliceren — enkel de server-side veldnaam verschilt.
+    processed_kernboodschap_json = None
+    if request.method == 'POST' and kaart.type == 'kennis':
+        _incoming_kb = request.form.get('kernboodschap_stappen_json') or '[]'
+        processed_kernboodschap_json = verwerk_werkwijze_fotos(_incoming_kb)
+        if processed_kernboodschap_json != _incoming_kb:
+            _inh = kaart.get_inhoud()
+            _inh['kernboodschap_stappen_json'] = processed_kernboodschap_json
+            kaart.set_inhoud(_inh)
+            db.session.commit()
+            if hasattr(form, 'kernboodschap_stappen_json'):
+                form.kernboodschap_stappen_json.data = processed_kernboodschap_json
+
     # Opdracht-foto's: idem — bij POST altijd verwerken zodat uploads niet verloren gaan.
     processed_opdracht_json = None
     if request.method == 'POST' and kaart.type == 'opdracht':
@@ -829,6 +864,8 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
+        if processed_kernboodschap_json is not None and 'kernboodschap_stappen_json' in inhoud:
+            inhoud['kernboodschap_stappen_json'] = processed_kernboodschap_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -930,6 +967,18 @@ def bewerken(kaart_id):
                 werkwijze_fout = f'Maximaal {WERKWIJZE_MAX_STAPPEN} stappen toegestaan ({totaal_stappen} geteld).'
                 form.werkwijze_stappen_json.errors = list(form.werkwijze_stappen_json.errors) + [werkwijze_fout]
 
+    # Kenniskaart: idem voor kernboodschap-stappen.
+    if request.method == 'POST' and not is_auto_save and kaart.type == 'kennis':
+        try:
+            kb_data = json.loads(request.form.get('kernboodschap_stappen_json') or '[]')
+        except (ValueError, TypeError):
+            kb_data = []
+        if isinstance(kb_data, list):
+            totaal_kb = len([s for s in kb_data if isinstance(s, dict)])
+            if totaal_kb > WERKWIJZE_MAX_STAPPEN:
+                werkwijze_fout = f'Maximaal {WERKWIJZE_MAX_STAPPEN} kernboodschap-stappen toegestaan ({totaal_kb} geteld).'
+                form.kernboodschap_stappen_json.errors = list(form.kernboodschap_stappen_json.errors) + [werkwijze_fout]
+
     # Instructiekaart-materiaal: elke marker op de productfoto moet een beschrijving hebben.
     markers_fout = None
     if (request.method == 'POST' and not is_auto_save and kaart.type == 'instructie'
@@ -963,6 +1012,8 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
+        if processed_kernboodschap_json is not None and 'kernboodschap_stappen_json' in inhoud:
+            inhoud['kernboodschap_stappen_json'] = processed_kernboodschap_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
@@ -1081,11 +1132,11 @@ def bewerken(kaart_id):
             if rijen:
                 beschikbaar_per_type[type_key] = {'naam': t_info['naam'], 'kaarten': rijen}
 
-    # Instructie- én opdrachtkaart-achtergrond: QR-koppelingen + beschikbare QR-codes uit de bank.
-    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus hij dekt beide types.
+    # Instructie-, opdracht- én kenniskaart-achtergrond: QR-koppelingen + beschikbare QR-codes.
+    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus dekt alle 3 types.
     instructie_qr_links = []
     instructie_beschikbare_qrs_per_categorie = {}
-    if kaart.type in ('instructie', 'opdracht'):
+    if kaart.type in ('instructie', 'opdracht', 'kennis'):
         instructie_qr_links = kaart.get_instructie_qr_links()
         gekoppelde_qr_ids = {r.qr_code_id for r in instructie_qr_links}
         beschikbare_qrs = QRCode.query.filter(
@@ -1385,7 +1436,7 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
 def instructie_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht'):
+    if kaart.type not in ('instructie', 'opdracht', 'kennis'):
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
     if not qr_id:
@@ -1415,7 +1466,7 @@ def instructie_qr_link_toevoegen(kaart_id):
 def instructie_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht'):
+    if kaart.type not in ('instructie', 'opdracht', 'kennis'):
         abort(404)
     link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
     if not link:
@@ -1614,11 +1665,6 @@ def kopieren(kaart_id):
 @login_required
 def download_pdf(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
-    # Kenniskaart-PDF komt in stap 3 (v0.7.10) — voor nu een vriendelijke stub.
-    if kaart.type == 'kennis':
-        flash('De PDF-template voor kenniskaarten wordt in een latere versie gemaakt. '
-              'Voor nu kun je de kaart wel bewerken en opslaan.', 'info')
-        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
     from app.kaarten.pdf import genereer_pdf
     pdf = genereer_pdf(kaart)
     response = make_response(pdf)
