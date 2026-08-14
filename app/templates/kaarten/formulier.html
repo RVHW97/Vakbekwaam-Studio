@@ -1198,6 +1198,120 @@
     }
     .kk-editor th { background: #F0EFEC; text-align: left; font-weight: 700; }
 
+    /* === Kenniskaart-hoofdstukken-editor (v0.7.13) === */
+    .kk-hoofdstuk-kaart {
+        border: 1px solid #D6D2C7;
+        border-radius: 6px;
+        background: #FFF;
+        padding: 0.75rem 0.9rem 1rem 0.9rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .kk-hoofdstuk-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+    }
+    .kk-hoofdstuk-nr {
+        background: #1B2A4A;
+        color: #FFF;
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    .kk-hoofdstuk-titel-input {
+        flex: 1;
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1B2A4A;
+        border: 1px solid #C5C0B4;
+        padding: 0.4rem 0.7rem;
+        border-radius: 3px;
+        background: #FAFAF7;
+    }
+    .kk-hoofdstuk-titel-input:focus {
+        outline: 2px solid #1B2A4A;
+        outline-offset: -2px;
+    }
+    .kk-hoofdstuk-verwijder {
+        background: none;
+        border: 1px solid #E5E2DA;
+        color: #B6463D;
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+        padding: 0.35rem 0.7rem;
+        border-radius: 3px;
+    }
+    .kk-hoofdstuk-verwijder:hover {
+        background: #FBEBEB;
+        border-color: #B6463D;
+    }
+    .kk-hoofdstuk-fotos {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+        padding-top: 0.6rem;
+        border-top: 1px dashed #E5E2DA;
+    }
+    .kk-hoofdstuk-foto-slot {
+        position: relative;
+        width: 140px;
+        height: 105px;
+        background: #F5F5F1;
+        border: 1px solid #D6D2C7;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .kk-hoofdstuk-foto-slot img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .kk-hoofdstuk-foto-acties {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 0.25rem;
+    }
+    .kk-hoofdstuk-foto-actie {
+        background: rgba(255,255,255,0.9);
+        border: 1px solid #C5C0B4;
+        color: #1B2A4A;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .kk-hoofdstuk-foto-actie:hover { background: #FFF; border-color: #1B2A4A; }
+    .kk-hoofdstuk-foto-verwijder { color: #B6463D; font-size: 0.85rem; padding: 0.1rem 0.35rem; }
+    .kk-hoofdstuk-foto-toevoegen {
+        width: 140px;
+        height: 105px;
+        background: #FAFAF7;
+        border: 2px dashed #C5C0B4;
+        border-radius: 4px;
+        color: #666;
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-family: 'Open Sans', sans-serif;
+    }
+    .kk-hoofdstuk-foto-toevoegen:hover {
+        border-color: #1B2A4A;
+        color: #1B2A4A;
+        background: #FFF;
+    }
+
     /* === Kenniskaart-fotogalerij === */
     .kk-galerij-rij {
         display: grid;
@@ -2845,23 +2959,24 @@
             </div>
         </div>
 
-        {# ---------------- TAB 3: KERNBOODSCHAP (rich-text-editor + fotogalerij) ---------------- #}
+        {# ---------------- TAB 3: KERNBOODSCHAP (hoofdstukken-editor) ---------------- #}
         <div class="tab-paneel" data-tab="kernboodschap">
-            {{ tab_fout_marker(['kernboodschap_html', 'kernboodschap_fotos_json']) }}
+            {{ tab_fout_marker(['kernboodschap_hoofdstukken_json']) }}
             <h2 class="form-section-title">Kernboodschap</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de kernboodschap invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier de kernboodschap-hoofdstukken invullen.</p>
             {% else %}
 
             <p class="form-hint">
-                Schrijf hier de uitleg van deze kenniskaart. Gebruik de toolbar voor opsommingen,
-                tabellen, koppen (H3/H4) en beperkte kleuren (huisstijl). Foto's kun je onderaan
-                als aparte fotogalerij toevoegen.
+                Verdeel de kernboodschap over maximaal <strong>5</strong> hoofdstukken. Per hoofdstuk
+                vul je een titel in, dan de uitleg (met opmaak: bold, koppen, opsommingen, tabel,
+                huisstijl-kleuren) en optioneel 1-3 foto's naast elkaar met een cropper.
+                <span id="kk-hoofdstuk-teller">0 / 5</span>.
             </p>
 
-            {# Toolbar — bediening loopt via document.execCommand op de contenteditable. #}
-            <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak">
+            {# Gedeelde toolbar — bedient de laatst-gefocuste editor. #}
+            <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak" id="kk-shared-toolbar">
                 <button type="button" class="kk-tb-knop" data-kk-cmd="bold" title="Vet (Ctrl+B)"><strong>B</strong></button>
                 <button type="button" class="kk-tb-knop" data-kk-cmd="italic" title="Cursief (Ctrl+I)"><em>I</em></button>
                 <span class="kk-tb-scheiding"></span>
@@ -2873,10 +2988,10 @@
                 <button type="button" class="kk-tb-knop" data-kk-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
                 <span class="kk-tb-scheiding"></span>
                 <button type="button" class="kk-tb-knop" data-kk-tabel="invoegen" title="Tabel invoegen (2×2)">▦ Tabel</button>
-                <button type="button" class="kk-tb-knop" data-kk-tabel="rij-toevoegen" title="Rij toevoegen aan huidige tabel">+ Rij</button>
-                <button type="button" class="kk-tb-knop" data-kk-tabel="kolom-toevoegen" title="Kolom toevoegen aan huidige tabel">+ Kolom</button>
-                <button type="button" class="kk-tb-knop" data-kk-tabel="rij-verwijderen" title="Huidige rij verwijderen">− Rij</button>
-                <button type="button" class="kk-tb-knop" data-kk-tabel="kolom-verwijderen" title="Huidige kolom verwijderen">− Kolom</button>
+                <button type="button" class="kk-tb-knop" data-kk-tabel="rij-toevoegen" title="+ Rij">+ Rij</button>
+                <button type="button" class="kk-tb-knop" data-kk-tabel="kolom-toevoegen" title="+ Kolom">+ Kolom</button>
+                <button type="button" class="kk-tb-knop" data-kk-tabel="rij-verwijderen" title="− Rij">− Rij</button>
+                <button type="button" class="kk-tb-knop" data-kk-tabel="kolom-verwijderen" title="− Kolom">− Kolom</button>
                 <span class="kk-tb-scheiding"></span>
                 <button type="button" class="kk-tb-kleur" data-kk-kleur="#000000" style="background:#000000" title="Zwart"></button>
                 <button type="button" class="kk-tb-kleur" data-kk-kleur="#1B2A4A" style="background:#1B2A4A" title="Huisstijl-navy"></button>
@@ -2884,35 +2999,19 @@
                 <span class="kk-tb-scheiding"></span>
                 <button type="button" class="kk-tb-knop" data-kk-cmd="removeFormat" title="Opmaak weghalen">Wis opmaak</button>
             </div>
+            <p class="form-hint" style="margin-top:0.4rem;">💡 De toolbar werkt op de tekst waar je cursor het laatst stond.</p>
 
-            <div id="kernboodschap-editor" class="kk-editor" contenteditable="true"
-                 role="textbox" aria-multiline="true"
-                 data-placeholder="Typ hier de uitleg van deze kenniskaart..."></div>
-            {{ form.kernboodschap_html(type="hidden", id="kernboodschap-html-hidden") }}
-            {% for error in form.kernboodschap_html.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            <div id="kk-hoofdstukken-lijst"></div>
 
-            {# ---------------- FOTOGALERIJ (rijke editor + cropper) ---------------- #}
-            <h3 class="form-groep-titel" style="margin-top: 1.5rem;">Fotogalerij</h3>
-            <p class="form-hint">
-                Voeg foto-blokken toe onder de kernboodschap. Per blok kies je zelf 1, 2 of 3
-                foto's naast elkaar (crop per foto: breed / liggend / vierkant / staand), plus
-                een optioneel bijschrift en toelichting.
-                Maximaal <strong>{{ WERKWIJZE_MAX_STAPPEN }}</strong> blokken — <span id="werkwijze-teller">0 / {{ WERKWIJZE_MAX_STAPPEN }}</span>.
-            </p>
-            <p class="form-hint">
-                💡 <strong>Tip:</strong> vul in het titel-veld het <strong>bijschrift</strong> in dat onder de foto's op de PDF komt. Het toelichting-veld is optioneel — laat leeg als je alleen foto's wilt tonen.
-            </p>
-
-            <div id="werkwijze-stappen-lijst"></div>
-
-            <button type="button" id="werkwijze-nieuwe-stap-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
-                + Foto-blok toevoegen
+            <button type="button" id="kk-hoofdstuk-nieuw-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.75rem;">
+                + Hoofdstuk toevoegen
             </button>
 
-            {{ form.kernboodschap_fotos_json(type="hidden", id="werkwijze-stappen-json") }}
-            {% for error in form.kernboodschap_fotos_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+            {{ form.kernboodschap_hoofdstukken_json(type="hidden", id="kk-hoofdstukken-json") }}
+            {% for error in form.kernboodschap_hoofdstukken_json.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
 
-            {# Cropper-modal voor foto's — één modal die hergebruikt wordt voor elk slot. #}
+            {# Cropper-modal (gedeeld met werkwijze-editor). Zit hier zodat kenniskaart
+               'm ook heeft — de kennis-JS zet 'kennis-actieve-slot' als state. #}
             <div id="werkwijze-cropper-modal" class="werkwijze-cropper-modal" style="display:none;" role="dialog" aria-label="Foto bijsnijden">
                 <div class="werkwijze-cropper-modal-content">
                     <h3 style="margin-top:0;">Foto bijsnijden</h3>
@@ -2920,7 +3019,7 @@
                         Sleep om te kiezen welk deel van de foto in de PDF zichtbaar wordt.
                     </p>
                     <div id="werkwijze-cropper-waarschuwing" style="display:none; margin-bottom:0.75rem; padding: 0.6rem 0.8rem; background:#FEF3C7; border-left: 3px solid #D97706; color:#7C2D12; font-size:0.9rem; border-radius:4px;">
-                        ⚠️ <strong>Let op:</strong> er staan al andere foto's in dit blok. Kies dezelfde verhouding of snij ze ook opnieuw bij voor een strak resultaat.
+                        ⚠️ <strong>Let op:</strong> er staan al andere foto's in dit hoofdstuk. Kies dezelfde verhouding of snij ze ook opnieuw bij voor een strak resultaat.
                     </div>
                     <div class="werkwijze-cropper-orient-keuze" style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
                         <button type="button" class="btn btn-secondary btn-sm" data-werkwijze-cropper-orient="breed">🖼️ Breed</button>
@@ -4869,17 +4968,16 @@ setupCropper({
     });
 })();
 
-/* Sluit het instructie-only script-blok — de werkwijze-editor draait ook
-   voor kenniskaart (v0.7.12): daar wordt hij als fotogalerij ingezet
-   onder de rich-text-editor. WTForms-veldnaam verschilt (kernboodschap_fotos_json)
-   maar de DOM-IDs zijn identiek. */
+/* Sluit het instructie-only script-blok — de kenniskaart heeft sinds v0.7.13
+   een eigen hoofdstukken-editor (verderop) en gebruikt de werkwijze-editor
+   niet meer. */
 </script>
 {% endif %}
 
-{% if kaart_type == 'instructie' or kaart_type == 'kennis' %}
+{% if kaart_type == 'instructie' %}
 <script>
-/* === Werkwijze-editor / kenniskaart-fotogalerij: platte stappen-lijst met
-   layout-eerst, mini-preview en cropper. Gedeeld tussen beide kaarttypes. */
+/* === Werkwijze-editor: platte stappen-lijst met layout-eerst, mini-preview en cropper.
+   Instructiekaart-specifiek. */
 (function() {
     var hiddenJson    = document.getElementById('werkwijze-stappen-json');
     var lijst         = document.getElementById('werkwijze-stappen-lijst');
@@ -6236,67 +6334,132 @@ setupCropper({
 {% endif %}
 
 {# ============================================================ #}
-{# Kenniskaart-specifieke scripts: rich-text editor + galerij     #}
+{# Kenniskaart-specifieke scripts: hoofdstukken-editor (v0.7.13) #}
 {# ============================================================ #}
 {% if kaart_type == 'kennis' %}
 <script>
-/* === Rich-text editor voor kernboodschap ===
-   Contenteditable + toolbar. document.execCommand is deprecated maar wél
-   universeel ondersteund in alle relevante browsers en veruit de simpelste
-   route voor onze beperkte toolbar. Server-side wordt de HTML alsnog gesanitized
-   (bleach) — dus vertrouwen we niet op wat de browser produceert. */
+/* === Kenniskaart-hoofdstukken-editor (v0.7.13) ===
+   Max 5 hoofdstukken, elk met titel + contenteditable rich-text + 1-3 foto's
+   met cropper. Gedeelde toolbar bovenaan werkt op de laatst-gefocuste editor.
+   Cropper hergebruikt de werkwijze-cropper-modal (dezelfde DOM-IDs). */
 (function() {
-    var editor = document.getElementById('kernboodschap-editor');
-    var hidden = document.getElementById('kernboodschap-html-hidden');
-    if (!editor || !hidden) return;
+    var hidden   = document.getElementById('kk-hoofdstukken-json');
+    var lijst    = document.getElementById('kk-hoofdstukken-lijst');
+    var nieuwBtn = document.getElementById('kk-hoofdstuk-nieuw-knop');
+    var teller   = document.getElementById('kk-hoofdstuk-teller');
+    var toolbar  = document.getElementById('kk-shared-toolbar');
+    if (!hidden || !lijst || !nieuwBtn) return;
 
-    // Prefill vanuit hidden input (server-side waarde).
-    var startWaarde = hidden.value || '';
-    if (startWaarde.trim()) {
-        editor.innerHTML = startWaarde;
-    }
+    var MAX_HOOFDSTUKKEN = 5;
+    var MAX_FOTOS = 3;
+    var TITEL_MAX = 80;
 
-    function isLeeg() {
-        var t = (editor.textContent || '').replace(/ |\s/g, '');
-        return t.length === 0;
+    var data;
+    try { data = JSON.parse(hidden.value || '[]'); } catch (_) { data = []; }
+    if (!Array.isArray(data)) data = [];
+
+    var actieveEditor = null;
+    var actieveFotoSlot = null;
+    var cropperInstance = null;
+    var cropperBronBestand = null;
+    var cropperModal = document.getElementById('werkwijze-cropper-modal');
+    var cropperImg  = document.getElementById('werkwijze-cropper-img');
+    var cropperWarn = document.getElementById('werkwijze-cropper-waarschuwing');
+    var CROP_RATIOS = { 'breed': 16/9, 'liggend': 4/3, 'vierkant': 1, 'staand': 3/4 };
+
+    function slotId(prefix) {
+        return (prefix || 'h') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
     }
-    function updatePlaceholder() {
-        editor.dataset.empty = isLeeg() ? 'true' : 'false';
+    function nieuwHoofdstuk() {
+        return { slot: slotId('h'), titel: '', tekst_html: '', fotos: [], foto_orientatie: 'liggend' };
     }
+    function fotoUrlVoor(bestand) { return bestand ? '/media/' + bestand : ''; }
     function sync() {
-        hidden.value = editor.innerHTML;
+        hidden.value = JSON.stringify(data);
+        if (teller) teller.textContent = data.length + ' / ' + MAX_HOOFDSTUKKEN;
+        nieuwBtn.disabled = data.length >= MAX_HOOFDSTUKKEN;
     }
-    editor.addEventListener('input', function() { updatePlaceholder(); sync(); });
-    editor.addEventListener('blur', sync);
-    updatePlaceholder();
-    sync();
 
-    // Toolbar: bold/italic/H3/H4/P/lijsten/removeFormat.
-    document.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
-        btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+    // ==== Cropper (gebruikt de werkwijze-cropper-modal-HTML) ====
+    function openCropper(hoofdstuk, foto, bronDataUrl) {
+        cropperBronBestand = bronDataUrl;
+        actieveFotoSlot = { hoofdstukSlot: hoofdstuk.slot, fotoSlot: foto.slot };
+        var startOrient = hoofdstuk.foto_orientatie || 'liggend';
+        var moetWaarschuwen = (hoofdstuk.fotos || []).some(function(f) {
+            return f.slot !== foto.slot && f.bestand;
+        });
+        if (cropperWarn) cropperWarn.style.display = moetWaarschuwen ? '' : 'none';
+        cropperModal.style.display = 'flex';
+        cropperImg.src = bronDataUrl;
+        cropperImg.onload = function() {
+            if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+            cropperInstance = new Cropper(cropperImg, {
+                viewMode: 1, autoCropArea: 1,
+                aspectRatio: CROP_RATIOS[startOrient],
+                background: false, movable: true, zoomable: true, rotatable: true, scalable: false
+            });
+        };
+    }
+    function sluitCropper() {
+        if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+        cropperModal.style.display = 'none';
+        cropperBronBestand = null;
+        actieveFotoSlot = null;
+    }
+
+    document.querySelectorAll('[data-werkwijze-cropper-orient]').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            editor.focus();
-            var cmd = btn.dataset.kkCmd;
-            var arg = btn.dataset.kkArg || null;
-            try { document.execCommand(cmd, false, arg); } catch (_) {}
-            sync();
+            if (!cropperInstance || !actieveFotoSlot) return;
+            var orient = btn.dataset.werkwijzeCropperOrient;
+            cropperInstance.setAspectRatio(CROP_RATIOS[orient]);
+            var h = data.find(function(x) { return x.slot === actieveFotoSlot.hoofdstukSlot; });
+            if (h) { h.foto_orientatie = orient; sync(); }
+        });
+    });
+    document.querySelectorAll('[data-werkwijze-cropper-actie]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var actie = btn.dataset.werkwijzeCropperActie;
+            if (!cropperInstance) { sluitCropper(); return; }
+            if (actie === 'annuleer') { sluitCropper(); return; }
+            if (actie === 'zoom-in')  { cropperInstance.zoom(0.1); return; }
+            if (actie === 'zoom-uit') { cropperInstance.zoom(-0.1); return; }
+            if (actie === 'reset')    { cropperInstance.reset(); return; }
+            if (actie === 'links')    { cropperInstance.rotate(-90); return; }
+            if (actie === 'rechts')   { cropperInstance.rotate(90); return; }
+            if (actie === 'bevestig' && actieveFotoSlot) {
+                var canvas = cropperInstance.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600 });
+                var slot = actieveFotoSlot.fotoSlot;
+                canvas.toBlob(function(blob) {
+                    if (!blob) return;
+                    var cropIn = document.querySelector('input[name="werkwijze_foto_' + slot + '"]');
+                    if (cropIn) {
+                        var dt = new DataTransfer();
+                        dt.items.add(new File([blob], 'crop.jpg', { type: 'image/jpeg' }));
+                        cropIn.files = dt.files;
+                    }
+                    if (cropperBronBestand) {
+                        fetch(cropperBronBestand).then(function(r) { return r.blob(); }).then(function(origBlob) {
+                            var origIn = document.querySelector('input[name="werkwijze_orig_' + slot + '"]');
+                            if (origIn) {
+                                var dt2 = new DataTransfer();
+                                dt2.items.add(new File([origBlob], 'orig.jpg', { type: 'image/jpeg' }));
+                                origIn.files = dt2.files;
+                            }
+                        }).catch(function() {});
+                    }
+                    var preview = document.querySelector('[data-preview-slot="' + slot + '"]');
+                    if (preview) { preview.src = canvas.toDataURL('image/jpeg'); preview.style.display = ''; }
+                    sync();
+                    sluitCropper();
+                }, 'image/jpeg', 0.9);
+            }
         });
     });
 
-    // Kleuren-swatches — beperkt tot de 3 huisstijl-kleuren (server-side ook gefilterd).
-    document.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
-        btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            editor.focus();
-            try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
-            sync();
-        });
-    });
-
-    // Tabel-acties.
-    function huidigeCel() {
+    // ==== Rich-text helpers voor gedeelde toolbar ====
+    function huidigeCel(editor) {
         var sel = window.getSelection();
         if (!sel || !sel.rangeCount) return null;
         var node = sel.getRangeAt(0).startContainer;
@@ -6310,80 +6473,259 @@ setupCropper({
         var html = '<table><tbody>';
         for (var r = 0; r < rijen; r++) {
             html += '<tr>';
-            for (var c = 0; c < kols; c++) {
-                html += '<td>&nbsp;</td>';
-            }
+            for (var c = 0; c < kols; c++) html += '<td>&nbsp;</td>';
             html += '</tr>';
         }
-        html += '</tbody></table><p>&nbsp;</p>';
-        return html;
+        return html + '</tbody></table><p>&nbsp;</p>';
     }
-    document.querySelectorAll('.kk-tb-knop[data-kk-tabel]').forEach(function(btn) {
-        btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-        btn.addEventListener('click', function(e) {
+
+    // ==== Renderer per hoofdstuk ====
+    function renderHoofdstuk(hoofdstuk, idx) {
+        var kaart = document.createElement('div');
+        kaart.className = 'kk-hoofdstuk-kaart';
+        kaart.dataset.hoofdstukSlot = hoofdstuk.slot;
+
+        var header = document.createElement('div');
+        header.className = 'kk-hoofdstuk-header';
+        var nr = document.createElement('span');
+        nr.className = 'kk-hoofdstuk-nr';
+        nr.textContent = 'Hoofdstuk ' + (idx + 1);
+        header.appendChild(nr);
+
+        var titelIn = document.createElement('input');
+        titelIn.type = 'text';
+        titelIn.maxLength = TITEL_MAX;
+        titelIn.className = 'kk-hoofdstuk-titel-input';
+        titelIn.placeholder = 'Titel van dit hoofdstuk';
+        titelIn.value = hoofdstuk.titel || '';
+        titelIn.addEventListener('input', function() { hoofdstuk.titel = titelIn.value; sync(); });
+        header.appendChild(titelIn);
+
+        var verw = document.createElement('button');
+        verw.type = 'button';
+        verw.className = 'kk-hoofdstuk-verwijder';
+        verw.title = 'Hoofdstuk verwijderen';
+        verw.textContent = '✕';
+        verw.addEventListener('click', function() {
+            if (!confirm('Dit hoofdstuk verwijderen?')) return;
+            data.splice(idx, 1);
+            renderAll();
+        });
+        header.appendChild(verw);
+        kaart.appendChild(header);
+
+        var editor = document.createElement('div');
+        editor.className = 'kk-editor';
+        editor.contentEditable = 'true';
+        editor.setAttribute('role', 'textbox');
+        editor.setAttribute('aria-multiline', 'true');
+        editor.dataset.placeholder = 'Typ hier de uitleg van dit hoofdstuk...';
+        editor.style.minHeight = '150px';
+        editor.style.borderRadius = '4px';
+        if ((hoofdstuk.tekst_html || '').trim()) editor.innerHTML = hoofdstuk.tekst_html;
+        function updateEditorPlaceholder() {
+            var leeg = (editor.textContent || '').replace(/ |\s/g, '').length === 0;
+            editor.dataset.empty = leeg ? 'true' : 'false';
+        }
+        editor.addEventListener('input', function() {
+            hoofdstuk.tekst_html = editor.innerHTML;
+            updateEditorPlaceholder();
+            sync();
+        });
+        editor.addEventListener('focus', function() { actieveEditor = editor; });
+        editor.addEventListener('paste', function(e) {
             e.preventDefault();
-            editor.focus();
-            var actie = btn.dataset.kkTabel;
-            var cel = huidigeCel();
-            if (actie === 'invoegen') {
-                document.execCommand('insertHTML', false, nieuweTabel(2, 2));
-            } else if (!cel) {
-                alert('Zet je cursor eerst in een tabel-cel.');
-            } else if (actie === 'rij-toevoegen') {
-                var rij = cel.parentNode;
-                var kols = rij.children.length;
-                var nieuw = document.createElement('tr');
-                for (var i = 0; i < kols; i++) {
-                    var c = document.createElement('td');
-                    c.innerHTML = '&nbsp;';
-                    nieuw.appendChild(c);
-                }
-                rij.parentNode.insertBefore(nieuw, rij.nextSibling);
-            } else if (actie === 'kolom-toevoegen') {
-                var rij0 = cel.parentNode;
-                var kolIdx = Array.prototype.indexOf.call(rij0.children, cel);
-                var tbl = rij0.closest('table');
-                tbl.querySelectorAll('tr').forEach(function(tr) {
-                    var refCel = tr.children[kolIdx];
-                    var nieuwCel = document.createElement(refCel && refCel.tagName === 'TH' ? 'th' : 'td');
-                    nieuwCel.innerHTML = '&nbsp;';
-                    tr.insertBefore(nieuwCel, refCel ? refCel.nextSibling : null);
+            var tekst = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, tekst);
+        });
+        updateEditorPlaceholder();
+        kaart.appendChild(editor);
+
+        var fotosWrap = document.createElement('div');
+        fotosWrap.className = 'kk-hoofdstuk-fotos';
+        function renderFotos() {
+            fotosWrap.innerHTML = '';
+            (hoofdstuk.fotos || []).forEach(function(foto, fIdx) {
+                var slot = document.createElement('div');
+                slot.className = 'kk-hoofdstuk-foto-slot';
+
+                var img = document.createElement('img');
+                img.dataset.previewSlot = foto.slot;
+                if (foto.bestand) img.src = fotoUrlVoor(foto.bestand);
+                else img.style.display = 'none';
+                slot.appendChild(img);
+
+                var acties = document.createElement('div');
+                acties.className = 'kk-hoofdstuk-foto-acties';
+
+                var recropBtn = document.createElement('button');
+                recropBtn.type = 'button';
+                recropBtn.className = 'kk-hoofdstuk-foto-actie';
+                recropBtn.textContent = '✂ Recrop';
+                recropBtn.addEventListener('click', function() {
+                    var bron = fotoUrlVoor(foto.bestand_origineel || foto.bestand);
+                    if (!bron && img.src) bron = img.src;
+                    if (!bron) { alert('Upload eerst een foto voor je hem kunt bijsnijden.'); return; }
+                    openCropper(hoofdstuk, foto, bron);
                 });
-            } else if (actie === 'rij-verwijderen') {
-                var rijVer = cel.parentNode;
-                var tblVer = rijVer.closest('table');
-                if (tblVer.querySelectorAll('tr').length <= 1) {
-                    tblVer.remove();
-                } else {
-                    rijVer.remove();
-                }
-            } else if (actie === 'kolom-verwijderen') {
-                var rijVK = cel.parentNode;
-                var kolIdxV = Array.prototype.indexOf.call(rijVK.children, cel);
-                var tblVK = rijVK.closest('table');
-                if (rijVK.children.length <= 1) {
-                    tblVK.remove();
-                } else {
-                    tblVK.querySelectorAll('tr').forEach(function(tr) {
+                acties.appendChild(recropBtn);
+
+                var vBtn = document.createElement('button');
+                vBtn.type = 'button';
+                vBtn.className = 'kk-hoofdstuk-foto-actie kk-hoofdstuk-foto-verwijder';
+                vBtn.textContent = '✕';
+                vBtn.title = 'Foto verwijderen';
+                vBtn.addEventListener('click', function() {
+                    hoofdstuk.fotos.splice(fIdx, 1);
+                    sync();
+                    renderFotos();
+                });
+                acties.appendChild(vBtn);
+
+                slot.appendChild(acties);
+
+                var cropIn = document.createElement('input');
+                cropIn.type = 'file';
+                cropIn.name = 'werkwijze_foto_' + foto.slot;
+                cropIn.accept = 'image/*';
+                cropIn.style.display = 'none';
+                slot.appendChild(cropIn);
+
+                var origIn = document.createElement('input');
+                origIn.type = 'file';
+                origIn.name = 'werkwijze_orig_' + foto.slot;
+                origIn.accept = 'image/*';
+                origIn.style.display = 'none';
+                slot.appendChild(origIn);
+
+                fotosWrap.appendChild(slot);
+            });
+
+            if ((hoofdstuk.fotos || []).length < MAX_FOTOS) {
+                var addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'kk-hoofdstuk-foto-toevoegen';
+                addBtn.textContent = '+ Foto';
+                addBtn.addEventListener('click', function() {
+                    var picker = document.createElement('input');
+                    picker.type = 'file';
+                    picker.accept = 'image/*';
+                    picker.addEventListener('change', function() {
+                        if (!picker.files || !picker.files[0]) return;
+                        var reader = new FileReader();
+                        reader.onload = function(ev) {
+                            var nieuwe = { slot: slotId('f'), bestand: '', bestand_origineel: '' };
+                            hoofdstuk.fotos = hoofdstuk.fotos || [];
+                            hoofdstuk.fotos.push(nieuwe);
+                            renderFotos();
+                            setTimeout(function() {
+                                openCropper(hoofdstuk, nieuwe, ev.target.result);
+                            }, 30);
+                        };
+                        reader.readAsDataURL(picker.files[0]);
+                    });
+                    picker.click();
+                });
+                fotosWrap.appendChild(addBtn);
+            }
+        }
+        renderFotos();
+        kaart.appendChild(fotosWrap);
+
+        return kaart;
+    }
+
+    function renderAll() {
+        lijst.innerHTML = '';
+        data.forEach(function(h, i) {
+            lijst.appendChild(renderHoofdstuk(h, i));
+        });
+        sync();
+    }
+
+    nieuwBtn.addEventListener('click', function() {
+        if (data.length >= MAX_HOOFDSTUKKEN) return;
+        data.push(nieuwHoofdstuk());
+        renderAll();
+    });
+
+    // ==== Gedeelde toolbar (werkt op laatst-gefocuste editor) ====
+    if (toolbar) {
+        toolbar.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!actieveEditor) return;
+                actieveEditor.focus();
+                var cmd = btn.dataset.kkCmd;
+                var arg = btn.dataset.kkArg || null;
+                try { document.execCommand(cmd, false, arg); } catch (_) {}
+                actieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+        toolbar.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!actieveEditor) return;
+                actieveEditor.focus();
+                try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
+                actieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+        toolbar.querySelectorAll('.kk-tb-knop[data-kk-tabel]').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!actieveEditor) return;
+                actieveEditor.focus();
+                var actie = btn.dataset.kkTabel;
+                var cel = huidigeCel(actieveEditor);
+                if (actie === 'invoegen') {
+                    document.execCommand('insertHTML', false, nieuweTabel(2, 2));
+                } else if (!cel) {
+                    alert('Zet je cursor eerst in een tabel-cel.');
+                } else if (actie === 'rij-toevoegen') {
+                    var rij = cel.parentNode;
+                    var kols = rij.children.length;
+                    var nieuw = document.createElement('tr');
+                    for (var i = 0; i < kols; i++) {
+                        var c = document.createElement('td');
+                        c.innerHTML = '&nbsp;';
+                        nieuw.appendChild(c);
+                    }
+                    rij.parentNode.insertBefore(nieuw, rij.nextSibling);
+                } else if (actie === 'kolom-toevoegen') {
+                    var rij0 = cel.parentNode;
+                    var kolIdx = Array.prototype.indexOf.call(rij0.children, cel);
+                    var tbl = rij0.closest('table');
+                    tbl.querySelectorAll('tr').forEach(function(tr) {
+                        var refCel = tr.children[kolIdx];
+                        var nieuwCel = document.createElement(refCel && refCel.tagName === 'TH' ? 'th' : 'td');
+                        nieuwCel.innerHTML = '&nbsp;';
+                        tr.insertBefore(nieuwCel, refCel ? refCel.nextSibling : null);
+                    });
+                } else if (actie === 'rij-verwijderen') {
+                    var rijVer = cel.parentNode;
+                    var tblVer = rijVer.closest('table');
+                    if (tblVer.querySelectorAll('tr').length <= 1) tblVer.remove();
+                    else rijVer.remove();
+                } else if (actie === 'kolom-verwijderen') {
+                    var rijVK = cel.parentNode;
+                    var kolIdxV = Array.prototype.indexOf.call(rijVK.children, cel);
+                    var tblVK = rijVK.closest('table');
+                    if (rijVK.children.length <= 1) tblVK.remove();
+                    else tblVK.querySelectorAll('tr').forEach(function(tr) {
                         if (tr.children[kolIdxV]) tr.children[kolIdxV].remove();
                     });
                 }
-            }
-            sync();
-            updatePlaceholder();
+                actieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
+            });
         });
-    });
+    }
 
-    // Plakken → alleen platte tekst (voorkomt Word-junk).
-    editor.addEventListener('paste', function(e) {
-        e.preventDefault();
-        var tekst = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, tekst);
-    });
+    renderAll();
 })();
-
-/* Kenniskaart-fotogalerij: sinds v0.7.12 hergebruikt via de werkwijze-editor
-   hierboven (gedeeld met instructiekaart). Geen aparte JS meer nodig. */
 </script>
 {% endif %}
 

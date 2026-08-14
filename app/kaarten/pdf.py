@@ -202,24 +202,19 @@ def genereer_pdf(kaart):
 
     # === KENNISKAART: A4-staand multi-page layout ===
     if kaart.type == 'kennis':
-        # v0.7.11: één rich-HTML-blok + aparte fotogalerij (vervangt de
-        # stappen-editor van v0.7.10). De HTML is al server-side gesanitized
-        # bij opslaan (bleach); hier wordt hij direct in de PDF gerenderd.
-        kernboodschap_html = inhoud.get('kernboodschap_html') or ''
-
-        # Fotogalerij (v0.7.12): identieke JSON-vorm als werkwijze_stappen_json —
-        # lijst van blokken met {titel, tekst, fotos: [{bestand, ...}], foto_orientatie}.
+        # v0.7.13: max 5 hoofdstukken, elk met titel + rich HTML + 1-3 foto's.
+        # De HTML in elk hoofdstuk is server-side gesanitized bij opslaan.
         try:
-            kennis_galerij = json.loads(inhoud.get('kernboodschap_fotos_json') or '[]')
-            if not isinstance(kennis_galerij, list):
-                kennis_galerij = []
+            kennis_hoofdstukken = json.loads(inhoud.get('kernboodschap_hoofdstukken_json') or '[]')
+            if not isinstance(kennis_hoofdstukken, list):
+                kennis_hoofdstukken = []
         except (ValueError, TypeError):
-            kennis_galerij = []
+            kennis_hoofdstukken = []
 
-        for blok in kennis_galerij:
-            if not isinstance(blok, dict):
+        for hoofdstuk in kennis_hoofdstukken:
+            if not isinstance(hoofdstuk, dict):
                 continue
-            for foto in (blok.get('fotos') or []):
+            for foto in (hoofdstuk.get('fotos') or []):
                 if not isinstance(foto, dict):
                     continue
                 bestand = (foto.get('bestand') or '').strip()
@@ -259,8 +254,7 @@ def genereer_pdf(kaart):
                                       kaart=kaart,
                                       inhoud=inhoud,
                                       doelgroep_tekst=doelgroep_tekst,
-                                      kernboodschap_html=kernboodschap_html,
-                                      kennis_galerij=kennis_galerij,
+                                      kennis_hoofdstukken=kennis_hoofdstukken,
                                       evaluatie_punten=evaluatie_punten,
                                       kennis_qrs=kennis_qrs,
                                       header_foto_pad=header_foto_pad,

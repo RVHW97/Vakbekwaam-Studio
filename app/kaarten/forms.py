@@ -248,11 +248,12 @@ class OpdrachtkaartForm(FlaskForm):
 class KenniskaartForm(FlaskForm):
     """Kenniskaart — achtergrondkennis/theorie voor manschappen.
 
-    v0.7.11 herziening: één groot rich-text-veld voor de kernboodschap
-    (contenteditable + beperkte toolbar) + aparte fotogalerij onderaan.
-    Voorheen (v0.7.10) waren dit meerdere stappen — te 'stap'-achtig voor
-    uitleg-teksten volgens Rebecca. Verdiepende vragen en evaluatie blijven
-    bulletlijsten.
+    v0.7.13: kernboodschap is opgedeeld in max 5 hoofdstukken. Elk hoofdstuk
+    heeft zijn eigen titel + rich-text-veld (bold/italic, H3/H4, lijsten,
+    tabel, huisstijl-kleuren) + 1-3 foto's met cropper. JSON-structuur:
+        [{"slot": "<uuid>", "titel": "...", "tekst_html": "...",
+          "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...],
+          "foto_orientatie": "liggend"}]
     """
     naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
@@ -262,19 +263,17 @@ class KenniskaartForm(FlaskForm):
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
     leerdoel = TextAreaField('Leerdoel', validators=[Optional(), Length(max=500)])
-    # Kernboodschap-HTML — komt uit een contenteditable met toolbar (bold/italic,
-    # H3/H4, ul/ol, tabel, 3 kleuren). Server-side gesanitized met bleach.
-    # Grote limiet omdat een kenniskaart een echte uitleg mag zijn (max ~20 A4-alinea's).
-    kernboodschap_html = StringField('Kernboodschap', validators=[Optional(), Length(max=50000)])
-    # Fotogalerij — rijkere editor (hergebruikt werkwijze-editor via gedeelde
-    # DOM-IDs). JSON-structuur is identiek aan werkwijze_stappen_json:
-    #   [{"id": "<uuid>", "layout": "A|B|C|D", "titel": "<bijschrift>",
-    #     "tekst": "<optionele toelichting>",
-    #     "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...]}]
-    # Op de PDF wordt titel als bijschrift onder de foto's gerenderd.
-    kernboodschap_fotos_json = StringField('Fotogalerij', validators=[Optional()])
+    # Hoofdstukken — max 5. JSON-string van {slot,titel,tekst_html,fotos,foto_orientatie}.
+    kernboodschap_hoofdstukken_json = StringField('Kernboodschap-hoofdstukken',
+                                                   validators=[Optional(), Length(max=200000)])
     evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
     submit = SubmitField('Opslaan als concept')
+
+
+# Kenniskaart: max aantal hoofdstukken + max foto's per hoofdstuk.
+KENNIS_MAX_HOOFDSTUKKEN = 5
+KENNIS_MAX_FOTOS_PER_HOOFDSTUK = 3
+KENNIS_HOOFDSTUK_TITEL_MAX = 80
 
 
 FORMULIEREN = {
@@ -318,8 +317,7 @@ INHOUD_VELDEN = {
                  'verdiepende_vragen', 'evaluatie'],
     'kennis':   ['doelgroep', 'doelgroep_anders',
                  'leerdoel',
-                 'kernboodschap_html',
-                 'kernboodschap_fotos_json',
+                 'kernboodschap_hoofdstukken_json',
                  'evaluatie'],
 }
 

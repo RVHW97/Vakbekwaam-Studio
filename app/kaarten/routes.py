@@ -54,6 +54,79 @@ def sanitize_kennis_html(ruw_html):
     # vaak achterlaat na een leegmaken-actie.
     schoon = re.sub(r'<p>\s*(?:<br\s*/?>)?\s*</p>', '', schoon)
     return schoon.strip()
+
+
+def verwerk_kennis_hoofdstukken(json_string):
+    """Parse kenniskaart-hoofdstukken-JSON (v0.7.13): per hoofdstuk sanitize
+    tekst_html met bleach én upload nieuwe foto's per slot.
+
+    Per hoofdstuk: {slot, titel, tekst_html, fotos:[{slot,bestand,...}], foto_orientatie}.
+    File-inputs volgen dezelfde conventie als werkwijze: 'werkwijze_foto_<slot>'
+    en 'werkwijze_orig_<slot>' — zo hoeven we de cropper-JS niet te dupliceren.
+    """
+    # Alleen import hier — bovenaan zit er al een globale import, dit voorkomt
+    # herhaling van de namespace-vermelding lager in de functie.
+    from app.kaarten.forms import (KENNIS_MAX_HOOFDSTUKKEN,
+                                    KENNIS_MAX_FOTOS_PER_HOOFDSTUK,
+                                    KENNIS_HOOFDSTUK_TITEL_MAX)
+    try:
+        hoofdstukken = json.loads(json_string or '[]')
+    except (ValueError, TypeError):
+        return json_string or '[]'
+    if not isinstance(hoofdstukken, list):
+        return json_string or '[]'
+
+    schoon = []
+    for h in hoofdstukken[:KENNIS_MAX_HOOFDSTUKKEN]:
+        if not isinstance(h, dict):
+            continue
+        slot = (h.get('slot') or '').strip()
+        titel = (h.get('titel') or '').strip()[:KENNIS_HOOFDSTUK_TITEL_MAX]
+        tekst_html = sanitize_kennis_html(h.get('tekst_html') or '')
+        foto_orientatie = (h.get('foto_orientatie') or 'liggend').strip()
+
+        nieuwe_fotos = []
+        for foto in (h.get('fotos') or [])[:KENNIS_MAX_FOTOS_PER_HOOFDSTUK]:
+            if not isinstance(foto, dict):
+                continue
+            f_slot = (foto.get('slot') or '').strip()
+            bestand = (foto.get('bestand') or '').strip()
+            bestand_origineel = (foto.get('bestand_origineel') or '').strip()
+            if f_slot:
+                orig_upload = request.files.get('werkwijze_orig_' + f_slot)
+                if orig_upload and orig_upload.filename:
+                    orig_naam, orig_fout = save_foto(orig_upload, prefix='kennis_h_orig', ratio=None)
+                    if orig_naam:
+                        if bestand_origineel:
+                            verwijder_bestand(bestand_origineel)
+                        bestand_origineel = orig_naam
+                    elif orig_fout:
+                        flash(f'Hoofdstuk-foto (origineel): {orig_fout}', 'warning')
+                crop_upload = request.files.get('werkwijze_foto_' + f_slot)
+                if crop_upload and crop_upload.filename:
+                    foto_naam, foto_fout = save_foto(crop_upload, prefix='kennis_h', ratio=None)
+                    if foto_naam:
+                        if bestand:
+                            verwijder_bestand(bestand)
+                        bestand = foto_naam
+                    elif foto_fout:
+                        flash(f'Hoofdstuk-foto: {foto_fout}', 'warning')
+                if bestand and not bestand_origineel:
+                    bestand_origineel = bestand
+            nieuwe_fotos.append({
+                'slot': f_slot,
+                'bestand': bestand,
+                'bestand_origineel': bestand_origineel,
+            })
+
+        schoon.append({
+            'slot': slot,
+            'titel': titel,
+            'tekst_html': tekst_html,
+            'fotos': nieuwe_fotos,
+            'foto_orientatie': foto_orientatie,
+        })
+    return json.dumps(schoon, ensure_ascii=False)
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          ThemaKaartLink, ThemaQRLink, InstructieQRLink, QRCode,
                          Kerntaak, Subcategorie,
@@ -107,7 +180,9 @@ from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
                                 WERKWIJZE_TEKST_MAX,
-                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
+                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX,
+                                KENNIS_MAX_HOOFDSTUKKEN, KENNIS_MAX_FOTOS_PER_HOOFDSTUK,
+                                KENNIS_HOOFDSTUK_TITEL_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 20 * 1024 * 1024
@@ -421,16 +496,26 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('leerdoel'):
             _add_error('leerdoel', 'Vul een leerdoel in.')
             ontbrekend.append('Leerdoel')
-        # Kernboodschap: minstens ~20 tekens platte tekst (na strip van HTML-tags).
-        # Een lege editor stuurt vaak "<p><br></p>" mee — die willen we niet als
-        # "ingevuld" tellen.
-        kb_html = request_form.get('kernboodschap_html') or ''
-        kb_plat = re.sub(r'<[^>]+>', ' ', kb_html)
-        kb_plat = re.sub(r'\s+', ' ', kb_plat).strip()
-        if len(kb_plat) < 20:
-            _add_error('kernboodschap_html',
-                        'Vul een kernboodschap in (minstens ~20 tekens tekst).')
-            ontbrekend.append('Kernboodschap')
+        # Kernboodschap: minstens 1 hoofdstuk met titel of tekst of foto.
+        try:
+            hoofdstukken = json.loads(request_form.get('kernboodschap_hoofdstukken_json') or '[]')
+        except (ValueError, TypeError):
+            hoofdstukken = []
+        gevuld = []
+        for h in hoofdstukken:
+            if not isinstance(h, dict):
+                continue
+            titel = (h.get('titel') or '').strip()
+            tekst_plat = re.sub(r'<[^>]+>', ' ', h.get('tekst_html') or '')
+            tekst_plat = re.sub(r'\s+', ' ', tekst_plat).strip()
+            fotos = [f for f in (h.get('fotos') or [])
+                     if isinstance(f, dict) and (f.get('bestand') or '').strip()]
+            if titel or tekst_plat or fotos:
+                gevuld.append(h)
+        if not gevuld:
+            _add_error('kernboodschap_hoofdstukken_json',
+                        'Voeg minstens 1 hoofdstuk toe met een titel, tekst of foto.')
+            ontbrekend.append('Kernboodschap-hoofdstuk')
         if _lijst_min('evaluatie', 1):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
             ontbrekend.append('Evaluatie')
@@ -837,20 +922,20 @@ def bewerken(kaart_id):
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
 
-    # Kenniskaart-fotogalerij: hergebruikt de werkwijze-editor (dezelfde JSON-
-    # structuur en file-input-conventie werkwijze_foto_<slot>). Server-side
-    # veldnaam blijft kernboodschap_fotos_json — pipe door verwerk_werkwijze_fotos.
-    processed_kennis_galerij_json = None
+    # Kenniskaart-hoofdstukken (v0.7.13): één JSON met max 5 hoofdstukken. Per
+    # hoofdstuk: titel (plain), tekst_html (rich, gesanitized met bleach) én
+    # foto's (dezelfde file-input-conventie werkwijze_foto_<slot>).
+    processed_kennis_hoofdstukken_json = None
     if request.method == 'POST' and kaart.type == 'kennis':
-        _incoming_gal = request.form.get('kernboodschap_fotos_json') or '[]'
-        processed_kennis_galerij_json = verwerk_werkwijze_fotos(_incoming_gal)
-        if processed_kennis_galerij_json != _incoming_gal:
+        _incoming_h = request.form.get('kernboodschap_hoofdstukken_json') or '[]'
+        processed_kennis_hoofdstukken_json = verwerk_kennis_hoofdstukken(_incoming_h)
+        if processed_kennis_hoofdstukken_json != _incoming_h:
             _inh = kaart.get_inhoud()
-            _inh['kernboodschap_fotos_json'] = processed_kennis_galerij_json
+            _inh['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
             kaart.set_inhoud(_inh)
             db.session.commit()
-            if hasattr(form, 'kernboodschap_fotos_json'):
-                form.kernboodschap_fotos_json.data = processed_kennis_galerij_json
+            if hasattr(form, 'kernboodschap_hoofdstukken_json'):
+                form.kernboodschap_hoofdstukken_json.data = processed_kennis_hoofdstukken_json
 
     # Opdracht-foto's: idem — bij POST altijd verwerken zodat uploads niet verloren gaan.
     processed_opdracht_json = None
@@ -902,11 +987,8 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kennis_galerij_json is not None and 'kernboodschap_fotos_json' in inhoud:
-            inhoud['kernboodschap_fotos_json'] = processed_kennis_galerij_json
-        # Kenniskaart rich-text: server-side sanitize, altijd — XSS-bescherming.
-        if kaart.type == 'kennis' and 'kernboodschap_html' in inhoud:
-            inhoud['kernboodschap_html'] = sanitize_kennis_html(inhoud['kernboodschap_html'])
+        if processed_kennis_hoofdstukken_json is not None and 'kernboodschap_hoofdstukken_json' in inhoud:
+            inhoud['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -1042,11 +1124,8 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kennis_galerij_json is not None and 'kernboodschap_fotos_json' in inhoud:
-            inhoud['kernboodschap_fotos_json'] = processed_kennis_galerij_json
-        # Kenniskaart rich-text: server-side sanitize, altijd — XSS-bescherming.
-        if kaart.type == 'kennis' and 'kernboodschap_html' in inhoud:
-            inhoud['kernboodschap_html'] = sanitize_kennis_html(inhoud['kernboodschap_html'])
+        if processed_kennis_hoofdstukken_json is not None and 'kernboodschap_hoofdstukken_json' in inhoud:
+            inhoud['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''

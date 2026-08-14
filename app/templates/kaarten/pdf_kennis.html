@@ -361,50 +361,38 @@
 </section>
 {% endif %}
 
-{# ==================== KERNBOODSCHAP (rich HTML) ==================== #}
-{% if kernboodschap_html %}
+{# ==================== KERNBOODSCHAP (hoofdstukken) ====================
+    Elk hoofdstuk = eigen sectie met titel + rich HTML + foto-strip.
+    Blokken worden bewust GESPLITST (elk in een eigen .pdf-sectie) zodat de
+    PDF-sectietitel-styling (kerntaak-kleur bar) per hoofdstuk zichtbaar is.
+#}
+{% for hoofdstuk in kennis_hoofdstukken %}
+    {% set fotos = hoofdstuk.fotos or [] %}
+    {% set gevuld = fotos | selectattr('pad') | list %}
+    {% set n = gevuld | length %}
+    {% set kols = 3 if n >= 3 else n %}
+    {% set foto_orient = hoofdstuk.foto_orientatie or 'liggend' %}
+    {% set heeft_tekst = (hoofdstuk.tekst_html or '').strip() != '' %}
+    {% if hoofdstuk.titel or heeft_tekst or n > 0 %}
 <section class="pdf-sectie">
-    <div class="pdf-sectie-titel">Kernboodschap</div>
+    <div class="pdf-sectie-titel">{{ hoofdstuk.titel or 'Hoofdstuk ' ~ loop.index }}</div>
     <div class="pdf-sectie-inhoud">
-        <div class="kk-rich">{{ kernboodschap_html | safe }}</div>
-    </div>
-</section>
-{% endif %}
-
-{# ==================== FOTOGALERIJ ====================
-    Elk blok in kennis_galerij komt uit de werkwijze-editor: {titel, tekst,
-    fotos: [...], foto_orientatie}. In de PDF vertaal je aantal-gevulde-foto's
-    naar 1/2/3-koloms strip; titel wordt bijschrift onder de foto's, tekst
-    (optioneel) als toelichting eronder. #}
-{% if kennis_galerij %}
-<section class="pdf-sectie">
-    <div class="pdf-sectie-titel">Fotogalerij</div>
-    <div class="pdf-sectie-inhoud">
-        {% for blok in kennis_galerij %}
-        {% set fotos = blok.fotos or [] %}
-        {% set gevuld = fotos | selectattr('pad') | list %}
-        {% set n = gevuld | length %}
+        {% if heeft_tekst %}
+        <div class="kk-rich">{{ hoofdstuk.tekst_html | safe }}</div>
+        {% endif %}
         {% if n > 0 %}
-        {% set kols = 3 if n >= 3 else n %}
-        {% set foto_orient = blok.foto_orientatie or 'liggend' %}
-        <div class="kk-galerij-blok">
-            <div class="kk-galerij-fotorij kk-galerij-fotorij--{{ kols }}" data-foto-orientatie="{{ foto_orient }}">
-                {% for f in gevuld[:kols] %}
-                <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
-                {% endfor %}
-            </div>
-            {% if blok.titel %}
-            <div class="kk-galerij-bijschrift">{{ blok.titel }}</div>
-            {% endif %}
-            {% if blok.tekst %}
-            <div class="kk-galerij-toelichting">{{ blok.tekst }}</div>
-            {% endif %}
+        <div class="kk-galerij-fotorij kk-galerij-fotorij--{{ kols }}"
+             data-foto-orientatie="{{ foto_orient }}"
+             style="margin-top: {{ '3mm' if heeft_tekst else '0' }};">
+            {% for f in gevuld[:kols] %}
+            <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
+            {% endfor %}
         </div>
         {% endif %}
-        {% endfor %}
     </div>
 </section>
-{% endif %}
+    {% endif %}
+{% endfor %}
 
 {# ==================== EVALUATIE ==================== #}
 {% if evaluatie_punten %}
