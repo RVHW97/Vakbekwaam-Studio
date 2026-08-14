@@ -202,26 +202,28 @@ def genereer_pdf(kaart):
 
     # === KENNISKAART: A4-staand multi-page layout ===
     if kaart.type == 'kennis':
-        try:
-            kernboodschap_stappen = json.loads(inhoud.get('kernboodschap_stappen_json') or '[]')
-            if not isinstance(kernboodschap_stappen, list):
-                kernboodschap_stappen = []
-        except (ValueError, TypeError):
-            kernboodschap_stappen = []
+        # v0.7.11: één rich-HTML-blok + aparte fotogalerij (vervangt de
+        # stappen-editor van v0.7.10). De HTML is al server-side gesanitized
+        # bij opslaan (bleach); hier wordt hij direct in de PDF gerenderd.
+        kernboodschap_html = inhoud.get('kernboodschap_html') or ''
 
-        # Foto-paden in kernboodschap-stappen omzetten naar file://.
-        for stap in kernboodschap_stappen:
-            if not isinstance(stap, dict):
+        try:
+            kennis_galerij = json.loads(inhoud.get('kernboodschap_fotos_json') or '[]')
+            if not isinstance(kennis_galerij, list):
+                kennis_galerij = []
+        except (ValueError, TypeError):
+            kennis_galerij = []
+
+        # Foto-paden absoluut maken zodat WeasyPrint ze kan laden.
+        for foto in kennis_galerij:
+            if not isinstance(foto, dict):
                 continue
-            for foto in (stap.get('fotos') or []):
-                if not isinstance(foto, dict):
-                    continue
-                bestand = (foto.get('bestand') or '').strip()
-                if bestand:
-                    pad = os.path.join(upload_folder, bestand)
-                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
-                else:
-                    foto['pad'] = None
+            bestand = (foto.get('bestand') or '').strip()
+            if bestand:
+                pad = os.path.join(upload_folder, bestand)
+                foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
+            else:
+                foto['pad'] = None
 
         # Doelgroep-tekst: dropdown-keuze of vrije tekst bij 'anders'.
         _dg_keuzes = dict(DOELGROEP_KEUZES)
@@ -253,7 +255,8 @@ def genereer_pdf(kaart):
                                       kaart=kaart,
                                       inhoud=inhoud,
                                       doelgroep_tekst=doelgroep_tekst,
-                                      kernboodschap_stappen=kernboodschap_stappen,
+                                      kernboodschap_html=kernboodschap_html,
+                                      kennis_galerij=kennis_galerij,
                                       verdiepende_vragen=verdiepende_vragen,
                                       evaluatie_punten=evaluatie_punten,
                                       kennis_qrs=kennis_qrs,

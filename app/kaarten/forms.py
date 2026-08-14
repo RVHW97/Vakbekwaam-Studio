@@ -248,10 +248,11 @@ class OpdrachtkaartForm(FlaskForm):
 class KenniskaartForm(FlaskForm):
     """Kenniskaart — achtergrondkennis/theorie voor manschappen.
 
-    Structuur volgt gedeeltelijk de opdrachtkaart (doelgroep + leerdoel +
-    stap-voor-stap kernboodschap), plus aandachtspunten voor de oefenleider en
-    dezelfde verdieping+evaluatie-lijsten. Stap 1 (v0.7.9) heeft de basis-
-    velden; kernboodschap-stappen-editor komt in stap 2.
+    v0.7.11 herziening: één groot rich-text-veld voor de kernboodschap
+    (contenteditable + beperkte toolbar) + aparte fotogalerij onderaan.
+    Voorheen (v0.7.10) waren dit meerdere stappen — te 'stap'-achtig voor
+    uitleg-teksten volgens Rebecca. Verdiepende vragen en evaluatie blijven
+    bulletlijsten.
     """
     naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
     kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
@@ -261,17 +262,21 @@ class KenniskaartForm(FlaskForm):
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
     leerdoel = TextAreaField('Leerdoel', validators=[Optional(), Length(max=500)])
-    # Kernboodschap in stappen — zelfde JSON-structuur als werkwijze op instructie:
-    #   [{"id": "<uuid>", "layout": "A|B|C|D", "titel": "...", "tekst": "...",
-    #     "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...]}]
-    # De editor daarvoor komt in stap 2 (v0.7.10). Voor nu een lege hidden.
-    kernboodschap_stappen_json = StringField('Kernboodschap', validators=[Optional()])
-    # Verdiepende vragen + evaluatie — beide dynamische lijsten (punten), net als
-    # bij de opdrachtkaart. Voor stap 1 zijn ze tekstvakken; stap 2 maakt er
-    # echte lijst-editors van.
+    # Kernboodschap-HTML — komt uit een contenteditable met toolbar (bold/italic,
+    # H3/H4, ul/ol, tabel, 3 kleuren). Server-side gesanitized met bleach.
+    # Grote limiet omdat een kenniskaart een echte uitleg mag zijn (max ~20 A4-alinea's).
+    kernboodschap_html = StringField('Kernboodschap', validators=[Optional(), Length(max=50000)])
+    # Fotogalerij — aparte lijst met foto's + bijschriften, wordt onder de tekst
+    # gerenderd in de PDF (2-koloms grid). Max 8 foto's.
+    kernboodschap_fotos_json = StringField('Fotogalerij', validators=[Optional()])
     verdiepende_vragen = TextAreaField('Verdiepende vragen', validators=[Optional(), Length(max=3000)])
     evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
     submit = SubmitField('Opslaan als concept')
+
+
+# Max aantal foto's in de kenniskaart-fotogalerij.
+KENNIS_GALERIJ_MAX_FOTOS = 8
+KENNIS_GALERIJ_BIJSCHRIFT_MAX = 120
 
 
 FORMULIEREN = {
@@ -315,7 +320,8 @@ INHOUD_VELDEN = {
                  'verdiepende_vragen', 'evaluatie'],
     'kennis':   ['doelgroep', 'doelgroep_anders',
                  'leerdoel',
-                 'kernboodschap_stappen_json',
+                 'kernboodschap_html',
+                 'kernboodschap_fotos_json',
                  'verdiepende_vragen', 'evaluatie'],
 }
 

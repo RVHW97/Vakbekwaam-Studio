@@ -2,10 +2,58 @@ import os
 import json
 import uuid
 import shutil
+import re
+import bleach
 from flask import render_template, redirect, url_for, flash, request, current_app, make_response, abort
 from flask_login import login_required, current_user
 from PIL import Image, ImageOps
 from app import db
+
+
+# === Kenniskaart rich-text sanitizer ===
+# Whitelist van tags/attributen die de editor mag produceren. Alles daarbuiten
+# wordt door bleach.clean() gestript — beschermt tegen XSS bij weergave in de app
+# en tegen ongewenste opmaak in de PDF (fonts, inline scripts, etc.).
+KENNIS_TOEGESTANE_TAGS = [
+    'p', 'br', 'strong', 'b', 'em', 'i', 'u',
+    'h3', 'h4',
+    'ul', 'ol', 'li',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+    'span',
+]
+# Enige attribuut dat we toelaten is `style="color: <hex>"` op <span>. Kleuren
+# worden verder gefilterd tot de 3 huisstijl-kleuren (navy, brandweer-rood, zwart).
+KENNIS_HUISSTIJL_KLEUREN = {'#1B2A4A', '#C8102E', '#000000', '#1b2a4a', '#c8102e'}
+_KLEUR_STYLE_RE = re.compile(r'color\s*:\s*(#[0-9a-fA-F]{6})', re.IGNORECASE)
+
+
+def _kennis_style_filter(tag, name, value):
+    """bleach attribute-filter: sta alleen 'style' toe op <span>, alleen met
+    color-waarde uit de huisstijl. Al het andere wordt geweigerd."""
+    if name != 'style' or tag != 'span':
+        return False
+    match = _KLEUR_STYLE_RE.search(value or '')
+    if not match:
+        return False
+    kleur = match.group(1)
+    return kleur in KENNIS_HUISSTIJL_KLEUREN
+
+
+def sanitize_kennis_html(ruw_html):
+    """Sanitize + normaliseer kenniskaart-rich-text. Leverstijl: één HTML-string
+    die veilig in Jinja én in WeasyPrint gerenderd kan worden."""
+    if not ruw_html:
+        return ''
+    schoon = bleach.clean(
+        ruw_html,
+        tags=KENNIS_TOEGESTANE_TAGS,
+        attributes={'span': _kennis_style_filter},
+        strip=True,
+    )
+    # Reduceer whitespace-blokken en verwijder lege paragrafen die contenteditable
+    # vaak achterlaat na een leegmaken-actie.
+    schoon = re.sub(r'<p>\s*(?:<br\s*/?>)?\s*</p>', '', schoon)
+    return schoon.strip()
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          ThemaKaartLink, ThemaQRLink, InstructieQRLink, QRCode,
                          Kerntaak, Subcategorie,
@@ -59,7 +107,8 @@ from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
                                 WERKWIJZE_TEKST_MAX,
-                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
+                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX,
+                                KENNIS_GALERIJ_MAX_FOTOS, KENNIS_GALERIJ_BIJSCHRIFT_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 20 * 1024 * 1024
@@ -373,23 +422,16 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('leerdoel'):
             _add_error('leerdoel', 'Vul een leerdoel in.')
             ontbrekend.append('Leerdoel')
-        # Minstens 1 kernboodschap-stap met tekst/titel/foto verplicht — een
-        # kenniskaart zonder inhoud heeft geen waarde in het PDF.
-        try:
-            kb_stappen = json.loads(request_form.get('kernboodschap_stappen_json') or '[]')
-        except (ValueError, TypeError):
-            kb_stappen = []
-        kb_gevuld = [
-            s for s in kb_stappen
-            if isinstance(s, dict) and (
-                (s.get('titel') or '').strip()
-                or (s.get('tekst') or '').strip()
-                or (s.get('fotos') or [])
-            )
-        ]
-        if len(kb_gevuld) < 1:
-            _add_error('kernboodschap_stappen_json', 'Voeg minstens 1 kernboodschap-stap toe.')
-            ontbrekend.append('Kernboodschap-stap')
+        # Kernboodschap: minstens ~20 tekens platte tekst (na strip van HTML-tags).
+        # Een lege editor stuurt vaak "<p><br></p>" mee — die willen we niet als
+        # "ingevuld" tellen.
+        kb_html = request_form.get('kernboodschap_html') or ''
+        kb_plat = re.sub(r'<[^>]+>', ' ', kb_html)
+        kb_plat = re.sub(r'\s+', ' ', kb_plat).strip()
+        if len(kb_plat) < 20:
+            _add_error('kernboodschap_html',
+                        'Vul een kernboodschap in (minstens ~20 tekens tekst).')
+            ontbrekend.append('Kernboodschap')
         if _lijst_min('verdiepende_vragen', 1):
             _add_error('verdiepende_vragen', 'Voeg minstens 1 verdiepende vraag toe.')
             ontbrekend.append('Verdiepende vraag')
@@ -512,6 +554,42 @@ def verwerk_opdracht_fotos(json_string):
             })
         opdr['fotos'] = nieuwe_fotos
     return json.dumps(opdrachten, ensure_ascii=False)
+
+
+def verwerk_kennis_galerij_fotos(json_string):
+    """Parse kenniskaart-fotogalerij-JSON, upload nieuwe foto's per slot en
+    return bijgewerkte JSON.
+
+    Per foto: {'slot': '<uuid>', 'bestand': '<filename>', 'bijschrift': '...'}
+    File-input: 'kennis_galerij_foto_<slot>' (nieuwe upload, ratio=None).
+    Max KENNIS_GALERIJ_MAX_FOTOS foto's — extra worden afgekapt.
+    """
+    try:
+        fotos = json.loads(json_string or '[]')
+    except (ValueError, TypeError):
+        return json_string or '[]'
+    if not isinstance(fotos, list):
+        return json_string or '[]'
+
+    nieuwe = []
+    for foto in fotos[:KENNIS_GALERIJ_MAX_FOTOS]:
+        if not isinstance(foto, dict):
+            continue
+        slot = (foto.get('slot') or '').strip()
+        bestand = (foto.get('bestand') or '').strip()
+        bijschrift = (foto.get('bijschrift') or '').strip()[:KENNIS_GALERIJ_BIJSCHRIFT_MAX]
+        if slot:
+            upload = request.files.get('kennis_galerij_foto_' + slot)
+            if upload and upload.filename:
+                foto_naam, foto_fout = save_foto(upload, prefix='kennis_gal', ratio=None)
+                if foto_naam:
+                    if bestand:
+                        verwijder_bestand(bestand)
+                    bestand = foto_naam
+                elif foto_fout:
+                    flash(f'Fotogalerij: {foto_fout}', 'warning')
+        nieuwe.append({'slot': slot, 'bestand': bestand, 'bijschrift': bijschrift})
+    return json.dumps(nieuwe, ensure_ascii=False)
 
 
 def verwerk_werkwijze_fotos(json_string):
@@ -799,20 +877,20 @@ def bewerken(kaart_id):
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
 
-    # Kernboodschap-foto's (kenniskaart): zelfde patroon als werkwijze. De editor
-    # gebruikt bewust dezelfde IDs (werkwijze-stappen-json / werkwijze-foto-<slot>)
-    # zodat we de JS hoeven te dupliceren — enkel de server-side veldnaam verschilt.
-    processed_kernboodschap_json = None
+    # Kenniskaart-fotogalerij: aparte lijst met foto's + bijschriften (max
+    # KENNIS_GALERIJ_MAX_FOTOS). Nieuwe uploads worden meteen op disk gezet;
+    # verwijderde slots worden ook fysiek opgeruimd.
+    processed_kennis_galerij_json = None
     if request.method == 'POST' and kaart.type == 'kennis':
-        _incoming_kb = request.form.get('kernboodschap_stappen_json') or '[]'
-        processed_kernboodschap_json = verwerk_werkwijze_fotos(_incoming_kb)
-        if processed_kernboodschap_json != _incoming_kb:
+        _incoming_gal = request.form.get('kernboodschap_fotos_json') or '[]'
+        processed_kennis_galerij_json = verwerk_kennis_galerij_fotos(_incoming_gal)
+        if processed_kennis_galerij_json != _incoming_gal:
             _inh = kaart.get_inhoud()
-            _inh['kernboodschap_stappen_json'] = processed_kernboodschap_json
+            _inh['kernboodschap_fotos_json'] = processed_kennis_galerij_json
             kaart.set_inhoud(_inh)
             db.session.commit()
-            if hasattr(form, 'kernboodschap_stappen_json'):
-                form.kernboodschap_stappen_json.data = processed_kernboodschap_json
+            if hasattr(form, 'kernboodschap_fotos_json'):
+                form.kernboodschap_fotos_json.data = processed_kennis_galerij_json
 
     # Opdracht-foto's: idem — bij POST altijd verwerken zodat uploads niet verloren gaan.
     processed_opdracht_json = None
@@ -864,8 +942,11 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kernboodschap_json is not None and 'kernboodschap_stappen_json' in inhoud:
-            inhoud['kernboodschap_stappen_json'] = processed_kernboodschap_json
+        if processed_kennis_galerij_json is not None and 'kernboodschap_fotos_json' in inhoud:
+            inhoud['kernboodschap_fotos_json'] = processed_kennis_galerij_json
+        # Kenniskaart rich-text: server-side sanitize, altijd — XSS-bescherming.
+        if kaart.type == 'kennis' and 'kernboodschap_html' in inhoud:
+            inhoud['kernboodschap_html'] = sanitize_kennis_html(inhoud['kernboodschap_html'])
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -967,17 +1048,6 @@ def bewerken(kaart_id):
                 werkwijze_fout = f'Maximaal {WERKWIJZE_MAX_STAPPEN} stappen toegestaan ({totaal_stappen} geteld).'
                 form.werkwijze_stappen_json.errors = list(form.werkwijze_stappen_json.errors) + [werkwijze_fout]
 
-    # Kenniskaart: idem voor kernboodschap-stappen.
-    if request.method == 'POST' and not is_auto_save and kaart.type == 'kennis':
-        try:
-            kb_data = json.loads(request.form.get('kernboodschap_stappen_json') or '[]')
-        except (ValueError, TypeError):
-            kb_data = []
-        if isinstance(kb_data, list):
-            totaal_kb = len([s for s in kb_data if isinstance(s, dict)])
-            if totaal_kb > WERKWIJZE_MAX_STAPPEN:
-                werkwijze_fout = f'Maximaal {WERKWIJZE_MAX_STAPPEN} kernboodschap-stappen toegestaan ({totaal_kb} geteld).'
-                form.kernboodschap_stappen_json.errors = list(form.kernboodschap_stappen_json.errors) + [werkwijze_fout]
 
     # Instructiekaart-materiaal: elke marker op de productfoto moet een beschrijving hebben.
     markers_fout = None
@@ -1012,8 +1082,11 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kernboodschap_json is not None and 'kernboodschap_stappen_json' in inhoud:
-            inhoud['kernboodschap_stappen_json'] = processed_kernboodschap_json
+        if processed_kennis_galerij_json is not None and 'kernboodschap_fotos_json' in inhoud:
+            inhoud['kernboodschap_fotos_json'] = processed_kennis_galerij_json
+        # Kenniskaart rich-text: server-side sanitize, altijd — XSS-bescherming.
+        if kaart.type == 'kennis' and 'kernboodschap_html' in inhoud:
+            inhoud['kernboodschap_html'] = sanitize_kennis_html(inhoud['kernboodschap_html'])
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''

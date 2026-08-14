@@ -151,63 +151,85 @@
     }
     .kk-inleiding-tekst { font-size: 9.5pt; color: #1A1A1A; white-space: pre-wrap; }
 
-    /* === KK: Kernboodschap-stappen — hergebruikt ik-stap styling === */
-    .ik-stap {
-        background: #FAFAF8;
-        padding: 2mm 5mm 4mm 5mm;
-        margin: 3mm 0;
-        box-sizing: border-box;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        display: block;
-        width: 100%;
+    /* === KK: Kernboodschap-rich-text — één blok met huisstijl-getriggerde tags === */
+    .kk-rich {
+        font-family: "Open Sans", sans-serif;
+        font-size: 10pt;
+        line-height: 1.55;
+        color: #1A1A1A;
     }
-    .ik-stap-kop { margin: 0 0 0.5mm -8mm; line-height: 0; }
-    .ik-stap-titel-chevron {
-        display: inline-flex; align-items: stretch; width: 78mm; height: 7mm;
-        font-weight: 700; font-size: 10pt; letter-spacing: 0.3px; line-height: 1;
+    .kk-rich p { margin: 0 0 2.5mm 0; }
+    .kk-rich p:last-child { margin-bottom: 0; }
+    .kk-rich h3 {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 12pt; font-weight: 700; color: #1B2A4A;
+        margin: 4mm 0 1.5mm 0;
+        page-break-after: avoid; break-after: avoid;
     }
-    .ik-stap-titel-tekst {
-        background: {{ kerntaak_kleur }}; color: #fff;
-        padding: 0 1mm 0 4mm;
-        display: flex; align-items: center;
-        flex: 1 1 auto; overflow: hidden; white-space: nowrap;
-        margin-right: -0.25mm;
+    .kk-rich h4 {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 10.5pt; font-weight: 700; color: #1B2A4A;
+        margin: 3mm 0 1mm 0;
+        page-break-after: avoid; break-after: avoid;
     }
-    .ik-stap-titel-slant { width: 2mm; height: 7mm; flex: 0 0 auto; display: block; }
-    .ik-stap-tekst { white-space: pre-wrap; font-size: 9.5pt; margin-top: 1mm; color: #1A1A1A; overflow: hidden; }
-    .ik-stap-bullets { list-style: none; padding: 0; margin: 0; }
-    .ik-stap-bullets li {
-        position: relative; padding-left: 4mm; margin-bottom: 0.8mm; line-height: 1.3;
-    }
-    .ik-stap-bullets li::before {
+    .kk-rich strong, .kk-rich b { font-weight: 700; }
+    .kk-rich em, .kk-rich i { font-style: italic; }
+    .kk-rich ul, .kk-rich ol { margin: 1.5mm 0 2.5mm 6mm; padding: 0; }
+    .kk-rich li { margin-bottom: 1mm; }
+    .kk-rich ul li { list-style: none; position: relative; padding-left: 4mm; }
+    .kk-rich ul li::before {
         content: '●'; position: absolute; left: 0; top: 0;
         color: {{ kerntaak_kleur }}; font-size: 1em; line-height: 1.3;
     }
-    .ik-stap-foto {
-        overflow: hidden; display: flex; align-items: center; justify-content: center;
-        box-sizing: border-box;
+    .kk-rich ol { list-style: decimal; padding-left: 5mm; }
+    /* Tabel — vaste kolom-breedtes (WeasyPrint doet netjes met echte <table> zolang
+       er geen percentage-cellen worden gebruikt). page-break-inside: auto zodat een
+       lange tabel niet in één keer naar de volgende pagina wordt geduwd. */
+    .kk-rich table {
+        border-collapse: collapse;
+        margin: 2mm 0 3mm 0;
+        width: auto;
+        page-break-inside: auto;
     }
-    .ik-stap-foto.leeg { font-style: italic; color: #aaa; font-size: 8pt; }
-    .ik-stap-foto img {
+    .kk-rich th, .kk-rich td {
+        border: 0.3mm solid #B8B2A4;
+        padding: 1.2mm 2mm;
+        font-size: 9.5pt;
+        vertical-align: top;
+        min-width: 12mm;
+    }
+    .kk-rich th {
+        background: #F0EFEC; text-align: left; font-weight: 700; color: #1B2A4A;
+    }
+
+    /* === KK: Fotogalerij === 2-koloms grid, elk foto met kort bijschrift. */
+    .kk-galerij {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+        margin-top: 2mm;
+    }
+    .kk-galerij-cel {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .kk-galerij-foto {
+        width: 100%;
+        height: 60mm;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #F5F5F1;
+    }
+    .kk-galerij-foto img {
         max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
     }
-    .ik-stap-layout-T, .ik-stap-layout-B, .ik-stap-layout-C, .ik-stap-layout-D { width: 100%; }
-    .ik-stap-layout-T { display: block; }
-    .ik-stap-layout-T .ik-stap-tekst { width: 100%; display: block; }
-    .ik-stap-layout-B { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: center; }
-    .ik-stap-layout-B .ik-stap-foto { height: 60mm; }
-    .ik-stap-layout-B .ik-stap-tekst { margin-top: 0; }
-    .ik-stap-layout-D .ik-stap-foto { width: 100%; height: 60mm; margin-top: 2mm; }
-    .ik-stap-layout-C { width: 100%; }
-    .ik-stap-layout-C .ik-stap-tekst { width: 100%; display: block; }
-    .ik-stap-layout-C .ik-stap-fotostrip { display: grid; gap: 3mm; margin-top: 2mm; width: 100%; }
-    .ik-stap-layout-C .ik-stap-foto { height: 45mm; }
-    .ik-stap-layout-B[data-foto-orientatie="staand"] { grid-template-columns: 1.5fr 1fr; }
-    .ik-stap-layout-B[data-foto-orientatie="staand"] .ik-stap-foto { height: 80mm; }
-    .ik-stap-layout-C[data-foto-orientatie="staand"] .ik-stap-foto { height: 65mm; }
-    .ik-stap-layout-D[data-foto-orientatie="staand"] .ik-stap-foto {
-        width: 60mm; height: 80mm; margin-left: auto; margin-right: auto;
+    .kk-galerij-bijschrift {
+        font-size: 8.5pt;
+        color: #444;
+        margin-top: 1mm;
+        line-height: 1.35;
     }
 
     /* === KK: Verdiepende vragen + Evaluatie (bullet-lijsten) === */
@@ -319,55 +341,33 @@
 </section>
 {% endif %}
 
-{# ==================== KERNBOODSCHAP (stappen) ==================== #}
-{% if kernboodschap_stappen %}
-<section class="pdf-sectie pdf-sectie--stappen">
+{# ==================== KERNBOODSCHAP (rich HTML) ==================== #}
+{% if kernboodschap_html %}
+<section class="pdf-sectie">
     <div class="pdf-sectie-titel">Kernboodschap</div>
     <div class="pdf-sectie-inhoud">
-        {% for stap in kernboodschap_stappen %}
-        {% set fotos = stap.fotos or [] %}
-        {% set gevulde_fotos = fotos | selectattr('pad') | list %}
-        {% set gevuld_n = gevulde_fotos | length %}
-        {% if gevuld_n == 0 %}
-            {% set layout = 'T' %}
-        {% elif gevuld_n == 1 %}
-            {% set plaatsing = stap.foto_plaatsing or ('onder' if stap.layout == 'D' else 'rechts') %}
-            {% set layout = 'D' if plaatsing == 'onder' else 'B' %}
-        {% else %}
-            {% set layout = 'C' %}
-        {% endif %}
-        {% set strip_cols = gevuld_n if gevuld_n in (2, 3) else 3 %}
-        {% set foto_orient = stap.foto_orientatie or 'liggend' %}
-        <div class="ik-stap ik-stap--{{ layout }}">
-            <div class="ik-stap-kop">
-                <span class="ik-stap-titel-chevron"><span class="ik-stap-titel-tekst">{{ stap.titel or '' }}</span><svg class="ik-stap-titel-slant" viewBox="0 0 2 7" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon fill="{{ kerntaak_kleur }}" points="0,0 2,0 0.25,7"/></svg></span>
-            </div>
-            {% if layout == 'T' %}
-            <div class="ik-stap-layout-T">
-                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
-            </div>
-            {% elif layout == 'B' %}
-            <div class="ik-stap-layout-B" data-foto-orientatie="{{ foto_orient }}">
-                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
-                <div class="ik-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
-            </div>
-            {% elif layout == 'C' %}
-            <div class="ik-stap-layout-C" data-foto-orientatie="{{ foto_orient }}">
-                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
-                <div class="ik-stap-fotostrip" style="grid-template-columns: repeat({{ strip_cols }}, 1fr);">
-                    {% for f in gevulde_fotos[:strip_cols] %}
-                    <div class="ik-stap-foto"><img src="{{ f.pad }}" alt=""></div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% elif layout == 'D' %}
-            <div class="ik-stap-layout-D" data-foto-orientatie="{{ foto_orient }}">
-                <div class="ik-stap-tekst">{{ stap_tekst(stap) }}</div>
-                <div class="ik-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
+        <div class="kk-rich">{{ kernboodschap_html | safe }}</div>
+    </div>
+</section>
+{% endif %}
+
+{# ==================== FOTOGALERIJ ==================== #}
+{% if kennis_galerij %}
+<section class="pdf-sectie">
+    <div class="pdf-sectie-titel">Fotogalerij</div>
+    <div class="pdf-sectie-inhoud">
+        <div class="kk-galerij">
+            {% for foto in kennis_galerij %}
+            {% if foto.pad %}
+            <div class="kk-galerij-cel">
+                <div class="kk-galerij-foto"><img src="{{ foto.pad }}" alt=""></div>
+                {% if foto.bijschrift %}
+                <div class="kk-galerij-bijschrift">{{ foto.bijschrift }}</div>
+                {% endif %}
             </div>
             {% endif %}
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
 </section>
 {% endif %}
