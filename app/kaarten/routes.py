@@ -84,6 +84,9 @@ def verwerk_kennis_hoofdstukken(json_string):
         titel = (h.get('titel') or '').strip()[:KENNIS_HOOFDSTUK_TITEL_MAX]
         tekst_html = sanitize_kennis_html(h.get('tekst_html') or '')
         foto_orientatie = (h.get('foto_orientatie') or 'liggend').strip()
+        foto_plaatsing = (h.get('foto_plaatsing') or 'onder').strip()
+        if foto_plaatsing not in ('onder', 'naast'):
+            foto_plaatsing = 'onder'
 
         nieuwe_fotos = []
         for foto in (h.get('fotos') or [])[:KENNIS_MAX_FOTOS_PER_HOOFDSTUK]:
@@ -125,6 +128,7 @@ def verwerk_kennis_hoofdstukken(json_string):
             'tekst_html': tekst_html,
             'fotos': nieuwe_fotos,
             'foto_orientatie': foto_orientatie,
+            'foto_plaatsing': foto_plaatsing,
         })
     return json.dumps(schoon, ensure_ascii=False)
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
@@ -493,9 +497,9 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('doelgroep'):
             _add_error('doelgroep', 'Kies een doelgroep.')
             ontbrekend.append('Doelgroep')
-        if _tekst_leeg('leerdoel'):
-            _add_error('leerdoel', 'Vul een leerdoel in.')
-            ontbrekend.append('Leerdoel')
+        if _tekst_leeg('doel'):
+            _add_error('doel', 'Vul een doel in.')
+            ontbrekend.append('Doel')
         # Kernboodschap: minstens 1 hoofdstuk met titel of tekst of foto.
         try:
             hoofdstukken = json.loads(request_form.get('kernboodschap_hoofdstukken_json') or '[]')

@@ -202,17 +202,8 @@
         background: #F0EFEC; text-align: left; font-weight: 700; color: #1B2A4A;
     }
 
-    /* === KK: Fotogalerij === Rijke variant sinds v0.7.12: elk blok kan 1-3
-       foto's naast elkaar tonen (layouts B/C/D uit werkwijze-editor), met een
-       optioneel bijschrift eronder. Geen chevron-titel — de tekst leeft in de
-       rich-text-editor hierboven, deze sectie draait om beeld. */
-    .kk-galerij-blok {
-        margin: 4mm 0;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        display: block;
-    }
-    .kk-galerij-blok:first-child { margin-top: 0; }
+    /* === KK: Fotogalerij per hoofdstuk === Sinds v0.7.14: elk hoofdstuk kan
+       foto's onder of naast de tekst plaatsen. */
     .kk-galerij-fotorij {
         display: grid;
         gap: 3mm;
@@ -237,19 +228,20 @@
     .kk-galerij-fotorij--3 .kk-galerij-foto { height: 55mm; }
     /* Staand-varianten: minder breed maar hoger. */
     .kk-galerij-fotorij[data-foto-orientatie="staand"] .kk-galerij-foto { height: 85mm; }
-    .kk-galerij-bijschrift {
-        font-size: 9pt;
-        color: #1B2A4A;
-        margin-top: 1.5mm;
-        line-height: 1.35;
-        font-style: italic;
+
+    /* Layout "naast" (alleen bij 1 foto): tekst links, foto rechts. */
+    .kk-hoofdstuk-naast {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 5mm;
+        align-items: start;
     }
-    .kk-galerij-toelichting {
-        font-size: 9pt;
-        color: #1A1A1A;
-        margin-top: 1mm;
-        line-height: 1.45;
-        white-space: pre-wrap;
+    .kk-hoofdstuk-naast .kk-galerij-foto { height: 65mm; }
+    .kk-hoofdstuk-naast[data-foto-orientatie="staand"] {
+        grid-template-columns: 1.5fr 1fr;
+    }
+    .kk-hoofdstuk-naast[data-foto-orientatie="staand"] .kk-galerij-foto {
+        height: 85mm;
     }
 
     /* === KK: Verdiepende vragen + Evaluatie (bullet-lijsten) === */
@@ -338,8 +330,8 @@
 </div>
 {% endif %}
 
-{# ==================== INLEIDING (doelgroep + leerdoel) ==================== #}
-{% if doelgroep_tekst or inhoud.leerdoel %}
+{# ==================== INLEIDING (doelgroep + doel) ==================== #}
+{% if doelgroep_tekst or inhoud.doel %}
 <section class="pdf-sectie">
     <div class="pdf-sectie-titel">Inleiding</div>
     <div class="pdf-sectie-inhoud">
@@ -350,10 +342,10 @@
                 <div class="kk-inleiding-tekst">{{ doelgroep_tekst }}</div>
             </div>
             {% endif %}
-            {% if inhoud.leerdoel %}
+            {% if inhoud.doel %}
             <div class="kk-inleiding-cel">
-                <div class="kk-inleiding-label">Leerdoel</div>
-                <div class="kk-inleiding-tekst">{{ inhoud.leerdoel }}</div>
+                <div class="kk-inleiding-label">Doel</div>
+                <div class="kk-inleiding-tekst">{{ inhoud.doel }}</div>
             </div>
             {% endif %}
         </div>
@@ -372,11 +364,20 @@
     {% set n = gevuld | length %}
     {% set kols = 3 if n >= 3 else n %}
     {% set foto_orient = hoofdstuk.foto_orientatie or 'liggend' %}
+    {% set foto_plaats = hoofdstuk.foto_plaatsing or 'onder' %}
     {% set heeft_tekst = (hoofdstuk.tekst_html or '').strip() != '' %}
+    {# 'naast'-layout alleen zinvol bij precies 1 foto; bij meer foto's val je terug op 'onder'. #}
+    {% set naast_mogelijk = (foto_plaats == 'naast' and n == 1 and heeft_tekst) %}
     {% if hoofdstuk.titel or heeft_tekst or n > 0 %}
 <section class="pdf-sectie">
     <div class="pdf-sectie-titel">{{ hoofdstuk.titel or 'Hoofdstuk ' ~ loop.index }}</div>
     <div class="pdf-sectie-inhoud">
+        {% if naast_mogelijk %}
+        <div class="kk-hoofdstuk-naast" data-foto-orientatie="{{ foto_orient }}">
+            <div class="kk-rich">{{ hoofdstuk.tekst_html | safe }}</div>
+            <div class="kk-galerij-foto"><img src="{{ gevuld[0].pad }}" alt=""></div>
+        </div>
+        {% else %}
         {% if heeft_tekst %}
         <div class="kk-rich">{{ hoofdstuk.tekst_html | safe }}</div>
         {% endif %}
@@ -388,6 +389,7 @@
             <div class="kk-galerij-foto"><img src="{{ f.pad }}" alt=""></div>
             {% endfor %}
         </div>
+        {% endif %}
         {% endif %}
     </div>
 </section>

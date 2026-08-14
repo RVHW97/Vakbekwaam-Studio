@@ -262,7 +262,7 @@ class KenniskaartForm(FlaskForm):
     header_foto = FileField('Headerfoto')
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
-    leerdoel = TextAreaField('Leerdoel', validators=[Optional(), Length(max=500)])
+    doel = TextAreaField('Doel', validators=[Optional(), Length(max=500)])
     # Hoofdstukken — max 5. JSON-string van {slot,titel,tekst_html,fotos,foto_orientatie}.
     kernboodschap_hoofdstukken_json = StringField('Kernboodschap-hoofdstukken',
                                                    validators=[Optional(), Length(max=200000)])
@@ -316,7 +316,7 @@ INHOUD_VELDEN = {
                  'opdrachten_json', 'uitdagende_variant',
                  'verdiepende_vragen', 'evaluatie'],
     'kennis':   ['doelgroep', 'doelgroep_anders',
-                 'leerdoel',
+                 'doel',
                  'kernboodschap_hoofdstukken_json',
                  'evaluatie'],
 }

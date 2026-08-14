@@ -1312,6 +1312,122 @@
         background: #FFF;
     }
 
+    /* === Foto-plaatsing keuze (onder / naast) === */
+    .kk-hoofdstuk-plaatsing {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+        margin: 0.75rem 0 0.35rem 0;
+        padding: 0.4rem 0.6rem;
+        background: #FAFAF7;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    .kk-hoofdstuk-plaatsing-label {
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-weight: 700;
+        color: #1B2A4A;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-size: 0.75rem;
+    }
+    .kk-hoofdstuk-plaatsing-optie {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        cursor: pointer;
+    }
+    .kk-hoofdstuk-plaatsing-optie input { cursor: pointer; }
+    .kk-hoofdstuk-plaatsing-optie em {
+        color: #888;
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+
+    /* === Live preview per hoofdstuk === Bootst PDF-look na. */
+    .kk-hoofdstuk-preview {
+        margin-top: 1rem;
+        border-top: 2px solid #1B2A4A;
+        padding-top: 0.6rem;
+    }
+    .kk-hoofdstuk-preview-kop {
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: #1B2A4A;
+        background: #E5E2DA;
+        display: inline-block;
+        padding: 0.15rem 0.6rem;
+        border-radius: 3px 3px 0 0;
+        margin-bottom: 0;
+    }
+    .kk-hoofdstuk-preview-body {
+        background: #FFF;
+        border: 1px solid #D6D2C7;
+        padding: 0.9rem 1rem;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 0.9rem;
+        color: #1A1A1A;
+        line-height: 1.5;
+    }
+    .kk-preview-titel {
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #1B2A4A;
+        background: #F0EFEC;
+        border-left: 3px solid var(--kk-preview-kerntaak-kleur, #CC9933);
+        padding: 0.3rem 0.7rem;
+        margin-bottom: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .kk-preview-rich h3 {
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        color: #1B2A4A; font-size: 1.05rem; margin: 0.6rem 0 0.3rem 0;
+    }
+    .kk-preview-rich h4 {
+        font-family: 'Frutiger', 'Open Sans', sans-serif;
+        color: #1B2A4A; font-size: 0.95rem; margin: 0.5rem 0 0.25rem 0;
+    }
+    .kk-preview-rich p { margin: 0 0 0.4rem 0; }
+    .kk-preview-rich ul, .kk-preview-rich ol { margin: 0.3rem 0 0.5rem 1.2rem; }
+    .kk-preview-rich li { margin-bottom: 0.15rem; }
+    .kk-preview-rich table { border-collapse: collapse; margin: 0.3rem 0 0.5rem 0; }
+    .kk-preview-rich th, .kk-preview-rich td {
+        border: 1px solid #B8B2A4; padding: 0.25rem 0.5rem; font-size: 0.85rem;
+    }
+    .kk-preview-rich th { background: #F0EFEC; text-align: left; }
+    .kk-preview-fotostrip {
+        display: grid; gap: 0.4rem; margin-top: 0.5rem;
+    }
+    .kk-preview-fotostrip--1 { grid-template-columns: 1fr; }
+    .kk-preview-fotostrip--2 { grid-template-columns: 1fr 1fr; }
+    .kk-preview-fotostrip--3 { grid-template-columns: 1fr 1fr 1fr; }
+    .kk-preview-foto {
+        overflow: hidden; background: #F5F5F1;
+        display: flex; align-items: center; justify-content: center;
+        aspect-ratio: 4/3;
+    }
+    .kk-preview-foto img {
+        max-width: 100%; max-height: 100%; object-fit: contain;
+    }
+    .kk-preview-fotostrip--1 .kk-preview-foto { aspect-ratio: 16/9; }
+    .kk-preview-fotostrip[data-foto-orientatie="staand"] .kk-preview-foto { aspect-ratio: 3/4; }
+    .kk-preview-naast {
+        display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.8rem; align-items: start;
+        margin-top: 0.3rem;
+    }
+    .kk-preview-naast[data-foto-orientatie="staand"] { grid-template-columns: 1.5fr 1fr; }
+    .kk-preview-naast .kk-preview-foto { aspect-ratio: 4/3; }
+    .kk-preview-naast[data-foto-orientatie="staand"] .kk-preview-foto { aspect-ratio: 3/4; }
+    .kk-preview-leeg {
+        color: #999; font-style: italic; font-size: 0.85rem;
+    }
+
     /* === Kenniskaart-fotogalerij === */
     .kk-galerij-rij {
         display: grid;
@@ -2910,13 +3026,13 @@
             </div>
         </div>
 
-        {# ---------------- TAB 2: INLEIDING (doelgroep + leerdoel) ---------------- #}
+        {# ---------------- TAB 2: INLEIDING (doelgroep + doel) ---------------- #}
         <div class="tab-paneel" data-tab="inleiding">
-            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'leerdoel']) }}
+            {{ tab_fout_marker(['doelgroep', 'doelgroep_anders', 'doel']) }}
             <h2 class="form-section-title">Inleiding</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier doelgroep en leerdoel invullen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier doelgroep en doel invullen.</p>
             {% else %}
 
             {# Doelgroep #}
@@ -2940,14 +3056,14 @@
                 </div>
             </div>
 
-            {# Leerdoel #}
+            {# Doel — korte intro-tekst boven de hoofdstukken #}
             <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Leerdoel</h3>
-                <p class="form-hint">Wat moet de deelnemer weten of begrijpen na deze kenniskaart? Kort en concreet — max 500 tekens.</p>
+                <h3 class="form-groep-titel">Doel</h3>
+                <p class="form-hint">Korte intro: wat moet de deelnemer weten of begrijpen na deze kenniskaart? Max 500 tekens.</p>
                 <div class="form-group">
-                    {{ form.leerdoel(class="form-input form-textarea", rows=3, maxlength=500,
+                    {{ form.doel(class="form-input form-textarea", rows=3, maxlength=500,
                        placeholder="Bv. Deelnemer kent de werking van de C35-pager en herkent de vier prioriteiten.") }}
-                    {% for error in form.leerdoel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                    {% for error in form.doel.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
                 </div>
             </div>
 
@@ -6371,7 +6487,14 @@ setupCropper({
         return (prefix || 'h') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
     }
     function nieuwHoofdstuk() {
-        return { slot: slotId('h'), titel: '', tekst_html: '', fotos: [], foto_orientatie: 'liggend' };
+        return {
+            slot: slotId('h'),
+            titel: '',
+            tekst_html: '',
+            fotos: [],
+            foto_orientatie: 'liggend',
+            foto_plaatsing: 'onder'
+        };
     }
     function fotoUrlVoor(bestand) { return bestand ? '/media/' + bestand : ''; }
     function sync() {
@@ -6541,6 +6664,32 @@ setupCropper({
         updateEditorPlaceholder();
         kaart.appendChild(editor);
 
+        // Foto-plaatsing keuze (onder / naast tekst)
+        var plaatsingWrap = document.createElement('div');
+        plaatsingWrap.className = 'kk-hoofdstuk-plaatsing';
+        plaatsingWrap.innerHTML =
+            '<span class="kk-hoofdstuk-plaatsing-label">Foto’s:</span>' +
+            '<label class="kk-hoofdstuk-plaatsing-optie">' +
+                '<input type="radio" name="plaatsing_' + hoofdstuk.slot + '" value="onder">' +
+                '<span>Onder de tekst</span>' +
+            '</label>' +
+            '<label class="kk-hoofdstuk-plaatsing-optie">' +
+                '<input type="radio" name="plaatsing_' + hoofdstuk.slot + '" value="naast">' +
+                '<span>Naast de tekst <em>(alleen bij 1 foto)</em></span>' +
+            '</label>';
+        var plaatsingRadios = plaatsingWrap.querySelectorAll('input[type="radio"]');
+        plaatsingRadios.forEach(function(r) {
+            if (r.value === (hoofdstuk.foto_plaatsing || 'onder')) r.checked = true;
+            r.addEventListener('change', function() {
+                if (r.checked) {
+                    hoofdstuk.foto_plaatsing = r.value;
+                    sync();
+                    updatePreview();
+                }
+            });
+        });
+        kaart.appendChild(plaatsingWrap);
+
         var fotosWrap = document.createElement('div');
         fotosWrap.className = 'kk-hoofdstuk-fotos';
         function renderFotos() {
@@ -6631,6 +6780,74 @@ setupCropper({
         }
         renderFotos();
         kaart.appendChild(fotosWrap);
+
+        // Live preview onderaan — toont hoe dit hoofdstuk op de PDF komt.
+        var previewWrap = document.createElement('div');
+        previewWrap.className = 'kk-hoofdstuk-preview';
+        previewWrap.innerHTML =
+            '<div class="kk-hoofdstuk-preview-kop">Preview</div>' +
+            '<div class="kk-hoofdstuk-preview-body"></div>';
+        var previewBody = previewWrap.querySelector('.kk-hoofdstuk-preview-body');
+
+        function fotoPreviewSrc(foto) {
+            // Blob-URL van net-gecropte foto zit in de <img data-preview-slot="...">
+            var slotImg = kaart.querySelector('[data-preview-slot="' + foto.slot + '"]');
+            if (slotImg && slotImg.src) return slotImg.src;
+            if (foto.bestand) return fotoUrlVoor(foto.bestand);
+            return '';
+        }
+        function updatePreview() {
+            var titel = (hoofdstuk.titel || '').trim();
+            var tekstHtml = hoofdstuk.tekst_html || '';
+            var fotos = (hoofdstuk.fotos || []).map(function(f) {
+                return { src: fotoPreviewSrc(f) };
+            }).filter(function(f) { return f.src; });
+            var n = fotos.length;
+            var plaatsing = hoofdstuk.foto_plaatsing || 'onder';
+            var orient = hoofdstuk.foto_orientatie || 'liggend';
+            var naast = (plaatsing === 'naast' && n === 1 && tekstHtml.trim());
+
+            var titelHtml = '<div class="kk-preview-titel">' + (titel ? titel : ('Hoofdstuk ' + (idx + 1))) + '</div>';
+            var tekstBlock = tekstHtml.trim()
+                ? '<div class="kk-preview-rich">' + tekstHtml + '</div>'
+                : '';
+            var fotoStrip = '';
+            if (n > 0) {
+                var kols = Math.min(n, 3);
+                fotoStrip = '<div class="kk-preview-fotostrip kk-preview-fotostrip--' + kols +
+                            '" data-foto-orientatie="' + orient + '">';
+                fotos.slice(0, kols).forEach(function(f) {
+                    fotoStrip += '<div class="kk-preview-foto"><img src="' + f.src + '" alt=""></div>';
+                });
+                fotoStrip += '</div>';
+            }
+
+            var body = titelHtml;
+            if (naast) {
+                body +=
+                    '<div class="kk-preview-naast" data-foto-orientatie="' + orient + '">' +
+                        tekstBlock +
+                        '<div class="kk-preview-foto"><img src="' + fotos[0].src + '" alt=""></div>' +
+                    '</div>';
+            } else {
+                body += tekstBlock + fotoStrip;
+            }
+            if (!tekstBlock && !fotoStrip) {
+                body += '<div class="kk-preview-leeg">Nog geen inhoud in dit hoofdstuk.</div>';
+            }
+            previewBody.innerHTML = body;
+        }
+
+        // Update-hooks: bij elke wijziging van editor/titel ook preview bijwerken.
+        editor.addEventListener('input', updatePreview);
+        titelIn.addEventListener('input', updatePreview);
+        // fotosWrap wordt vaak opnieuw gerenderd (foto toevoegen/verwijderen) →
+        // MutationObserver houdt de preview automatisch in sync.
+        var mo = new MutationObserver(updatePreview);
+        mo.observe(fotosWrap, { childList: true, subtree: true, attributes: true });
+
+        kaart.appendChild(previewWrap);
+        updatePreview();
 
         return kaart;
     }
