@@ -4246,6 +4246,16 @@ setupCropper({
         if (Array.from(knoppen).some(function(k) { return k.dataset.tab === gewenst; })) {
             zetActief(gewenst);
         }
+    } else {
+        // Geen hash: in aanmaken-modus MOET de Type-tab actief zijn als die bestaat
+        // (instructiekaart). Server-side rendert-ie 'm goed, maar iets JS-side kan
+        // 'm alsnog naar 'algemeen' hebben verschoven. Herstel expliciet.
+        var kaartForm = document.querySelector('.kaart-form');
+        var isAanmaken = kaartForm && kaartForm.dataset.modus === 'aanmaken';
+        if (isAanmaken) {
+            var typeKnop = tabsNav.querySelector('.tab-knop[data-tab="type"]');
+            if (typeKnop) zetActief('type');
+        }
     }
 
     // Rode rand op velden met een server-side error: zoek elke inline
