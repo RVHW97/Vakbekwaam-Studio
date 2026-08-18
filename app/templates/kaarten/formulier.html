@@ -3467,6 +3467,8 @@ function setupCropper(config) {
         if (statusEl) statusEl.style.display = 'none';
         isBevestigd = false;
         originalFile = null;
+        // Reset processed-vlag: bij een nieuwe upload moet de nieuwe crop opnieuw bevestigd worden.
+        if (form.dataset[config.processedKey]) delete form.dataset[config.processedKey];
         wisValidatieFout();
 
         var file = e.target.files && e.target.files[0];
@@ -3597,6 +3599,34 @@ function setupCropper(config) {
             // Lock de cropper zodat scrollen/klikken de crop niet meer verandert
             cropper.disable();
             bannerFoutVerwijderen(fotoLabel + ' bijsnijden');
+
+            // Meteen de gecropte canvas in de file-input zetten (i.p.v. pas op form-submit).
+            // Reden: na Bevestig gaat de gebruiker vaak naar een andere tab; op dat moment
+            // is de cropper-container display:none en kan cropper.getCroppedCanvas() falen —
+            // waardoor de foto niet meegestuurd zou worden bij opslaan. Nu doen we het
+            // terwijl de cropper nog zichtbaar is en gegarandeerd werkt.
+            try {
+                var canvas = cropper.getCroppedCanvas({
+                    maxWidth: config.maxW || 1200,
+                    maxHeight: config.maxH || 900,
+                    imageSmoothingQuality: 'high',
+                    fillColor: config.fillColor || '#fff'
+                });
+                if (canvas && canvas.width > 0 && canvas.height > 0) {
+                    canvas.toBlob(function(blob) {
+                        if (!blob) return;
+                        try {
+                            var origNaam = (originalFile && originalFile.name) || config.prefix;
+                            var naam = origNaam.replace(/\.[^.]+$/, '') + '.jpg';
+                            var dt = new DataTransfer();
+                            dt.items.add(new File([blob], naam, { type: 'image/jpeg' }));
+                            fileInput.files = dt.files;
+                            // Markeer: crop is al verwerkt, form-submit hoeft niets meer te doen.
+                            form.dataset[config.processedKey] = 'true';
+                        } catch (err) { console.error(config.label + ' cropper Bevestig-fout:', err); }
+                    }, 'image/jpeg', 0.92);
+                }
+            } catch (err) { console.error(config.label + ' cropper Bevestig-fout:', err); }
         });
     }
 
@@ -3620,6 +3650,11 @@ function setupCropper(config) {
         // Bij auto-save met onbevestigde foto: skip crop, laat file gewoon in file-input
         if (isAutoSave && !isBevestigd) return;
 
+        // Fallback: normaal is de crop al bij Bevestig verwerkt (processedKey='true'
+        // → early return hierboven). Kom je hier tóch (bv. gebruiker klikte Opslaan
+        // zeer snel na Bevestig en toBlob was nog niet klaar), probeer dan alsnog te croppen.
+        // Als de cropper hidden is en canvas faalt, laten we native submit met de
+        // originele file doorlopen (beter dan geen foto).
         e.preventDefault();
         try {
             var canvas = cropper.getCroppedCanvas({
@@ -3628,13 +3663,19 @@ function setupCropper(config) {
                 imageSmoothingQuality: 'high',
                 fillColor: config.fillColor || '#fff'
             });
-            if (!canvas) { form.dataset[config.processedKey] = 'true'; HTMLFormElement.prototype.submit.call(form); return; }
+            if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                form.dataset[config.processedKey] = 'true';
+                HTMLFormElement.prototype.submit.call(form);
+                return;
+            }
             canvas.toBlob(function(blob) {
                 try {
-                    var naam = (originalFile.name || config.prefix).replace(/\.[^.]+$/, '') + '.jpg';
-                    var dt = new DataTransfer();
-                    dt.items.add(new File([blob], naam, { type: 'image/jpeg' }));
-                    fileInput.files = dt.files;
+                    if (blob) {
+                        var naam = (originalFile.name || config.prefix).replace(/\.[^.]+$/, '') + '.jpg';
+                        var dt = new DataTransfer();
+                        dt.items.add(new File([blob], naam, { type: 'image/jpeg' }));
+                        fileInput.files = dt.files;
+                    }
                 } catch (err) { console.error(config.label + ' cropper fout:', err); }
                 form.dataset[config.processedKey] = 'true';
                 // Native submit via prototype: 'submit' kan overschaduwd zijn door <input name="submit">
