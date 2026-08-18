@@ -4458,12 +4458,13 @@ setupCropper({
 /* === Filter/zoek boven lange koppel-selects ===
    Voor elke koppel-blok-dropdown (kaart-koppel + QR-koppel op thema/scenario/
    instructie/opdracht/kennis) plaatst dit een zoek-input erboven. Filtert
-   opties (én optgroups) live op wat er getypt wordt — geen extra bibliotheek
-   nodig, werkt met de bestaande <select>. Alleen actief bij ≥8 opties.
+   live terwijl je typt.
 
-   IMPLEMENTATIE: we bewaren de originele innerHTML en herbouwen op elke
-   input. option.hidden werkt niet betrouwbaar in native macOS-select-
-   dropdowns (Safari negeert het), dus opties écht uit de DOM verwijderen. */
+   IMPLEMENTATIE: naast het zoekveld tonen we een custom lijst-panel dat
+   live meeloopt met de input. Native <select>-dropdowns sluiten zodra de
+   focus naar het zoekveld gaat — daarom vervangen we die view door een
+   eigen paneel dat gewoon zichtbaar blijft. Bij click op een lijst-item
+   wordt de originele <select> gezet en fires change → auto-koppel. */
 (function() {
     var selectors = [
         '.thema-koppel-blok select[name="doel_id"]',
@@ -4472,57 +4473,95 @@ setupCropper({
         '.instructie-koppel-blok select[name="qr_id"]'
     ];
     document.querySelectorAll(selectors.join(',')).forEach(function(sel) {
-        // Tel echte opties (uit optgroups + los), exclusief de lege placeholder.
-        var echteOpties = 0;
-        sel.querySelectorAll('option').forEach(function(o) { if (o.value) echteOpties++; });
-        if (echteOpties < 8) return;
+        // Bouw platte lijst {label, value, groep} uit optgroups/opties.
+        var items = [];
+        sel.querySelectorAll('optgroup').forEach(function(og) {
+            var groep = og.label || '';
+            og.querySelectorAll('option').forEach(function(o) {
+                if (!o.value) return;
+                items.push({ label: o.textContent, value: o.value, groep: groep });
+            });
+        });
+        // Losse opties buiten optgroup (niet-placeholder)
+        Array.prototype.slice.call(sel.children).forEach(function(el) {
+            if (el.tagName !== 'OPTION' || !el.value) return;
+            items.push({ label: el.textContent, value: el.value, groep: '' });
+        });
+        if (items.length < 8) return;
 
-        // Skip als er al een filter is (bij dubbel init).
+        // Skip als er al een filter zit
         if (sel.previousElementSibling && sel.previousElementSibling.classList &&
-            sel.previousElementSibling.classList.contains('koppel-filter')) return;
+            sel.previousElementSibling.classList.contains('koppel-filter-wrap')) return;
 
-        // Bewaar de originele markup zodat we bij een leeg zoekveld weer alles terug hebben.
-        var origineleHTML = sel.innerHTML;
+        var wrap = document.createElement('div');
+        wrap.className = 'koppel-filter-wrap';
+        wrap.style.flex = '0 0 100%';
+        wrap.style.marginBottom = '0.35rem';
 
         var input = document.createElement('input');
         input.type = 'search';
         input.className = 'form-input koppel-filter';
         input.placeholder = '🔍 Zoek in de lijst (nummer, naam, categorie)…';
         input.autocomplete = 'off';
-        // Neem volle regel in de flex-container zodat het niet naast de select gedrukt wordt.
-        input.style.flex = '0 0 100%';
-        input.style.marginBottom = '0.35rem';
+        input.style.width = '100%';
 
-        sel.parentNode.insertBefore(input, sel);
+        var lijst = document.createElement('div');
+        lijst.className = 'koppel-suggesties';
+        lijst.style.cssText = 'max-height: 240px; overflow-y: auto; ' +
+            'border: 1px solid #ccc; border-top: none; background: #fff; ' +
+            'border-radius: 0 0 4px 4px; margin-top: -1px;';
 
-        function filter() {
-            var q = input.value.trim().toLowerCase();
-            // Herstel eerst de volledige lijst — dan bouwen we die per beurt af.
-            sel.innerHTML = origineleHTML;
-            if (!q) return;
+        wrap.appendChild(input);
+        wrap.appendChild(lijst);
+        sel.parentNode.insertBefore(wrap, sel);
+        // Verberg de originele <select> — hij blijft in de DOM voor de value + change-event.
+        sel.style.display = 'none';
 
-            // Verwijder options die niet matchen; optgroups met 0 kinderen ook verwijderen.
-            // Placeholder-option (value="") blijft altijd staan.
-            sel.querySelectorAll('optgroup').forEach(function(og) {
-                var groepLabel = (og.label || '').toLowerCase();
-                var groepMatch = groepLabel.indexOf(q) !== -1;
-                Array.prototype.slice.call(og.querySelectorAll('option')).forEach(function(o) {
-                    if (groepMatch) return;  // groep zelf matcht — alles binnen behouden
-                    if (o.textContent.toLowerCase().indexOf(q) === -1) o.remove();
+        function render(q) {
+            q = (q || '').trim().toLowerCase();
+            lijst.innerHTML = '';
+            var laatsteGroep = null;
+            var aantal = 0;
+            items.forEach(function(it) {
+                var groepLc = (it.groep || '').toLowerCase();
+                var labelLc = it.label.toLowerCase();
+                if (q && labelLc.indexOf(q) === -1 && groepLc.indexOf(q) === -1) return;
+                if (it.groep && it.groep !== laatsteGroep) {
+                    var kop = document.createElement('div');
+                    kop.textContent = it.groep;
+                    kop.style.cssText = 'padding: 0.35rem 0.6rem; font-weight: 700; ' +
+                        'color: #1B2A4A; background: #f0f0f0; font-size: 0.85rem;';
+                    lijst.appendChild(kop);
+                    laatsteGroep = it.groep;
+                }
+                var rij = document.createElement('div');
+                rij.textContent = it.label;
+                rij.dataset.value = it.value;
+                rij.style.cssText = 'padding: 0.4rem 0.6rem; cursor: pointer; ' +
+                    'font-size: 0.9rem; border-top: 1px solid #f0f0f0;';
+                rij.addEventListener('mouseenter', function() { rij.style.background = '#e8f0f8'; });
+                rij.addEventListener('mouseleave', function() { rij.style.background = ''; });
+                rij.addEventListener('click', function() {
+                    sel.value = it.value;
+                    // Trigger change zodat auto-koppel-JS fires
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-                if (og.querySelectorAll('option').length === 0) og.remove();
+                lijst.appendChild(rij);
+                aantal++;
             });
-            Array.prototype.slice.call(sel.children).forEach(function(el) {
-                if (el.tagName !== 'OPTION') return;
-                if (!el.value) return;  // placeholder blijft
-                if (el.textContent.toLowerCase().indexOf(q) === -1) el.remove();
-            });
+            if (aantal === 0) {
+                var leeg = document.createElement('div');
+                leeg.textContent = 'Geen resultaten.';
+                leeg.style.cssText = 'padding: 0.5rem 0.6rem; color: #888; font-style: italic;';
+                lijst.appendChild(leeg);
+            }
         }
-        input.addEventListener('input', filter);
-        // Voorkom dat Enter in het zoekveld het hoofdform submit (novalidate).
+
+        input.addEventListener('input', function() { render(input.value); });
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') e.preventDefault();
         });
+        render('');  // initieel: toon alles
     });
 })();
 
