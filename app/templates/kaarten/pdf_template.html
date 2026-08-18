@@ -1429,21 +1429,21 @@
                 </div>
                 {% if layout == 'T' %}
                 <div class="pdf-tip-stap-layout-T">
-                    <div class="pdf-tip-stap-tekst">{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                    <div class="pdf-tip-stap-tekst">{% if tip.tekst_html %}{{ tip.tekst_html | safe }}{% else %}{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
                 </div>
                 {% elif layout == 'B' %}
                 <div class="pdf-tip-stap-layout-B">
-                    <div class="pdf-tip-stap-tekst">{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                    <div class="pdf-tip-stap-tekst">{% if tip.tekst_html %}{{ tip.tekst_html | safe }}{% else %}{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
                     <div class="pdf-tip-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
                 </div>
                 {% elif layout == 'D' %}
                 <div class="pdf-tip-stap-layout-D">
-                    <div class="pdf-tip-stap-tekst">{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                    <div class="pdf-tip-stap-tekst">{% if tip.tekst_html %}{{ tip.tekst_html | safe }}{% else %}{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
                     <div class="pdf-tip-stap-foto"><img src="{{ gevulde_fotos[0].pad }}" alt=""></div>
                 </div>
                 {% else %}
                 <div class="pdf-tip-stap-layout-C">
-                    <div class="pdf-tip-stap-tekst">{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}</div>
+                    <div class="pdf-tip-stap-tekst">{% if tip.tekst_html %}{{ tip.tekst_html | safe }}{% else %}{{ (tip.tekst or '') | replace('\n', '<br>')|safe }}{% endif %}</div>
                     <div class="pdf-tip-stap-fotostrip">
                         {% for f in gevulde_fotos[:2] %}
                         <div class="pdf-tip-stap-foto"><img src="{{ f.pad }}" alt=""></div>

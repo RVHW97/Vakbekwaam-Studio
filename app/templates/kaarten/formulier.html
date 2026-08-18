@@ -1880,6 +1880,22 @@
         <p class="form-hint">Per tip een korte omschrijving en optioneel max 2 foto's. Max <strong>3</strong> tips — <span id="tips-teller">0 / 3</span>.</p>
         <p class="form-hint">💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een tip — de tweede foto binnen dezelfde tip volgt automatisch dezelfde verhouding.</p>
 
+        {# Gedeelde rich-text toolbar (v0.7.32) — bedient de laatst-gefocuste tip-omschrijving. #}
+        <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak" id="tips-shared-toolbar">
+            <button type="button" class="kk-tb-knop" data-kk-cmd="bold" title="Vet (Ctrl+B)"><strong>B</strong></button>
+            <button type="button" class="kk-tb-knop" data-kk-cmd="italic" title="Cursief (Ctrl+I)"><em>I</em></button>
+            <span class="kk-tb-scheiding"></span>
+            <button type="button" class="kk-tb-knop" data-kk-cmd="insertUnorderedList" title="Opsomming">• Lijst</button>
+            <button type="button" class="kk-tb-knop" data-kk-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
+            <span class="kk-tb-scheiding"></span>
+            <button type="button" class="kk-tb-kleur" data-kk-kleur="#000000" style="background:#000000" title="Zwart"></button>
+            <button type="button" class="kk-tb-kleur" data-kk-kleur="#1B2A4A" style="background:#1B2A4A" title="Huisstijl-navy"></button>
+            <button type="button" class="kk-tb-kleur" data-kk-kleur="#C8102E" style="background:#C8102E" title="Brandweer-rood"></button>
+            <span class="kk-tb-scheiding"></span>
+            <button type="button" class="kk-tb-knop" data-kk-cmd="removeFormat" title="Opmaak weghalen">Wis opmaak</button>
+        </div>
+        <p class="form-hint" style="margin-top:0.4rem;">💡 De toolbar werkt op de tip-omschrijving waar je cursor het laatst stond.</p>
+
         {{ form.ensceneringstips(type="hidden", id="tips-json") }}
         <div id="tips-lijst"></div>
 
@@ -4795,7 +4811,11 @@ setupCropper({
     var nieuweBtn  = document.getElementById('tips-nieuwe-knop');
     var teller     = document.getElementById('tips-teller');
     var modal      = document.getElementById('tips-cropper-modal');
+    var tipsToolbar = document.getElementById('tips-shared-toolbar');
     if (!hiddenJson || !lijst || !nieuweBtn) return;
+
+    // Rich-text state (v0.7.32): laatst-gefocuste tip-omschrijving.
+    var tipsActieveEditor = null;
 
     var MAX_TIPS   = 3;
     var MAX_FOTOS  = 2;
@@ -5019,12 +5039,32 @@ setupCropper({
         var lblTekst = document.createElement('label'); lblTekst.className = 'form-label';
         lblTekst.textContent = 'Omschrijving van de tip';
         grpTekst.appendChild(lblTekst);
-        var inpTekst = document.createElement('textarea');
-        inpTekst.className = 'form-input form-textarea'; inpTekst.rows = 2;
-        inpTekst.maxLength = TEKST_MAX;
-        inpTekst.placeholder = 'Bijv. Rookmachine in de hoek plaatsen';
-        inpTekst.value = t.tekst || '';
-        inpTekst.addEventListener('input', function() { t.tekst = inpTekst.value; syncJson(); updatePreviewNu(); });
+        // v0.7.32: rich-text i.p.v. textarea. Werkt met gedeelde tips-shared-toolbar.
+        var inpTekst = document.createElement('div');
+        inpTekst.className = 'kk-editor';
+        inpTekst.setAttribute('contenteditable', 'true');
+        inpTekst.setAttribute('role', 'textbox');
+        inpTekst.setAttribute('aria-multiline', 'true');
+        inpTekst.setAttribute('data-placeholder', 'Bijv. Rookmachine in de hoek plaatsen — met opmaak via de toolbar bovenaan');
+        var initTipHtml = t.tekst_html;
+        if (!initTipHtml && t.tekst) {
+            var escT = String(t.tekst).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            initTipHtml = '<p>' + escT.replace(/\n/g, '<br>') + '</p>';
+        }
+        inpTekst.innerHTML = initTipHtml || '';
+        function markEmptyTip() {
+            var leeg = (inpTekst.textContent || '').trim().length === 0 && !inpTekst.querySelector('img,table');
+            inpTekst.setAttribute('data-empty', leeg ? 'true' : 'false');
+        }
+        markEmptyTip();
+        inpTekst.addEventListener('focus', function() { tipsActieveEditor = inpTekst; });
+        inpTekst.addEventListener('input', function() {
+            t.tekst_html = inpTekst.innerHTML;
+            t.tekst = (inpTekst.textContent || '').trim();
+            markEmptyTip();
+            syncJson();
+            updatePreviewNu();
+        });
         grpTekst.appendChild(inpTekst);
         body.appendChild(grpTekst);
 
@@ -5327,6 +5367,32 @@ setupCropper({
                 if (!blok) return;
                 var previewEl = blok.querySelector('.werkwijze-preview');
                 if (previewEl) renderTipPreview(t, previewEl);
+            });
+        });
+    }
+
+    // ==== Gedeelde rich-text toolbar (v0.7.32) ====
+    if (tipsToolbar) {
+        tipsToolbar.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!tipsActieveEditor) return;
+                tipsActieveEditor.focus();
+                var cmd = btn.dataset.kkCmd;
+                var arg = btn.dataset.kkArg || null;
+                try { document.execCommand(cmd, false, arg); } catch (_) {}
+                tipsActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+        tipsToolbar.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!tipsActieveEditor) return;
+                tipsActieveEditor.focus();
+                try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
+                tipsActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
             });
         });
     }
