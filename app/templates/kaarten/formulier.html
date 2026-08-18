@@ -3268,8 +3268,13 @@
     var gewijzigd = false;
     var actief = false;
 
-    function markeerGewijzigd() {
+    // Koppel-blokken (QR/kaart/thema) doen hun eigen ajax-opslag — hun change/input
+    // mag de form NIET als "onopgeslagen" markeren, anders blokkeert het reload-modal.
+    var NEGEER_SELECTORS = '.instructie-koppel-blok, .thema-koppel-blok, .scenario-koppel-blok';
+
+    function markeerGewijzigd(e) {
         if (!actief || gewijzigd) return;
+        if (e && e.target && e.target.closest && e.target.closest(NEGEER_SELECTORS)) return;
         gewijzigd = true;
     }
 
@@ -7081,7 +7086,15 @@ setupCropper({
             btn.disabled = true;
             var origTekst = btn.textContent;
             fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function() { window.location.reload(); })
+                .then(function() {
+                    // Zorg dat je na reload op de achtergrond-tab blijft
+                    // (anders val je terug op algemeen en lijkt de dropdown verdwenen).
+                    var hash = window.location.hash;
+                    if (!hash || hash.indexOf('#tab-') !== 0) {
+                        window.location.hash = '#tab-achtergrond';
+                    }
+                    window.location.reload();
+                })
                 .catch(function(err) {
                     console.error('QR-koppel-actie fout:', err);
                     btn.disabled = false;
