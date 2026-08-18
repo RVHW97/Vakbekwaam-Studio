@@ -8,6 +8,8 @@
 {%- if r %}<li>{{ r }}</li>{% endif -%}
 {%- endfor -%}
 </ul>
+{%- elif stap.tekst_html -%}
+{{ stap.tekst_html | safe }}
 {%- else -%}
 {{ ruwe }}
 {%- endif -%}

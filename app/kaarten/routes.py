@@ -580,6 +580,9 @@ def verwerk_tips_fotos(json_string):
                 'bestand_origineel': bestand_origineel,
             })
         tip['fotos'] = nieuwe_fotos
+        # v0.7.31 rich-text: sanitize tekst_html per tip.
+        if tip.get('tekst_html'):
+            tip['tekst_html'] = sanitize_kennis_html(tip.get('tekst_html'))
     return json.dumps(tips[:3], ensure_ascii=False)
 
 
@@ -702,6 +705,10 @@ def verwerk_werkwijze_fotos(json_string):
                 'bestand_origineel': bestand_origineel,
             })
         stap['fotos'] = nieuwe_fotos
+        # v0.7.31 rich-text: sanitize tekst_html van de vrije-tekst-modus.
+        # Bullets-modus (tekst_opmaak='lijst') blijft plain-text.
+        if stap.get('tekst_opmaak') != 'lijst' and stap.get('tekst_html'):
+            stap['tekst_html'] = sanitize_kennis_html(stap.get('tekst_html'))
     return json.dumps(stappen, ensure_ascii=False)
 
 

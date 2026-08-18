@@ -2523,6 +2523,22 @@
                 💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een stap — de volgende foto's binnen die stap volgen automatisch dezelfde verhouding voor een strak eindresultaat.
             </p>
 
+            {# Gedeelde rich-text toolbar (v0.7.31) — bedient de laatst-gefocuste vrije-tekst-editor. #}
+            <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak" id="ww-shared-toolbar">
+                <button type="button" class="kk-tb-knop" data-kk-cmd="bold" title="Vet (Ctrl+B)"><strong>B</strong></button>
+                <button type="button" class="kk-tb-knop" data-kk-cmd="italic" title="Cursief (Ctrl+I)"><em>I</em></button>
+                <span class="kk-tb-scheiding"></span>
+                <button type="button" class="kk-tb-knop" data-kk-cmd="insertUnorderedList" title="Opsomming">• Lijst</button>
+                <button type="button" class="kk-tb-knop" data-kk-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
+                <span class="kk-tb-scheiding"></span>
+                <button type="button" class="kk-tb-kleur" data-kk-kleur="#000000" style="background:#000000" title="Zwart"></button>
+                <button type="button" class="kk-tb-kleur" data-kk-kleur="#1B2A4A" style="background:#1B2A4A" title="Huisstijl-navy"></button>
+                <button type="button" class="kk-tb-kleur" data-kk-kleur="#C8102E" style="background:#C8102E" title="Brandweer-rood"></button>
+                <span class="kk-tb-scheiding"></span>
+                <button type="button" class="kk-tb-knop" data-kk-cmd="removeFormat" title="Opmaak weghalen">Wis opmaak</button>
+            </div>
+            <p class="form-hint" style="margin-top:0.4rem;">💡 De toolbar werkt op de vrije-tekst-uitleg waar je cursor het laatst stond.</p>
+
             <div id="werkwijze-stappen-lijst"></div>
 
             <button type="button" id="werkwijze-nieuwe-stap-knop" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">
@@ -5389,7 +5405,11 @@ setupCropper({
     var lijst         = document.getElementById('werkwijze-stappen-lijst');
     var nieuweStapBtn = document.getElementById('werkwijze-nieuwe-stap-knop');
     var teller        = document.getElementById('werkwijze-teller');
+    var wwToolbar     = document.getElementById('ww-shared-toolbar');
     if (!hiddenJson || !lijst || !nieuweStapBtn) return;
+
+    // Rich-text state: laatst-gefocuste vrije-tekst-editor.
+    var wwActieveEditor = null;
 
     var MAX_STAPPEN = {{ WERKWIJZE_MAX_STAPPEN|default(20) }};
     var TITEL_MAX   = {{ WERKWIJZE_TITEL_MAX|default(40) }};
@@ -5907,31 +5927,36 @@ setupCropper({
     }
 
     function bouwVrijeTekstEditor(s, body, container, tekstMax) {
-        var tekstArea = document.createElement('textarea');
-        tekstArea.className = 'form-input form-textarea';
-        tekstArea.rows = Math.max(3, Math.min(10, Math.ceil(tekstMax / 80)));
-        tekstArea.cols = 100;
-        tekstArea.style.width = '100%';
-        tekstArea.style.boxSizing = 'border-box';
-        tekstArea.maxLength = tekstMax;
-        tekstArea.placeholder = 'Wat moet er bij deze stap gebeuren?';
-        tekstArea.value = s.tekst || '';
-        var teller = document.createElement('span');
-        teller.className = 'form-hint';
-        teller.style.display = 'block';
-        teller.style.textAlign = 'right';
-        function vernieuwTeller() {
-            teller.textContent = tekstArea.value.length + ' / ' + tekstMax + ' tekens';
+        // v0.7.31: rich-text i.p.v. textarea. Bedient door de gedeelde ww-toolbar
+        // die op wwActieveEditor werkt.
+        var editor = document.createElement('div');
+        editor.className = 'kk-editor';
+        editor.setAttribute('contenteditable', 'true');
+        editor.setAttribute('role', 'textbox');
+        editor.setAttribute('aria-multiline', 'true');
+        editor.setAttribute('data-placeholder', 'Wat moet er bij deze stap gebeuren? (opmaak via de toolbar)');
+        // Backward compat: als er nog geen tekst_html is maar wel tekst (plain), migreer.
+        var initHtml = s.tekst_html;
+        if (!initHtml && s.tekst) {
+            var esc = String(s.tekst).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            initHtml = '<p>' + esc.replace(/\n/g, '<br>') + '</p>';
         }
-        vernieuwTeller();
-        tekstArea.addEventListener('input', function() {
-            s.tekst = this.value;
+        editor.innerHTML = initHtml || '';
+        function markEmpty() {
+            var leeg = (editor.textContent || '').trim().length === 0 && !editor.querySelector('img,table');
+            editor.setAttribute('data-empty', leeg ? 'true' : 'false');
+        }
+        markEmpty();
+        editor.addEventListener('focus', function() { wwActieveEditor = editor; });
+        editor.addEventListener('input', function() {
+            s.tekst_html = editor.innerHTML;
+            // Fallback: houd s.tekst gesynchroniseerd voor code die nog naar plain tekst kijkt.
+            s.tekst = (editor.textContent || '').trim();
+            markEmpty();
             syncJson();
-            vernieuwTeller();
             updatePreviewTekst(s, body);
         });
-        container.appendChild(tekstArea);
-        container.appendChild(teller);
+        container.appendChild(editor);
     }
 
     function bouwBulletsEditor(s, body, container) {
@@ -6572,6 +6597,33 @@ setupCropper({
                 p.style.setProperty('--preview-kerntaak', kleur);
                 var poly = p.querySelector('.werkwijze-preview-chevron-slant polygon');
                 if (poly) poly.setAttribute('fill', kleur);
+            });
+        });
+    }
+
+    // ==== Gedeelde rich-text toolbar (v0.7.31) ====
+    // Werkt op wwActieveEditor (laatst-gefocuste .kk-editor binnen deze editor).
+    if (wwToolbar) {
+        wwToolbar.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!wwActieveEditor) return;
+                wwActieveEditor.focus();
+                var cmd = btn.dataset.kkCmd;
+                var arg = btn.dataset.kkArg || null;
+                try { document.execCommand(cmd, false, arg); } catch (_) {}
+                wwActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+        wwToolbar.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
+            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!wwActieveEditor) return;
+                wwActieveEditor.focus();
+                try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
+                wwActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
             });
         });
     }
