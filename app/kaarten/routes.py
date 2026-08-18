@@ -1270,7 +1270,7 @@ def bewerken(kaart_id):
     # Themakaart: koppelingen aan andere kaarten (per tussentitel) + QR-codes (één lijst)
     thema_kaart_links = {0: [], 1: [], 2: []}
     thema_qr_links_op_volgorde = []
-    thema_beschikbare_kaarten_per_type = {}  # {'instructie': [...], 'scenario': [...], 'opdracht': [...]}
+    thema_beschikbare_kaarten_per_type = {}  # {'instructie': [...], 'scenario': [...], 'opdracht': [...], 'kennis': [...]}
     thema_beschikbare_qrs_per_categorie = {}  # {'oefening': [...], ...}
     if kaart.type == 'thema':
         thema_kaart_links = kaart.get_thema_kaart_links()
@@ -1283,8 +1283,8 @@ def bewerken(kaart_id):
             Kaart.status != 'gearchiveerd',
             ~Kaart.id.in_(gekoppelde_ids),
         ).order_by(Kaart.nummer).all()
-        # Groepeer per type, in vaste volgorde (instructie / scenario / opdracht)
-        for type_key in ('instructie', 'scenario', 'opdracht'):
+        # Groepeer per type, in vaste volgorde (instructie / scenario / opdracht / kennis)
+        for type_key in ('instructie', 'scenario', 'opdracht', 'kennis'):
             kaarten = [k for k in beschikbare_kaarten if k.type == type_key]
             if kaarten:
                 thema_beschikbare_kaarten_per_type[type_key] = {

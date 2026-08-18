@@ -96,6 +96,7 @@ def genereer_pdf(kaart):
         'instructie': '#4C7F52', # THV groen
         'scenario': '#B6463D',   # Brand rood
         'opdracht': '#DAB94F',   # IBGS geel
+        'kennis': '#6B4C93',     # Kennis indigo/paars
     }
     type_kleur = type_kleuren.get(kaart.type, '#CC9933')
 

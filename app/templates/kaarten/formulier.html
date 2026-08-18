@@ -2177,7 +2177,7 @@
                         {% if thema_kaart_links[groep_index] %}
                         {% set links_in_groep = thema_kaart_links[groep_index] %}
                         {# Groepeer gekoppelde kaarten per type binnen deze sectie #}
-                        {% for type_key, type_naam in [('instructie', 'Instructiekaarten'), ('scenario', 'Scenariokaarten'), ('opdracht', 'Opdrachtkaarten')] %}
+                        {% for type_key, type_naam in [('instructie', 'Instructiekaarten'), ('scenario', 'Scenariokaarten'), ('opdracht', 'Opdrachtkaarten'), ('kennis', 'Kenniskaarten')] %}
                             {% set links_van_type = links_in_groep | selectattr('gekoppelde_kaart.type', 'equalto', type_key) | list %}
                             {% if links_van_type %}
                             <div class="thema-kaart-groep">
