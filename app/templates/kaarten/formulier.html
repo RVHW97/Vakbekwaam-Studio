@@ -4305,6 +4305,46 @@ setupCropper({
     }, 50);
 })();
 
+/* === Globale helper: bewaar ALLE formulier-velden via auto-save ===
+   Wordt door alle koppel-actie-handlers (thema/scenario/instructie) aangeroepen
+   vóór hun eigen fetch+reload. Anders gaat een reload ná koppel-actie alle
+   niet-opgeslagen velden op andere tabs kwijt (bewerken-mode: tab-wissel is
+   client-side, dus opzet/scenario/uitvoering-inhoud staat tot dan alleen in DOM).
+   Slaat op via auto_save_tab → server slaat concept op zonder strikte validatie. */
+(function() {
+    window.__vsSaveHoofdformAlleVelden = function() {
+        var form = document.querySelector('.kaart-form');
+        if (!form) return Promise.resolve();
+        var csrfMeta = document.querySelector('input[name="csrf_token"]');
+        var csrfToken = csrfMeta ? csrfMeta.value : '';
+        var actief = document.querySelector('.tab-paneel.actief');
+        var doelTab = actief ? actief.dataset.tab : 'algemeen';
+
+        var fd = new FormData();
+        fd.append('csrf_token', csrfToken);
+        fd.append('auto_save_tab', doelTab);
+
+        // Verzamel alle input/textarea/select-velden, behalve:
+        //  - file-inputs (kunnen we niet betrouwbaar meesturen; foto's hebben eigen flow)
+        //  - velden binnen een koppel-blok (die triggeren hun eigen ajax)
+        //  - csrf_token en auto_save_tab (al toegevoegd)
+        //  - wijziging_toelichting (aparte flow bij publiceren)
+        form.querySelectorAll('input, textarea, select').forEach(function(el) {
+            if (!el.name) return;
+            if (el.type === 'file') return;
+            if (el.name === 'csrf_token' || el.name === 'auto_save_tab') return;
+            if (el.name === 'wijziging_toelichting') return;
+            if (el.closest('.thema-koppel-blok, .scenario-koppel-blok, .instructie-koppel-blok')) return;
+            if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) return;
+            fd.append(el.name, el.value);
+        });
+
+        return fetch(form.action || window.location.pathname, {
+            method: 'POST', body: fd, credentials: 'same-origin'
+        });
+    };
+})();
+
 /* === Themakaart: progressive disclosure van sectie 2 en 3 === */
 (function() {
     var toonKnoppen = document.querySelectorAll('.thema-sectie-toon-knop');
@@ -4384,7 +4424,12 @@ setupCropper({
             // Toon korte status
             btn.disabled = true;
             var origTekst = btn.textContent;
-            bewaarHoofdformVelden()
+            // Hoofdform-auto-save met ALLE velden (v0.7.27 — was voorheen alleen
+            // tekst-velden op thema, waardoor koppel-acties op andere types velden
+            // konden wissen). Fallback naar de thema-specifieke helper als de globale
+            // niet geladen is (bv. na een JS-error eerder in de pagina).
+            var bewaar = (window.__vsSaveHoofdformAlleVelden || bewaarHoofdformVelden)();
+            bewaar
                 .then(function() {
                     return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 })
@@ -4651,7 +4696,13 @@ setupCropper({
 
             btn.disabled = true;
             var origTekst = btn.textContent;
-            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+            // Eerst het HELE hoofdform opslaan (alle tab-inhouden), daarna koppel-actie,
+            // daarna reload. Anders zou de reload alle nog-niet-opgeslagen tab-velden wissen.
+            var bewaar = (window.__vsSaveHoofdformAlleVelden || function() { return Promise.resolve(); })();
+            bewaar
+                .then(function() {
+                    return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                })
                 .then(function() {
                     document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
                     window.location.reload();
@@ -7293,7 +7344,13 @@ setupCropper({
 
             btn.disabled = true;
             var origTekst = btn.textContent;
-            fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+            // Eerst hoofdform opslaan (alle tab-velden) — anders raakt de reload
+            // niet-opgeslagen velden op andere tabs kwijt.
+            var bewaar = (window.__vsSaveHoofdformAlleVelden || function() { return Promise.resolve(); })();
+            bewaar
+                .then(function() {
+                    return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                })
                 .then(function() {
                     // Reset "wijzigd"-vlag zodat beforeunload-modal de reload niet blokkeert.
                     document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
