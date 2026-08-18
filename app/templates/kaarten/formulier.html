@@ -3280,6 +3280,12 @@
 
     form.addEventListener('submit', function() { gewijzigd = false; });
 
+    // Ajax-handlers (koppel-blokken op thema/scenario/instructie) doen een auto-save
+    // via fetch en daarna window.location.reload(). Zonder deze reset zou de
+    // "wil je verlaten"-modal die reload blokkeren zodra er ELDERS op de pagina
+    // (bv. titel/ondertitel) iets was aangepast.
+    document.addEventListener('vs-form-opgeslagen', function() { gewijzigd = false; });
+
     // Eigen modal — compacter en met gekleurde knoppen (rood = weg, groen = blijven).
     var modalEl = null;
     function toonModal(bijOK) {
@@ -4332,6 +4338,8 @@ setupCropper({
                     return fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
                 })
                 .then(function() {
+                    // Reset "wijzigd"-vlag zodat beforeunload-modal de reload niet blokkeert.
+                    document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
                     // Hash blijft automatisch bewaard — geen handmatige href-assignment
                     // (die deed niets bij identieke URL, dus geen reload).
                     window.location.reload();
@@ -4483,7 +4491,10 @@ setupCropper({
             btn.disabled = true;
             var origTekst = btn.textContent;
             fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function() { window.location.reload(); })
+                .then(function() {
+                    document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
+                    window.location.reload();
+                })
                 .catch(function(err) {
                     console.error('Scenario-koppel-actie fout:', err);
                     btn.disabled = false;
@@ -7123,6 +7134,8 @@ setupCropper({
             var origTekst = btn.textContent;
             fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
                 .then(function() {
+                    // Reset "wijzigd"-vlag zodat beforeunload-modal de reload niet blokkeert.
+                    document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
                     // Zorg dat je na reload op de achtergrond-tab blijft
                     // (anders val je terug op algemeen en lijkt de dropdown verdwenen).
                     var hash = window.location.hash;
