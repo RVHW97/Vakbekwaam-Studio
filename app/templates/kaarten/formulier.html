@@ -3966,6 +3966,17 @@ setupCropper({
                 zetActief(k.dataset.tab);
                 return;
             }
+            // In aanmaken-mode: valideer huidige tab eerst — anders zou de tab-wissel
+            // server-side POST doen, validatie zou falen, form re-render, file-input
+            // zou leegraken (browsers blokkeren voorvullen van file-inputs).
+            if (huidigTab && typeof valideerTab === 'function') {
+                var ontbrekend = valideerTab(huidigTab);
+                if (ontbrekend.length > 0) {
+                    toonTabFout(huidigTab, ontbrekend);
+                    return;
+                }
+                wisTabFout(huidigTab);
+            }
             autoSaveEnSwitch(k.dataset.tab);
         });
     });
@@ -3977,7 +3988,13 @@ setupCropper({
         'algemeen': [
             { id: 'naam', label: 'Logische naam' },
             { id: 'titel', label: 'Titel' },
-            { id: 'kerntaak', label: 'Kerntaak' }
+            { id: 'kerntaak', label: 'Kerntaak' },
+            // In AANMAKEN-mode moet subcategorie én header-foto ook al ingevuld zijn —
+            // anders faalt server-side validatie en verdwijnt de foto uit de file-input
+            // (browsers voorkomen dat we een file-input server-side voorvullen).
+            // In BEWERKEN-mode wordt deze check overgeslagen (zie valideerTab hieronder).
+            { id: 'subcategorie-select', label: 'Subcategorie', aanmakenOnly: true },
+            { id: 'header-foto-input', label: 'Header/achtergrondfoto', aanmakenOnly: true, type: 'file-of-bestaand' }
         ],
         'opzet': [
             { id: 'doelgroep-select', label: 'Doelgroep' },
@@ -4015,7 +4032,20 @@ setupCropper({
     function valideerTab(tabId) {
         var verplicht = TAB_VERPLICHT[tabId] || [];
         var ontbrekend = [];
+        var form = document.querySelector('.kaart-form');
+        var isAanmaken = form && form.dataset.modus === 'aanmaken';
         verplicht.forEach(function(v) {
+            // Sommige checks alleen in aanmaken-mode (in bewerken slaat de tab-wissel
+            // client-side gewoon over — geen server-round-trip die iets kan wissen).
+            if (v.aanmakenOnly && !isAanmaken) return;
+            if (v.type === 'file-of-bestaand') {
+                // Header-foto is OK als er ofwel al een bestaande foto is, ofwel een nieuwe upload.
+                var fi = document.getElementById(v.id);
+                var heeftNieuwe = fi && fi.files && fi.files.length > 0;
+                var heeftBestaand = !!document.querySelector('.bestaande-afbeelding img');
+                if (!heeftNieuwe && !heeftBestaand) ontbrekend.push(v.label);
+                return;
+            }
             if (v.type === 'lijst') {
                 var hidden = document.getElementById(v.hidden);
                 if (hidden) {
