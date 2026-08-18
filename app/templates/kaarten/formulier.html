@@ -4459,8 +4459,11 @@ setupCropper({
    Voor elke koppel-blok-dropdown (kaart-koppel + QR-koppel op thema/scenario/
    instructie/opdracht/kennis) plaatst dit een zoek-input erboven. Filtert
    opties (én optgroups) live op wat er getypt wordt — geen extra bibliotheek
-   nodig, werkt met de bestaande <select>. Alleen actief bij ≥8 opties, anders
-   geen filter. */
+   nodig, werkt met de bestaande <select>. Alleen actief bij ≥8 opties.
+
+   IMPLEMENTATIE: we bewaren de originele innerHTML en herbouwen op elke
+   input. option.hidden werkt niet betrouwbaar in native macOS-select-
+   dropdowns (Safari negeert het), dus opties écht uit de DOM verwijderen. */
 (function() {
     var selectors = [
         '.thema-koppel-blok select[name="doel_id"]',
@@ -4470,14 +4473,16 @@ setupCropper({
     ];
     document.querySelectorAll(selectors.join(',')).forEach(function(sel) {
         // Tel echte opties (uit optgroups + los), exclusief de lege placeholder.
-        var alleOpties = sel.querySelectorAll('option');
         var echteOpties = 0;
-        alleOpties.forEach(function(o) { if (o.value) echteOpties++; });
+        sel.querySelectorAll('option').forEach(function(o) { if (o.value) echteOpties++; });
         if (echteOpties < 8) return;
 
         // Skip als er al een filter is (bij dubbel init).
         if (sel.previousElementSibling && sel.previousElementSibling.classList &&
             sel.previousElementSibling.classList.contains('koppel-filter')) return;
+
+        // Bewaar de originele markup zodat we bij een leeg zoekveld weer alles terug hebben.
+        var origineleHTML = sel.innerHTML;
 
         var input = document.createElement('input');
         input.type = 'search';
@@ -4492,27 +4497,25 @@ setupCropper({
 
         function filter() {
             var q = input.value.trim().toLowerCase();
-            var optgroups = sel.querySelectorAll('optgroup');
-            if (!q) {
-                alleOpties.forEach(function(o) { o.hidden = false; });
-                optgroups.forEach(function(og) { og.hidden = false; });
-                return;
-            }
-            optgroups.forEach(function(og) {
+            // Herstel eerst de volledige lijst — dan bouwen we die per beurt af.
+            sel.innerHTML = origineleHTML;
+            if (!q) return;
+
+            // Verwijder options die niet matchen; optgroups met 0 kinderen ook verwijderen.
+            // Placeholder-option (value="") blijft altijd staan.
+            sel.querySelectorAll('optgroup').forEach(function(og) {
                 var groepLabel = (og.label || '').toLowerCase();
-                var iets = false;
-                og.querySelectorAll('option').forEach(function(o) {
-                    var match = groepLabel.indexOf(q) !== -1 ||
-                                o.textContent.toLowerCase().indexOf(q) !== -1;
-                    o.hidden = !match;
-                    if (match) iets = true;
+                var groepMatch = groepLabel.indexOf(q) !== -1;
+                Array.prototype.slice.call(og.querySelectorAll('option')).forEach(function(o) {
+                    if (groepMatch) return;  // groep zelf matcht — alles binnen behouden
+                    if (o.textContent.toLowerCase().indexOf(q) === -1) o.remove();
                 });
-                og.hidden = !iets;
+                if (og.querySelectorAll('option').length === 0) og.remove();
             });
-            // Losse opties (buiten optgroup): placeholder blijft altijd zichtbaar.
-            sel.querySelectorAll(':scope > option').forEach(function(o) {
-                if (!o.value) { o.hidden = false; return; }
-                o.hidden = o.textContent.toLowerCase().indexOf(q) === -1;
+            Array.prototype.slice.call(sel.children).forEach(function(el) {
+                if (el.tagName !== 'OPTION') return;
+                if (!el.value) return;  // placeholder blijft
+                if (el.textContent.toLowerCase().indexOf(q) === -1) el.remove();
             });
         }
         input.addEventListener('input', filter);
