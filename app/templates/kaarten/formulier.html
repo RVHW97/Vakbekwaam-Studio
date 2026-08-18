@@ -2795,18 +2795,8 @@
             </div>
 
             <div class="form-groep-blok">
-                <h3 class="form-groep-titel">Voorbereiding</h3>
-                <p class="form-hint">Wat moet er voorafgaand aan de oefening geregeld worden? Bv. oefenlocatie regelen, gevaarlijke stof + ontsmetting opzoeken, materialen klaarleggen. <strong>Één punt per regel</strong> — elke regel wordt een bullet op de PDF.</p>
-                <div class="form-group">
-                    {{ form.voorbereiding(class="form-input form-textarea", rows=5, maxlength=2000,
-                       placeholder="Regel een oefenterrein\nZoek een gevaarlijke stof + bijbehorende ontsmetting op\nLeg de PBM's van te voren klaar") }}
-                    {% for error in form.voorbereiding.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                </div>
-            </div>
-
-            <div class="form-groep-blok">
                 <h3 class="form-groep-titel">Opdrachten</h3>
-                <p class="form-hint"><strong>Houd het behapbaar.</strong> Per opdracht een korte titel, uitleg en eventueel max 2 foto's. Max <strong>10</strong> opdrachten — <span id="opdracht-teller">0 / 10</span>.</p>
+                <p class="form-hint"><strong>Houd het behapbaar.</strong> De eerste opdracht is altijd "Voorbereiding" (regel oefenterrein, materialen, etc.). Per opdracht een korte titel, uitleg en eventueel max 2 foto's. Max <strong>10</strong> opdrachten — <span id="opdracht-teller">0 / 10</span>.</p>
 
                 {{ form.opdrachten_json(type="hidden", id="opdrachten-json") }}
                 <div id="opdrachten-lijst"></div>
@@ -7699,6 +7689,25 @@ initKeuzeLijst({
         while (o.fotos.length < MAX_FOTOS) o.fotos.push({ slot: genId('ofslot'), bestand: '', bestand_origineel: '' });
         if (o.fotos.length > MAX_FOTOS) o.fotos.length = MAX_FOTOS;
     });
+
+    // Bij lege lijst: automatisch een eerste "Voorbereiding"-opdracht aanmaken.
+    // Rebecca's voorkeur (v0.7.30): de eerste opdracht is altijd Voorbereiding met
+    // bullets als "regel oefenterrein", "zoek gevaarlijke stof + ontsmetting op".
+    if (opdrachten.length === 0) {
+        opdrachten.push({
+            id: genId('op'),
+            titel: 'Voorbereiding',
+            tekst: '',
+            tekst_opmaak: 'lijst',
+            fotos: (function() {
+                var fs = [];
+                for (var i = 0; i < MAX_FOTOS; i++) {
+                    fs.push({ slot: genId('ofslot'), bestand: '', bestand_origineel: '' });
+                }
+                return fs;
+            })(),
+        });
+    }
 
     // File-cache per slot (behoudt ongesavede uploads bij re-render).
     var origineleFiles = {};
