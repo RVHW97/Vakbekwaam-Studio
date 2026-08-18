@@ -1232,10 +1232,10 @@ def bewerken(kaart_id):
         form.kenmerken_kerntaak.label.text = kenmerken_kerntaak_label(form.kerntaak.data or kaart.kerntaak)
     type_info = KAART_TYPES[kaart.type]
 
-    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (alleen scenariokaart)
+    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (scenario- én opdrachtkaart)
     gekoppelde_kaarten = []
     beschikbaar_per_type = {}
-    if kaart.type == 'scenario':
+    if kaart.type in ('scenario', 'opdracht'):
         gekoppelde_kaarten = kaart.get_gekoppelde_kaarten()
         huidige_ids = {k.id for k in gekoppelde_kaarten}
         huidige_ids.add(kaart.id)

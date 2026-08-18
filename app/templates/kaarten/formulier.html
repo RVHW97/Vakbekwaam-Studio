@@ -2919,8 +2919,59 @@
             <h2 class="form-section-title">Achtergrond</h2>
 
             {% if not (bewerken and kaart) %}
-            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier QR-codes koppelen.</p>
+            <p class="form-hint" style="font-style:italic;">Sla eerst tab "Algemeen" op — daarna kun je hier andere kaarten en QR-codes koppelen.</p>
             {% else %}
+
+            {# === Gekoppelde kaarten (v0.7.28) === #}
+            <h3 class="form-groep-titel" style="margin-top: 0.5rem;">Gekoppelde kaarten</h3>
+            <p class="form-hint">Koppel andere kaarten die bij deze opdracht horen (bv. kenniskaarten met achtergrond, instructiekaarten met materiaal). Ze verschijnen als QR-code onder de eigen verwijzingen in de PDF.</p>
+
+            {% if gekoppelde_kaarten %}
+            <div class="gekoppelde-lijst" style="margin-bottom: 0.75rem;">
+                {% for k in gekoppelde_kaarten %}
+                <div class="gekoppelde-kaart-rij">
+                    <span class="badge badge-type">{{ k.type_naam }}</span>
+                    <strong>{{ k.nummer }}</strong>
+                    <span class="gekoppelde-kaart-naam">{{ k.naam }}</span>
+                    <button type="button" class="btn-verwijder scenario-actie-knop" title="Loskoppelen"
+                            data-scenario-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
+                            data-scenario-payload="actie=verwijderen&doel_id={{ k.id }}">✕</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="form-hint" style="font-style:italic; margin-bottom: 0.75rem;">Nog geen kaarten gekoppeld.</p>
+            {% endif %}
+
+            {% if beschikbaar_per_type %}
+            <div class="scenario-koppel-blok"
+                 data-scenario-url="{{ url_for('kaarten.koppel_actie', kaart_id=kaart.id) }}"
+                 style="margin-bottom: 1.25rem;">
+                <input type="hidden" name="actie" value="toevoegen">
+                <div class="form-groep-rij" style="align-items: flex-end; gap: 0.5rem;">
+                    <div class="form-groep-kolom" style="flex: 3;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Kaart koppelen</label>
+                            <select name="doel_id" class="form-input form-select">
+                                <option value="">— Kies een kaart —</option>
+                                {% for type_key, blok in beschikbaar_per_type.items() %}
+                                <optgroup label="{{ blok.naam }}">
+                                    {% for k in blok.kaarten %}
+                                    <option value="{{ k.id }}">{{ k.nummer }} — {{ k.naam }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-groep-kolom" style="flex: 0 0 auto;">
+                        <button type="button" class="btn btn-secondary scenario-actie-knop" data-scenario-veld-blok>+ Koppelen</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="form-hint" style="font-style: italic; margin-bottom: 1.25rem;">Er zijn geen andere kaarten beschikbaar om te koppelen.</p>
+            {% endif %}
 
             {# === QR-codes uit de bank === #}
             <h3 class="form-groep-titel" style="margin-top: 0.5rem;">QR-codes</h3>
@@ -4659,9 +4710,12 @@ setupCropper({
 </script>
 
 {# ============================================================ #}
-{# Scenariokaart: koppel-knoppen (fetch + reload, geen nested form) #}
+{# Scenario- en opdrachtkaart: koppel-knoppen (fetch + reload)  #}
+{# Deelt dezelfde koppel_actie-route en scenario-koppel-blok    #}
+{# markup — opdrachtkaart heeft een kaart-koppel-blok op de     #}
+{# Achtergrond-tab (v0.7.28).                                    #}
 {# ============================================================ #}
-{% if kaart_type == 'scenario' %}
+{% if kaart_type == 'scenario' or kaart_type == 'opdracht' %}
 <script>
 (function() {
     var knoppen = document.querySelectorAll('.scenario-actie-knop');
