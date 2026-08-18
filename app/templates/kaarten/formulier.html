@@ -4455,6 +4455,74 @@ setupCropper({
     });
 })();
 
+/* === Filter/zoek boven lange koppel-selects ===
+   Voor elke koppel-blok-dropdown (kaart-koppel + QR-koppel op thema/scenario/
+   instructie/opdracht/kennis) plaatst dit een zoek-input erboven. Filtert
+   opties (én optgroups) live op wat er getypt wordt — geen extra bibliotheek
+   nodig, werkt met de bestaande <select>. Alleen actief bij ≥8 opties, anders
+   geen filter. */
+(function() {
+    var selectors = [
+        '.thema-koppel-blok select[name="doel_id"]',
+        '.thema-koppel-blok select[name="qr_id"]',
+        '.scenario-koppel-blok select[name="doel_id"]',
+        '.instructie-koppel-blok select[name="qr_id"]'
+    ];
+    document.querySelectorAll(selectors.join(',')).forEach(function(sel) {
+        // Tel echte opties (uit optgroups + los), exclusief de lege placeholder.
+        var alleOpties = sel.querySelectorAll('option');
+        var echteOpties = 0;
+        alleOpties.forEach(function(o) { if (o.value) echteOpties++; });
+        if (echteOpties < 8) return;
+
+        // Skip als er al een filter is (bij dubbel init).
+        if (sel.previousElementSibling && sel.previousElementSibling.classList &&
+            sel.previousElementSibling.classList.contains('koppel-filter')) return;
+
+        var input = document.createElement('input');
+        input.type = 'search';
+        input.className = 'form-input koppel-filter';
+        input.placeholder = '🔍 Zoek in de lijst (nummer, naam, categorie)…';
+        input.autocomplete = 'off';
+        // Neem volle regel in de flex-container zodat het niet naast de select gedrukt wordt.
+        input.style.flex = '0 0 100%';
+        input.style.marginBottom = '0.35rem';
+
+        sel.parentNode.insertBefore(input, sel);
+
+        function filter() {
+            var q = input.value.trim().toLowerCase();
+            var optgroups = sel.querySelectorAll('optgroup');
+            if (!q) {
+                alleOpties.forEach(function(o) { o.hidden = false; });
+                optgroups.forEach(function(og) { og.hidden = false; });
+                return;
+            }
+            optgroups.forEach(function(og) {
+                var groepLabel = (og.label || '').toLowerCase();
+                var iets = false;
+                og.querySelectorAll('option').forEach(function(o) {
+                    var match = groepLabel.indexOf(q) !== -1 ||
+                                o.textContent.toLowerCase().indexOf(q) !== -1;
+                    o.hidden = !match;
+                    if (match) iets = true;
+                });
+                og.hidden = !iets;
+            });
+            // Losse opties (buiten optgroup): placeholder blijft altijd zichtbaar.
+            sel.querySelectorAll(':scope > option').forEach(function(o) {
+                if (!o.value) { o.hidden = false; return; }
+                o.hidden = o.textContent.toLowerCase().indexOf(q) === -1;
+            });
+        }
+        input.addEventListener('input', filter);
+        // Voorkom dat Enter in het zoekveld het hoofdform submit (novalidate).
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    });
+})();
+
 /* === Auto-teller op invoervelden met maxlength ===
    Scant elke input[maxlength], textarea[maxlength] binnen .kaart-form en voegt
    een teller-span toe die live meeloopt (bv. "142 / 500 tekens").
