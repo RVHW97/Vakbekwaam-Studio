@@ -1466,6 +1466,17 @@
             </ol>
         </div>
     </div>
+    {% elif veld == 'voorbereiding' and kaart.type == 'opdracht' and (inhoud.get('voorbereiding') or '').strip() %}
+    <div class="pdf-sectie">
+        <div class="pdf-sectie-titel">Voorbereiding</div>
+        <div class="pdf-sectie-inhoud">
+            <ul style="margin: 0; padding-left: 1.2rem;">
+                {% for regel in inhoud.voorbereiding.split('\n') %}
+                {% if regel.strip() %}<li style="margin-bottom: 0.25rem;">{{ regel.strip() }}</li>{% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
     {% elif veld == 'opdrachten_json' and opdracht_stappen %}
     <div class="pdf-sectie pdf-sectie--stappen">
         <div class="pdf-sectie-titel">Opdrachten</div>

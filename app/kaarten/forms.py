@@ -234,6 +234,10 @@ class OpdrachtkaartForm(FlaskForm):
     veiligheid_zin_5 = StringField('Veiligheidspunt 5', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
     # Eén SMART-oefendoel — kort en bondig (max 500 tekens).
     oefendoel = TextAreaField('Oefendoel', validators=[Optional(), Length(max=500)])
+    # Voorbereiding — dynamische lijst (regel-per-punt). Verschijnt in de PDF
+    # als eerste blok (vóór de genummerde opdrachten). Voor dingen als
+    # "regel een oefenterrein", "zoek een gevaarlijke stof + ontsmetting op".
+    voorbereiding = TextAreaField('Voorbereiding', validators=[Optional(), Length(max=2000)])
     # Opdrachten — JSON-lijst: [{"id": "<uuid>", "titel": "...", "tekst": "...",
     #                            "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg",
     #                                       "bestand_origineel": "yyy.jpg"}]}].
@@ -314,6 +318,7 @@ INHOUD_VELDEN = {
                  'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                  'veiligheid_zin_4', 'veiligheid_zin_5',
                  'oefendoel',
+                 'voorbereiding',
                  'opdrachten_json', 'uitdagende_variant',
                  'verdiepende_vragen', 'evaluatie'],
     'kennis':   ['doelgroep', 'doelgroep_anders',
