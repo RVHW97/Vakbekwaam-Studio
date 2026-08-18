@@ -175,11 +175,11 @@ class Kaart(db.Model):
         return info['afkorting'] if info else '—'
 
     def get_thema_kaart_links(self):
-        """Alle thema-kaart-koppelingen, gegroepeerd per tussentitel-index (0/1/2)."""
+        """Alle thema-kaart-koppelingen, gegroepeerd per tussentitel-index (0/1/2/3)."""
         rows = ThemaKaartLink.query.filter_by(kaart_id=self.id).order_by(
             ThemaKaartLink.groep_index, ThemaKaartLink.volgorde, ThemaKaartLink.id
         ).all()
-        groepen = {0: [], 1: [], 2: []}
+        groepen = {0: [], 1: [], 2: [], 3: []}
         for r in rows:
             if r.groep_index in groepen and r.gekoppelde_kaart is not None:
                 groepen[r.groep_index].append(r)
@@ -314,7 +314,7 @@ class KaartKoppeling(db.Model):
 class ThemaKaartLink(db.Model):
     """Koppeling van een themakaart aan een onderliggende kaart, gegroepeerd per tussentitel.
 
-    groep_index: 0/1/2 — hoort bij tussentitel_1 / tussentitel_2 / tussentitel_3.
+    groep_index: 0/1/2/3 — hoort bij tussentitel_1 / tussentitel_2 / tussentitel_3 / tussentitel_4.
     """
     __tablename__ = 'thema_kaart_links'
 
@@ -380,7 +380,7 @@ class ThemaQRLink(db.Model):
 THEMA_MAX_KAARTEN_TOTAAL = 20
 THEMA_MAX_QR_TOP = 5
 THEMA_MAX_QR_BOTTOM = 10
-THEMA_MAX_GROEPEN = 3
+THEMA_MAX_GROEPEN = 4
 THEMA_QR_LABEL_MAX = 25
 
 # Limieten voor de instructiekaart-achtergrondinformatie

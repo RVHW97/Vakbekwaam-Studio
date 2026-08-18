@@ -400,7 +400,7 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('ondertitel'):
             _add_error('ondertitel', 'Vul een ondertitel in.')
             ontbrekend.append('Ondertitel')
-        tussentitels = [(request_form.get(f'tussentitel_{i}') or '').strip() for i in (1, 2, 3)]
+        tussentitels = [(request_form.get(f'tussentitel_{i}') or '').strip() for i in (1, 2, 3, 4)]
         if not any(tussentitels):
             _add_error('tussentitel_1', 'Vul minstens 1 tussentitel in.')
             ontbrekend.append('Tussentitel')
@@ -1386,7 +1386,7 @@ def thema_kaart_link_toevoegen(kaart_id):
         abort(404)
     doel_id = request.form.get('doel_id', type=int)
     groep_index = request.form.get('groep_index', type=int)
-    if groep_index is None or groep_index not in (0, 1, 2) or not doel_id:
+    if groep_index is None or groep_index not in (0, 1, 2, 3) or not doel_id:
         flash('Ongeldige koppeling.', 'danger')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
     if doel_id == kaart.id:

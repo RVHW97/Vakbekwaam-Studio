@@ -2146,17 +2146,17 @@
 
         {# ---------------- TAB 2: SECTIES ---------------- #}
         <div class="tab-paneel" data-tab="secties">
-            {{ tab_fout_marker(['tussentitel_1', 'tussentitel_2', 'tussentitel_3']) }}
+            {{ tab_fout_marker(['tussentitel_1', 'tussentitel_2', 'tussentitel_3', 'tussentitel_4']) }}
             {% if not (bewerken and kaart) %}
             <p class="form-hint" style="font-style: italic;">Sla eerst tab "Algemeen" op — daarna kun je tussentitels en kaarten koppelen.</p>
             {% else %}
-            {% set aantal_kaarten = (thema_kaart_links[0]|length) + (thema_kaart_links[1]|length) + (thema_kaart_links[2]|length) %}
+            {% set aantal_kaarten = (thema_kaart_links[0]|length) + (thema_kaart_links[1]|length) + (thema_kaart_links[2]|length) + (thema_kaart_links[3]|length) %}
             <p class="form-hint">
-                Maximaal 3 secties met elk een tussentitel. Aan elke sectie kun je kaarten koppelen die rechts op de themakaart in een lijst verschijnen.
+                Maximaal 4 secties met elk een tussentitel. Aan elke sectie kun je kaarten koppelen die rechts op de themakaart in een lijst verschijnen.
                 In totaal <strong>{{ aantal_kaarten }}/{{ THEMA_MAX_KAARTEN_TOTAAL }}</strong> kaarten gekoppeld.
             </p>
 
-            {% for groep_index in [0, 1, 2] %}
+            {% for groep_index in [0, 1, 2, 3] %}
                 {% set sectie_nr = groep_index + 1 %}
                 {% set heeft_inhoud = form['tussentitel_' ~ sectie_nr].data or thema_kaart_links[groep_index] %}
                 {% set vorige_heeft_inhoud = (groep_index == 0) or form['tussentitel_' ~ groep_index].data or thema_kaart_links[groep_index - 1] %}
@@ -2225,8 +2225,8 @@
                     </div>
                 </div>
 
-                {# Knop "+ Sectie X+1 toevoegen" — alleen tonen als deze sectie er IS en de volgende NIET zichtbaar is en we nog niet bij sectie 3 zijn #}
-                {% if sectie_nr < 3 %}
+                {# Knop "+ Sectie X+1 toevoegen" — alleen tonen als deze sectie er IS en de volgende NIET zichtbaar is en we nog niet bij sectie 4 zijn #}
+                {% if sectie_nr < 4 %}
                 {% set volgende_heeft_inhoud = form['tussentitel_' ~ (sectie_nr + 1)].data or thema_kaart_links[groep_index + 1] %}
                 <div class="thema-sectie-toevoeg-knop" data-toon-sectie="{{ sectie_nr + 1 }}"
                      {% if volgende_heeft_inhoud or (groep_index > 0 and not heeft_inhoud) %}style="display:none;"{% endif %}>
@@ -4230,6 +4230,12 @@ setupCropper({
             // Verberg de knop-wrapper die nu opent
             var wrapper = btn.closest('.thema-sectie-toevoeg-knop');
             if (wrapper) wrapper.style.display = 'none';
+            // Toon ook meteen de volgende "+ Sectie X+1"-knop (progressive disclosure)
+            // zodat je niet éérst deze nieuwe sectie hoeft in te vullen om verder te gaan.
+            var volgende = document.querySelector(
+                '.thema-sectie-toevoeg-knop[data-toon-sectie="' + (parseInt(sectieNr, 10) + 1) + '"]'
+            );
+            if (volgende) volgende.style.display = '';
             // Focus de tussentitel-input van de zojuist getoonde sectie
             var input = sectie ? sectie.querySelector('input[name="tussentitel_' + sectieNr + '"]') : null;
             if (input) input.focus();
@@ -4260,7 +4266,7 @@ setupCropper({
         fd.append('auto_save_tab', 'secties');
         // Verzamel relevante velden: alleen direct in hoofd-form, niet uit koppel-blokken
         var velden = ['titel', 'ondertitel', 'kerntaak',
-                      'tussentitel_1', 'tussentitel_2', 'tussentitel_3'];
+                      'tussentitel_1', 'tussentitel_2', 'tussentitel_3', 'tussentitel_4'];
         velden.forEach(function(naam) {
             var el = hoofdForm.querySelector('[name="' + naam + '"]');
             if (el && !el.closest('.thema-koppel-blok')) fd.append(naam, el.value);

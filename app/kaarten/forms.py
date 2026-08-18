@@ -97,6 +97,7 @@ class ThemakaartForm(FlaskForm):
     tussentitel_1 = StringField('Tussentitel 1', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
     tussentitel_2 = StringField('Tussentitel 2', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
     tussentitel_3 = StringField('Tussentitel 3', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
+    tussentitel_4 = StringField('Tussentitel 4', validators=[Optional(), Length(max=45, message='Max 45 tekens.')])
 
     submit = SubmitField('Opslaan als concept')
 
@@ -287,7 +288,7 @@ FORMULIEREN = {
 # Velden per type die opgeslagen worden als inhoud (exclusief naam en afbeeldingen)
 INHOUD_VELDEN = {
     'thema': ['titel', 'ondertitel',
-              'tussentitel_1', 'tussentitel_2', 'tussentitel_3'],
+              'tussentitel_1', 'tussentitel_2', 'tussentitel_3', 'tussentitel_4'],
     'instructie': ['instructie_type', 'omschrijving', 'productfoto_markers_json',
                    'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                    'veiligheid_zin_4', 'veiligheid_zin_5',

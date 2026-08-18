@@ -168,10 +168,10 @@ def genereer_pdf(kaart):
 
     # === THEMAKAART: aparte 1-pagina A4-landscape layout ===
     if kaart.type == 'thema':
-        # Tussentitels + gekoppelde kaarten per groep (0/1/2)
+        # Tussentitels + gekoppelde kaarten per groep (0/1/2/3)
         koppelingen = kaart.get_thema_kaart_links()
         thema_groepen = []
-        for idx in (0, 1, 2):
+        for idx in (0, 1, 2, 3):
             titel = inhoud.get(f'tussentitel_{idx + 1}') or ''
             kaarten = [link.gekoppelde_kaart for link in koppelingen.get(idx, [])
                        if link.gekoppelde_kaart is not None]
