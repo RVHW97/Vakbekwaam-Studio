@@ -1688,33 +1688,6 @@
     </div>
     {% endmacro %}
 
-    {% macro render_verwijzingen_blok() %}
-    <div class="form-groep-blok">
-        <h3 class="form-groep-titel">Verwijzingen</h3>
-        <p class="form-hint">Voeg eigen links toe (URL + korte toelichting). Deze verschijnen als QR-codes in de PDF.</p>
-        {% for i in range(1, 6) %}
-        <div class="form-groep-rij verwijzing-rij" id="verwijzing-rij-{{ i }}" style="margin-bottom: 0.5rem; align-items: flex-end;{% if i > 1 and not form['verwijzing_url_' ~ i].data %} display:none;{% endif %}">
-            <div class="form-groep-kolom" style="flex: 2;">
-                <div class="form-group">
-                    <label class="form-label">URL {{ i }}</label>
-                    {{ form['verwijzing_url_' ~ i](class="form-input verwijzing-url", placeholder="https://...", maxlength=200) }}
-                </div>
-            </div>
-            <div class="form-groep-kolom" style="flex: 1;">
-                <div class="form-group">
-                    <label class="form-label">Toelichting</label>
-                    {{ form['verwijzing_label_' ~ i](class="form-input verwijzing-label", placeholder="Max 40 tekens", maxlength=40) }}
-                </div>
-            </div>
-            <div class="form-groep-kolom" style="flex: 0 0 auto;">
-                <button type="button" class="btn btn-secondary btn-sm verwijzing-verwijder" data-rij="{{ i }}" title="Verwijdering wissen" style="margin-bottom: 0.6rem;">✕</button>
-            </div>
-        </div>
-        {% endfor %}
-        <button type="button" class="btn btn-secondary btn-sm" id="verwijzing-toevoegen" style="margin-top: 0.5rem;">+ Verwijzing toevoegen</button>
-    </div>
-    {% endmacro %}
-
     {# ==================== TAB-FOUT-MARKER ==================== #}
     {# Onzichtbare .form-error-spans bovenaan elke tab. Zodra een form-veld op
        die tab een server-side error heeft, verschijnt hier een marker. De
@@ -1802,12 +1775,10 @@
         </div>
 
         <div class="tab-paneel" data-tab="verwijzingen">
-            {{ render_verwijzingen_blok() }}
-
             {% if bewerken and kaart %}
-            <div class="form-groep-blok" style="margin-top: 1.5rem;">
+            <div class="form-groep-blok">
                 <h3 class="form-groep-titel">Gekoppelde kaarten</h3>
-                <p class="form-hint">Koppel andere kaarten die bij deze scenariokaart horen. Ze verschijnen als QR-code onder de eigen verwijzingen in de PDF.</p>
+                <p class="form-hint">Koppel andere kaarten die bij deze scenariokaart horen. Ze verschijnen als QR-code in de PDF.</p>
 
                 {% if gekoppelde_kaarten %}
                 <div class="gekoppelde-lijst" style="margin-bottom: 0.75rem;">
@@ -3464,37 +3435,6 @@ setupCropper({
             });
         }, true); // capture-fase: vóór andere submit-listeners
     }
-})();
-
-/* === Verwijzingen: toevoegen + verwijderen === */
-(function() {
-    var toevoegBtn = document.getElementById('verwijzing-toevoegen');
-
-    // Toevoegen
-    if (toevoegBtn) {
-        toevoegBtn.addEventListener('click', function() {
-            var rijen = document.querySelectorAll('.verwijzing-rij');
-            for (var i = 0; i < rijen.length; i++) {
-                if (rijen[i].style.display === 'none') {
-                    rijen[i].style.display = '';
-                    if (i >= rijen.length - 1) toevoegBtn.style.display = 'none';
-                    return;
-                }
-            }
-            toevoegBtn.style.display = 'none';
-        });
-    }
-
-    // Verwijderen (leegmaken + verbergen)
-    document.querySelectorAll('.verwijzing-verwijder').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var rij = document.getElementById('verwijzing-rij-' + btn.dataset.rij);
-            if (!rij) return;
-            rij.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
-            rij.style.display = 'none';
-            if (toevoegBtn) toevoegBtn.style.display = '';
-        });
-    });
 })();
 
 /* === Teken-teller voor velden met maxlength === */

@@ -194,17 +194,6 @@ class ScenariokaartForm(FlaskForm):
     # Max 3 tips, elk met max 2 foto's (zelfde patroon als opdrachten_json).
     ensceneringstips = StringField('Ensceneringstips', validators=[Optional()])
     evaluatie = TextAreaField('Evaluatie', validators=[Optional()])
-    # Eigen verwijzingen (URL + label, max 5)
-    verwijzing_url_1 = StringField('URL 1', validators=[Optional(), Length(max=200)])
-    verwijzing_label_1 = StringField('Toelichting 1', validators=[Optional(), Length(max=40)])
-    verwijzing_url_2 = StringField('URL 2', validators=[Optional(), Length(max=200)])
-    verwijzing_label_2 = StringField('Toelichting 2', validators=[Optional(), Length(max=40)])
-    verwijzing_url_3 = StringField('URL 3', validators=[Optional(), Length(max=200)])
-    verwijzing_label_3 = StringField('Toelichting 3', validators=[Optional(), Length(max=40)])
-    verwijzing_url_4 = StringField('URL 4', validators=[Optional(), Length(max=200)])
-    verwijzing_label_4 = StringField('Toelichting 4', validators=[Optional(), Length(max=40)])
-    verwijzing_url_5 = StringField('URL 5', validators=[Optional(), Length(max=200)])
-    verwijzing_label_5 = StringField('Toelichting 5', validators=[Optional(), Length(max=40)])
     submit = SubmitField('Opslaan als concept')
 
 # Velden die gegroepeerd worden in het "Doelgroep, Oefenstaf en tijdsduur" blok
@@ -271,12 +260,7 @@ INHOUD_VELDEN = {
                  'ensceneringstips',
                  'kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken',
                  'omgevingskenmerken', 'interventiekenmerken',
-                 'evaluatie',
-                 'verwijzing_url_1', 'verwijzing_label_1',
-                 'verwijzing_url_2', 'verwijzing_label_2',
-                 'verwijzing_url_3', 'verwijzing_label_3',
-                 'verwijzing_url_4', 'verwijzing_label_4',
-                 'verwijzing_url_5', 'verwijzing_label_5'],
+                 'evaluatie'],
     'opdracht': ['doelgroep', 'doelgroep_anders',
                  'oefenmiddelen_basis', 'oefenmiddelen_extra',
                  'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',

@@ -1179,7 +1179,6 @@
 <!-- INFOSTRIP: Doelgroep / Oefenstaf / Tijdsduur (alleen scenariokaarten) -->
 {% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen', 'oefenmiddelen_basis', 'oefenmiddelen_extra'] %}
 {% set pager_velden = ['pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen'] %}
-{% set verwijzing_velden = ['verwijzing_url_1', 'verwijzing_label_1', 'verwijzing_url_2', 'verwijzing_label_2', 'verwijzing_url_3', 'verwijzing_label_3', 'verwijzing_url_4', 'verwijzing_label_4', 'verwijzing_url_5', 'verwijzing_label_5'] %}
 {% set pager_soort_tekst = inhoud.get('pager_soort_anders') if inhoud.get('pager_soort') == 'anders' else inhoud.get('pager_soort', '') %}
 {% set heeft_pager = inhoud.get('pager_prio') or pager_soort_tekst or inhoud.get('pager_voertuigen') %}
 {% set kenmerken_velden = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
@@ -1585,7 +1584,7 @@
             <div class="pdf-oefendoel-tekst">{{ inhoud[veld] | replace('\n', '<br>')|safe }}</div>
         </div>
     </div>
-    {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in verwijzing_velden and veld not in veiligheid_velden %}
+    {% elif inhoud.get(veld) and veld not in groep_velden and veld not in kenmerken_velden and veld not in pager_velden and veld not in veiligheid_velden %}
     <div class="pdf-sectie">
         <div class="pdf-sectie-titel">{{ labels[veld] }}</div>
         <div class="pdf-sectie-inhoud">{{ inhoud[veld] | replace('\n', '<br>')|safe }}</div>
@@ -1594,29 +1593,12 @@
 {% endfor %}
 
 
-<!-- VERWIJZINGEN (eigen URLs + gekoppelde kaarten als QR-codes) -->
-{% set eigen_verwijzingen = [] %}
-{% for i in range(1, 6) %}
-    {% if inhoud.get('verwijzing_url_' ~ i) %}
-        {% set _ = eigen_verwijzingen.append({'url': inhoud['verwijzing_url_' ~ i], 'label': inhoud.get('verwijzing_label_' ~ i, '')}) %}
-    {% endif %}
-{% endfor %}
-{% if eigen_verwijzingen or gekoppelde %}
+<!-- VERWIJZINGEN (gekoppelde kaarten als QR-codes) -->
+{% if gekoppelde %}
 <div class="pdf-sectie pdf-verwijzingen">
     <div class="pdf-sectie-titel">Verwijzingen</div>
     <p class="pdf-verwijzingen-hint">QR-codes worden beschikbaar zodra de applicatie online is.</p>
-    {% if eigen_verwijzingen %}
     <div class="pdf-verwijzingen-lijst">
-        {% for v in eigen_verwijzingen %}
-        <div class="pdf-verwijzing-item">
-            <div class="pdf-verwijzing-qr-placeholder"></div>
-            <span class="pdf-verwijzing-naam">{{ v.label or v.url }}</span>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% if gekoppelde %}
-    <div class="pdf-verwijzingen-lijst" style="margin-top: 3mm;">
         {% for k in gekoppelde %}
         <div class="pdf-verwijzing-item">
             <div class="pdf-verwijzing-qr-placeholder"></div>
@@ -1625,7 +1607,6 @@
         </div>
         {% endfor %}
     </div>
-    {% endif %}
 </div>
 {% endif %}
 
