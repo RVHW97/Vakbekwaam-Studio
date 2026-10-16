@@ -325,15 +325,34 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if _tekst_leeg('ondertitel'):
             _add_error('ondertitel', 'Vul een ondertitel in.')
             ontbrekend.append('Ondertitel')
-        tussentitels = [(request_form.get(f'tussentitel_{i}') or '').strip() for i in (1, 2, 3, 4)]
-        if not any(tussentitels):
-            _add_error('tussentitel_1', 'Vul minstens 1 tussentitel in.')
-            ontbrekend.append('Tussentitel')
-        elif kaart is not None:
-            aantal_links = ThemaKaartLink.query.filter_by(kaart_id=kaart.id).count()
-            if aantal_links < 1:
-                _add_error('tussentitel_1', 'Koppel minstens 1 kaart onder een tussentitel.')
-                ontbrekend.append('Gekoppelde kaart')
+        # v0.7.35: elke sectie die bestaat (tussentitel ingevuld of koppelingen heeft)
+        # moet BEIDE hebben: tussentitel + ≥1 gekoppelde kaart. Strict per-sectie-regel.
+        koppelingen_per_sectie = {0: 0, 1: 0, 2: 0, 3: 0}
+        if kaart is not None:
+            for link in ThemaKaartLink.query.filter_by(kaart_id=kaart.id).all():
+                if link.groep_index in koppelingen_per_sectie:
+                    koppelingen_per_sectie[link.groep_index] += 1
+
+        secties_met_inhoud = []
+        for i in (1, 2, 3, 4):
+            titel = (request_form.get(f'tussentitel_{i}') or '').strip()
+            koppel_n = koppelingen_per_sectie.get(i - 1, 0)
+            if titel or koppel_n > 0:
+                secties_met_inhoud.append((i, titel, koppel_n))
+
+        if not secties_met_inhoud:
+            _add_error('tussentitel_1',
+                        'Vul minstens 1 sectie met tussentitel én minstens 1 gekoppelde kaart.')
+            ontbrekend.append('Sectie')
+        else:
+            for i, titel, koppel_n in secties_met_inhoud:
+                if not titel:
+                    _add_error(f'tussentitel_{i}', f'Vul tussentitel {i} in.')
+                    ontbrekend.append(f'Tussentitel sectie {i}')
+                if koppel_n < 1:
+                    _add_error(f'tussentitel_{i}',
+                                f'Koppel minstens 1 kaart aan sectie {i} (of verwijder de tussentitel).')
+                    ontbrekend.append(f'Koppeling sectie {i}')
 
     elif kaart_type == 'instructie':
         if _tekst_leeg('omschrijving'):
@@ -354,6 +373,15 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
         if len(gevuld) < 1:
             _add_error('werkwijze_stappen_json', 'Voeg minstens 1 werkwijze-stap toe.')
             ontbrekend.append('Werkwijze-stap')
+        else:
+            # v0.7.35: elke stap die inhoud heeft moet een titel hebben.
+            zonder_titel = [idx + 1 for idx, s in enumerate(gevuld)
+                            if not (s.get('titel') or '').strip()]
+            if zonder_titel:
+                nrs = ', '.join(f'stap {n}' for n in zonder_titel)
+                _add_error('werkwijze_stappen_json',
+                            f'Elke werkwijze-stap heeft een titel nodig (ontbreekt bij: {nrs}).')
+                ontbrekend.append('Werkwijze-stap-titel')
 
     elif kaart_type == 'scenario':
         if _tekst_leeg('doelgroep'):
@@ -414,6 +442,23 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
                                           or (o.get('tekst') or '').strip())):
             _add_error('opdrachten_json', 'Voeg minstens 1 opdracht toe.')
             ontbrekend.append('Opdracht')
+        else:
+            # v0.7.35: elke gevulde opdracht moet een titel hebben.
+            try:
+                opdrachten = json.loads(request_form.get('opdrachten_json') or '[]')
+            except (ValueError, TypeError):
+                opdrachten = []
+            gevulde_opdrachten = [o for o in opdrachten if isinstance(o, dict) and (
+                (o.get('titel') or '').strip() or (o.get('tekst') or '').strip()
+                or (o.get('fotos') or [])
+            )]
+            zonder_titel = [idx + 1 for idx, o in enumerate(gevulde_opdrachten)
+                            if not (o.get('titel') or '').strip()]
+            if zonder_titel:
+                nrs = ', '.join(f'opdracht {n}' for n in zonder_titel)
+                _add_error('opdrachten_json',
+                            f'Elke opdracht heeft een titel nodig (ontbreekt bij: {nrs}).')
+                ontbrekend.append('Opdracht-titel')
         if _lijst_min('evaluatie', 1):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
             ontbrekend.append('Evaluatie')
