@@ -599,6 +599,28 @@
         font-size: 7pt;
         color: #888;
     }
+    /* Gekoppelde-kaarten placeholder (v0.7.36 unified met pdf_template) */
+    .ik-koppel-placeholder {
+        width: 28mm;
+        height: 28mm;
+        background: #E8E4D8;
+        border: 0.3mm dashed #B8B2A4;
+        padding: 1mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    .ik-koppel-placeholder-badge {
+        display: inline-block;
+        padding: 0.6mm 1.5mm;
+        border-radius: 1mm;
+        font-size: 7pt;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
 </style>
 </head>
 <body>
@@ -782,10 +804,25 @@
 {% endif %}
 
 {# ==================== ACHTERGRONDINFORMATIE ==================== #}
-{% if instructie_qrs %}
+{% if gekoppelde or instructie_qrs %}
 <section class="pdf-sectie">
     <div class="pdf-sectie-titel">Achtergrondinformatie</div>
     <div class="pdf-sectie-inhoud">
+        {% if gekoppelde %}
+        <div class="ik-achtergrond-subtitel">Gekoppelde kaarten</div>
+        <div class="ik-qr-rij">
+            {% for k in gekoppelde %}
+            <div class="ik-qr-blok">
+                <div class="ik-koppel-placeholder">
+                    <span class="ik-koppel-placeholder-badge" style="background-color: {{ k.kleur }};">{{ k.type_naam }}</span>
+                </div>
+                <div class="ik-qr-label">{{ k.nummer }}</div>
+                <div class="ik-qr-cat">{{ k.naam }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if instructie_qrs %}
         <div class="ik-achtergrond-subtitel">QR-codes</div>
         <div class="ik-qr-rij">
             {% for q in instructie_qrs %}
@@ -796,6 +833,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endif %}
     </div>
 </section>
 {% endif %}

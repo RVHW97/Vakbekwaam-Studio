@@ -677,36 +677,68 @@
         text-align: left;
     }
 
-    /* Opdrachtkaart: gekoppelde QR-codes (zoals bij instructiekaart) */
-    .pdf-opdracht-qr-rij {
+    /* Achtergrondinformatie: gekoppelde kaarten + QR-codes (v0.7.36 unified) */
+    .pdf-achtergrond-subtitel {
+        font-family: "Frutiger", "Open Sans", sans-serif;
+        font-size: 9pt;
+        font-weight: 700;
+        color: #1B2A4A;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin: 2.5mm 0 1.5mm 0;
+    }
+    .pdf-achtergrond-rij {
         display: flex;
         gap: 4mm;
         flex-wrap: wrap;
         margin-top: 1mm;
     }
-    .pdf-opdracht-qr-blok {
+    .pdf-achtergrond-blok {
         flex: 0 0 auto;
         width: 32mm;
         text-align: center;
         page-break-inside: avoid;
+        break-inside: avoid;
     }
-    .pdf-opdracht-qr-blok img {
+    .pdf-achtergrond-blok img {
         width: 28mm;
         height: 28mm;
         background: #fff;
         border: 0.3mm solid #ddd;
         padding: 1mm;
     }
-    .pdf-opdracht-qr-label {
+    .pdf-achtergrond-placeholder {
+        width: 28mm;
+        height: 28mm;
+        background: #E8E4D8;
+        border: 0.3mm dashed #B8B2A4;
+        padding: 1mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+    .pdf-achtergrond-placeholder-badge {
+        display: inline-block;
+        padding: 0.6mm 1.5mm;
+        border-radius: 1mm;
+        font-size: 7pt;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.2px;
+    }
+    .pdf-achtergrond-label {
         font-size: 8pt;
         margin-top: 1mm;
         color: #1B2A4A;
         font-weight: 700;
         word-break: break-word;
     }
-    .pdf-opdracht-qr-cat {
+    .pdf-achtergrond-sub {
         font-size: 7pt;
         color: #888;
+        word-break: break-word;
     }
 
     /* === PAGERBERICHT C35 === */
@@ -1593,37 +1625,37 @@
 {% endfor %}
 
 
-<!-- VERWIJZINGEN (gekoppelde kaarten als QR-codes) -->
-{% if gekoppelde %}
-<div class="pdf-sectie pdf-verwijzingen">
-    <div class="pdf-sectie-titel">Verwijzingen</div>
-    <p class="pdf-verwijzingen-hint">QR-codes worden beschikbaar zodra de applicatie online is.</p>
-    <div class="pdf-verwijzingen-lijst">
-        {% for k in gekoppelde %}
-        <div class="pdf-verwijzing-item">
-            <div class="pdf-verwijzing-qr-placeholder"></div>
-            <span class="pdf-koppeling-type" style="background-color: {{ k.kleur }};">{{ k.type_naam }}</span>
-            <span class="pdf-verwijzing-naam">{{ k.nummer }} — {{ k.naam }}</span>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- OPDRACHTKAART: gekoppelde QR-codes (zelfde stijl als instructiekaart) -->
-{% if kaart.type == 'opdracht' and opdracht_qrs %}
+<!-- ACHTERGRONDINFORMATIE: gekoppelde kaarten + QR-codes (v0.7.36 unified) -->
+{% if gekoppelde or opdracht_qrs %}
 <div class="pdf-sectie">
-    <div class="pdf-sectie-titel">Achtergrond</div>
+    <div class="pdf-sectie-titel">Achtergrondinformatie</div>
     <div class="pdf-sectie-inhoud">
-        <div class="pdf-opdracht-qr-rij">
-            {% for qr in opdracht_qrs %}
-            <div class="pdf-opdracht-qr-blok">
-                <img src="{{ qr.data_uri }}" alt="QR">
-                <div class="pdf-opdracht-qr-label">{{ qr.naam }}</div>
-                <div class="pdf-opdracht-qr-cat">{{ qr.categorie }}</div>
+        {% if gekoppelde %}
+        <div class="pdf-achtergrond-subtitel">Gekoppelde kaarten</div>
+        <div class="pdf-achtergrond-rij">
+            {% for k in gekoppelde %}
+            <div class="pdf-achtergrond-blok">
+                <div class="pdf-achtergrond-placeholder">
+                    <span class="pdf-achtergrond-placeholder-badge" style="background-color: {{ k.kleur }};">{{ k.type_naam }}</span>
+                </div>
+                <div class="pdf-achtergrond-label">{{ k.nummer }}</div>
+                <div class="pdf-achtergrond-sub">{{ k.naam }}</div>
             </div>
             {% endfor %}
         </div>
+        {% endif %}
+        {% if opdracht_qrs %}
+        <div class="pdf-achtergrond-subtitel">QR-codes</div>
+        <div class="pdf-achtergrond-rij">
+            {% for qr in opdracht_qrs %}
+            <div class="pdf-achtergrond-blok">
+                <img src="{{ qr.data_uri }}" alt="QR">
+                <div class="pdf-achtergrond-label">{{ qr.naam }}</div>
+                <div class="pdf-achtergrond-sub">{{ qr.categorie }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}

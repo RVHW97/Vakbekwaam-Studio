@@ -270,6 +270,7 @@ def genereer_pdf(kaart):
                                       lmra_url=lmra_url,
                                       lmra_qr_data_uri=lmra_qr_data_uri,
                                       instructie_qrs=instructie_qrs,
+                                      gekoppelde=gekoppelde,
                                       header_foto_pad=header_foto_pad,
                                       logo_pad=logo_pad,
                                       logo_wit_pad=logo_wit_pad,
@@ -343,7 +344,9 @@ def genereer_pdf(kaart):
         except (ValueError, TypeError):
             opdracht_stappen = []
 
-        # Gekoppelde QR-codes uit de bank (achtergrond-tab). Reuse InstructieQRLink.
+    # Gekoppelde QR-codes uit de bank (achtergrond-tab) — scenario én opdracht
+    # (v0.7.36: scenario kreeg ook een QR-blok op de Verwijzingen-tab).
+    if kaart.type in ('scenario', 'opdracht'):
         for link in kaart.get_instructie_qr_links():
             if link.qr_code is None:
                 continue
@@ -352,6 +355,8 @@ def genereer_pdf(kaart):
                 'naam': link.qr_code.naam,
                 'categorie': link.qr_code.categorie_naam,
             })
+
+    if kaart.type == 'opdracht':
         # Foto-paden absoluut maken zodat WeasyPrint ze kan laden.
         for opdr in opdracht_stappen:
             if not isinstance(opdr, dict):

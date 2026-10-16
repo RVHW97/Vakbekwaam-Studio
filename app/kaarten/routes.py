@@ -1159,10 +1159,11 @@ def bewerken(kaart_id):
         form.kenmerken_kerntaak.label.text = kenmerken_kerntaak_label(form.kerntaak.data or kaart.kerntaak)
     type_info = KAART_TYPES[kaart.type]
 
-    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown (scenario- én opdrachtkaart)
+    # Gekoppelde kaarten + beschikbare kaarten voor koppel-dropdown
+    # (v0.7.36: ook instructiekaart heeft nu een Gekoppelde-kaarten-blok op Achtergrond-tab)
     gekoppelde_kaarten = []
     beschikbaar_per_type = {}
-    if kaart.type in ('scenario', 'opdracht'):
+    if kaart.type in ('scenario', 'opdracht', 'instructie'):
         gekoppelde_kaarten = kaart.get_gekoppelde_kaarten()
         huidige_ids = {k.id for k in gekoppelde_kaarten}
         huidige_ids.add(kaart.id)
@@ -1175,11 +1176,12 @@ def bewerken(kaart_id):
             if rijen:
                 beschikbaar_per_type[type_key] = {'naam': t_info['naam'], 'kaarten': rijen}
 
-    # Instructie- én opdrachtkaart-achtergrond: QR-koppelingen + beschikbare QR-codes.
-    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus dekt beide types.
+    # Instructie-, opdracht- én scenariokaart: QR-koppelingen + beschikbare QR-codes.
+    # (v0.7.36: scenario kreeg ook een QR-blok op de Verwijzingen-tab).
+    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK).
     instructie_qr_links = []
     instructie_beschikbare_qrs_per_categorie = {}
-    if kaart.type in ('instructie', 'opdracht'):
+    if kaart.type in ('instructie', 'opdracht', 'scenario'):
         instructie_qr_links = kaart.get_instructie_qr_links()
         gekoppelde_qr_ids = {r.qr_code_id for r in instructie_qr_links}
         beschikbare_qrs = QRCode.query.filter(
@@ -1479,7 +1481,7 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
 def instructie_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht'):
+    if kaart.type not in ('instructie', 'opdracht', 'scenario'):
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
     if not qr_id:
@@ -1509,7 +1511,7 @@ def instructie_qr_link_toevoegen(kaart_id):
 def instructie_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht'):
+    if kaart.type not in ('instructie', 'opdracht', 'scenario'):
         abort(404)
     link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
     if not link:
