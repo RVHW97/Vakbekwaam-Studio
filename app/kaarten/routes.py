@@ -362,25 +362,36 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             werkwijze = json.loads(request_form.get('werkwijze_stappen_json') or '[]')
         except (ValueError, TypeError):
             werkwijze = []
-        gevuld = [
-            s for s in werkwijze
-            if isinstance(s, dict) and (
-                (s.get('titel') or '').strip()
-                or (s.get('tekst') or '').strip()
-                or (s.get('fotos') or [])
-            )
-        ]
+        # Werkwijze-editor houdt per stap pre-emptief 3 lege foto-slots aan — die tellen
+        # NIET als 'inhoud'. Alleen echte content (titel, tekst, foto met bestand) telt.
+        def _stap_heeft_inhoud(s):
+            if not isinstance(s, dict):
+                return False
+            if (s.get('titel') or '').strip():
+                return True
+            if (s.get('tekst') or '').strip():
+                return True
+            for f in (s.get('fotos') or []):
+                if isinstance(f, dict) and (f.get('bestand') or '').strip():
+                    return True
+            return False
+
+        valide_stappen = [s for s in werkwijze if isinstance(s, dict)]
+        gevuld = [s for s in valide_stappen if _stap_heeft_inhoud(s)]
         if len(gevuld) < 1:
             _add_error('werkwijze_stappen_json', 'Voeg minstens 1 werkwijze-stap toe.')
             ontbrekend.append('Werkwijze-stap')
         else:
-            # v0.7.35: elke stap die inhoud heeft moet een titel hebben.
-            zonder_titel = [idx + 1 for idx, s in enumerate(gevuld)
+            # v0.7.35/37: ELKE stap die in de lijst staat (ook als-ie "leeg lijkt" door
+            # alleen voorgevulde slots) moet een titel hebben. Zo kan de gebruiker geen
+            # lege stap-blokken laten slingeren.
+            zonder_titel = [idx + 1 for idx, s in enumerate(valide_stappen)
                             if not (s.get('titel') or '').strip()]
             if zonder_titel:
                 nrs = ', '.join(f'stap {n}' for n in zonder_titel)
                 _add_error('werkwijze_stappen_json',
-                            f'Elke werkwijze-stap heeft een titel nodig (ontbreekt bij: {nrs}).')
+                            f'Elke werkwijze-stap heeft een titel nodig (ontbreekt bij: {nrs}). '
+                            f'Verwijder lege stappen of vul een titel in.')
                 ontbrekend.append('Werkwijze-stap-titel')
 
     elif kaart_type == 'scenario':
@@ -443,21 +454,20 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             _add_error('opdrachten_json', 'Voeg minstens 1 opdracht toe.')
             ontbrekend.append('Opdracht')
         else:
-            # v0.7.35: elke gevulde opdracht moet een titel hebben.
+            # v0.7.35/37: ELKE opdracht in de lijst moet een titel hebben
+            # (ook als-ie 'leeg lijkt' door alleen voorgevulde foto-slots).
             try:
                 opdrachten = json.loads(request_form.get('opdrachten_json') or '[]')
             except (ValueError, TypeError):
                 opdrachten = []
-            gevulde_opdrachten = [o for o in opdrachten if isinstance(o, dict) and (
-                (o.get('titel') or '').strip() or (o.get('tekst') or '').strip()
-                or (o.get('fotos') or [])
-            )]
-            zonder_titel = [idx + 1 for idx, o in enumerate(gevulde_opdrachten)
+            valide_opdrachten = [o for o in opdrachten if isinstance(o, dict)]
+            zonder_titel = [idx + 1 for idx, o in enumerate(valide_opdrachten)
                             if not (o.get('titel') or '').strip()]
             if zonder_titel:
                 nrs = ', '.join(f'opdracht {n}' for n in zonder_titel)
                 _add_error('opdrachten_json',
-                            f'Elke opdracht heeft een titel nodig (ontbreekt bij: {nrs}).')
+                            f'Elke opdracht heeft een titel nodig (ontbreekt bij: {nrs}). '
+                            f'Verwijder lege opdrachten of vul een titel in.')
                 ontbrekend.append('Opdracht-titel')
         if _lijst_min('evaluatie', 1):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
