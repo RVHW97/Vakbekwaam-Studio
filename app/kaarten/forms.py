@@ -246,43 +246,11 @@ class OpdrachtkaartForm(FlaskForm):
     submit = SubmitField('Opslaan als concept')
 
 
-class KenniskaartForm(FlaskForm):
-    """Kenniskaart — achtergrondkennis/theorie voor manschappen.
-
-    v0.7.13: kernboodschap is opgedeeld in max 5 hoofdstukken. Elk hoofdstuk
-    heeft zijn eigen titel + rich-text-veld (bold/italic, H3/H4, lijsten,
-    tabel, huisstijl-kleuren) + 1-3 foto's met cropper. JSON-structuur:
-        [{"slot": "<uuid>", "titel": "...", "tekst_html": "...",
-          "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg"}, ...],
-          "foto_orientatie": "liggend"}]
-    """
-    naam = StringField('Logische naam', validators=NAAM_VALIDATORS)
-    kerntaak = SelectField('Kerntaak', choices=KERNTAAK_KEUZES, validators=KERNTAAK_VALIDATORS)
-    subcategorie_id = SelectField('Subcategorie', choices=[('', '— kies eerst een kerntaak —')],
-                                    validators=[Optional()], validate_choice=False)
-    header_foto = FileField('Headerfoto')
-    doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
-    doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
-    doel = TextAreaField('Doel', validators=[Optional(), Length(max=500)])
-    # Hoofdstukken — max 5. JSON-string van {slot,titel,tekst_html,fotos,foto_orientatie}.
-    kernboodschap_hoofdstukken_json = StringField('Kernboodschap-hoofdstukken',
-                                                   validators=[Optional(), Length(max=200000)])
-    evaluatie = TextAreaField('Evaluatie', validators=[Optional(), Length(max=3000)])
-    submit = SubmitField('Opslaan als concept')
-
-
-# Kenniskaart: max aantal hoofdstukken + max foto's per hoofdstuk.
-KENNIS_MAX_HOOFDSTUKKEN = 5
-KENNIS_MAX_FOTOS_PER_HOOFDSTUK = 3
-KENNIS_HOOFDSTUK_TITEL_MAX = 80
-
-
 FORMULIEREN = {
     'thema': ThemakaartForm,
     'instructie': InstructiekaartForm,
     'scenario': ScenariokaartForm,
     'opdracht': OpdrachtkaartForm,
-    'kennis': KenniskaartForm,
 }
 
 # Velden per type die opgeslagen worden als inhoud (exclusief naam en afbeeldingen)
@@ -316,10 +284,6 @@ INHOUD_VELDEN = {
                  'oefendoel',
                  'opdrachten_json', 'uitdagende_variant',
                  'verdiepende_vragen', 'evaluatie'],
-    'kennis':   ['doelgroep', 'doelgroep_anders',
-                 'doel',
-                 'kernboodschap_hoofdstukken_json',
-                 'evaluatie'],
 }
 
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).

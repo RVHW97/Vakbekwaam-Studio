@@ -40,8 +40,10 @@ def _kennis_style_filter(tag, name, value):
 
 
 def sanitize_kennis_html(ruw_html):
-    """Sanitize + normaliseer kenniskaart-rich-text. Leverstijl: één HTML-string
-    die veilig in Jinja én in WeasyPrint gerenderd kan worden."""
+    """Sanitize + normaliseer rich-text input. Oorspronkelijk voor kenniskaart,
+    nu generiek gebruikt voor werkwijze-stappen (v0.7.31) en ensceneringstips
+    (v0.7.32). Leverstijl: één HTML-string die veilig in Jinja én in WeasyPrint
+    gerenderd kan worden."""
     if not ruw_html:
         return ''
     schoon = bleach.clean(
@@ -56,81 +58,6 @@ def sanitize_kennis_html(ruw_html):
     return schoon.strip()
 
 
-def verwerk_kennis_hoofdstukken(json_string):
-    """Parse kenniskaart-hoofdstukken-JSON (v0.7.13): per hoofdstuk sanitize
-    tekst_html met bleach én upload nieuwe foto's per slot.
-
-    Per hoofdstuk: {slot, titel, tekst_html, fotos:[{slot,bestand,...}], foto_orientatie}.
-    File-inputs volgen dezelfde conventie als werkwijze: 'werkwijze_foto_<slot>'
-    en 'werkwijze_orig_<slot>' — zo hoeven we de cropper-JS niet te dupliceren.
-    """
-    # Alleen import hier — bovenaan zit er al een globale import, dit voorkomt
-    # herhaling van de namespace-vermelding lager in de functie.
-    from app.kaarten.forms import (KENNIS_MAX_HOOFDSTUKKEN,
-                                    KENNIS_MAX_FOTOS_PER_HOOFDSTUK,
-                                    KENNIS_HOOFDSTUK_TITEL_MAX)
-    try:
-        hoofdstukken = json.loads(json_string or '[]')
-    except (ValueError, TypeError):
-        return json_string or '[]'
-    if not isinstance(hoofdstukken, list):
-        return json_string or '[]'
-
-    schoon = []
-    for h in hoofdstukken[:KENNIS_MAX_HOOFDSTUKKEN]:
-        if not isinstance(h, dict):
-            continue
-        slot = (h.get('slot') or '').strip()
-        titel = (h.get('titel') or '').strip()[:KENNIS_HOOFDSTUK_TITEL_MAX]
-        tekst_html = sanitize_kennis_html(h.get('tekst_html') or '')
-        foto_orientatie = (h.get('foto_orientatie') or 'liggend').strip()
-        foto_plaatsing = (h.get('foto_plaatsing') or 'onder').strip()
-        if foto_plaatsing not in ('onder', 'naast'):
-            foto_plaatsing = 'onder'
-
-        nieuwe_fotos = []
-        for foto in (h.get('fotos') or [])[:KENNIS_MAX_FOTOS_PER_HOOFDSTUK]:
-            if not isinstance(foto, dict):
-                continue
-            f_slot = (foto.get('slot') or '').strip()
-            bestand = (foto.get('bestand') or '').strip()
-            bestand_origineel = (foto.get('bestand_origineel') or '').strip()
-            if f_slot:
-                orig_upload = request.files.get('werkwijze_orig_' + f_slot)
-                if orig_upload and orig_upload.filename:
-                    orig_naam, orig_fout = save_foto(orig_upload, prefix='kennis_h_orig', ratio=None)
-                    if orig_naam:
-                        if bestand_origineel:
-                            verwijder_bestand(bestand_origineel)
-                        bestand_origineel = orig_naam
-                    elif orig_fout:
-                        flash(f'Hoofdstuk-foto (origineel): {orig_fout}', 'warning')
-                crop_upload = request.files.get('werkwijze_foto_' + f_slot)
-                if crop_upload and crop_upload.filename:
-                    foto_naam, foto_fout = save_foto(crop_upload, prefix='kennis_h', ratio=None)
-                    if foto_naam:
-                        if bestand:
-                            verwijder_bestand(bestand)
-                        bestand = foto_naam
-                    elif foto_fout:
-                        flash(f'Hoofdstuk-foto: {foto_fout}', 'warning')
-                if bestand and not bestand_origineel:
-                    bestand_origineel = bestand
-            nieuwe_fotos.append({
-                'slot': f_slot,
-                'bestand': bestand,
-                'bestand_origineel': bestand_origineel,
-            })
-
-        schoon.append({
-            'slot': slot,
-            'titel': titel,
-            'tekst_html': tekst_html,
-            'fotos': nieuwe_fotos,
-            'foto_orientatie': foto_orientatie,
-            'foto_plaatsing': foto_plaatsing,
-        })
-    return json.dumps(schoon, ensure_ascii=False)
 from app.models import (Kaart, KaartAfbeelding, KaartWijziging, KaartKoppeling,
                          ThemaKaartLink, ThemaQRLink, InstructieQRLink, QRCode,
                          Kerntaak, Subcategorie,
@@ -184,9 +111,7 @@ from app.kaarten import bp
 from app.kaarten.forms import (FORMULIEREN, INHOUD_VELDEN, INHOUD_LIJST_VELDEN,
                                 WERKWIJZE_MAX_STAPPEN, WERKWIJZE_TITEL_MAX,
                                 WERKWIJZE_TEKST_MAX,
-                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX,
-                                KENNIS_MAX_HOOFDSTUKKEN, KENNIS_MAX_FOTOS_PER_HOOFDSTUK,
-                                KENNIS_HOOFDSTUK_TITEL_MAX)
+                                VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 HEADER_FOTO_MAX_BYTES = 20 * 1024 * 1024
@@ -489,37 +414,6 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
                                           or (o.get('tekst') or '').strip())):
             _add_error('opdrachten_json', 'Voeg minstens 1 opdracht toe.')
             ontbrekend.append('Opdracht')
-        if _lijst_min('evaluatie', 1):
-            _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
-            ontbrekend.append('Evaluatie')
-
-    elif kaart_type == 'kennis':
-        if _tekst_leeg('doelgroep'):
-            _add_error('doelgroep', 'Kies een doelgroep.')
-            ontbrekend.append('Doelgroep')
-        if _tekst_leeg('doel'):
-            _add_error('doel', 'Vul een doel in.')
-            ontbrekend.append('Doel')
-        # Kernboodschap: minstens 1 hoofdstuk met titel of tekst of foto.
-        try:
-            hoofdstukken = json.loads(request_form.get('kernboodschap_hoofdstukken_json') or '[]')
-        except (ValueError, TypeError):
-            hoofdstukken = []
-        gevuld = []
-        for h in hoofdstukken:
-            if not isinstance(h, dict):
-                continue
-            titel = (h.get('titel') or '').strip()
-            tekst_plat = re.sub(r'<[^>]+>', ' ', h.get('tekst_html') or '')
-            tekst_plat = re.sub(r'\s+', ' ', tekst_plat).strip()
-            fotos = [f for f in (h.get('fotos') or [])
-                     if isinstance(f, dict) and (f.get('bestand') or '').strip()]
-            if titel or tekst_plat or fotos:
-                gevuld.append(h)
-        if not gevuld:
-            _add_error('kernboodschap_hoofdstukken_json',
-                        'Voeg minstens 1 hoofdstuk toe met een titel, tekst of foto.')
-            ontbrekend.append('Kernboodschap-hoofdstuk')
         if _lijst_min('evaluatie', 1):
             _add_error('evaluatie', 'Voeg minstens 1 evaluatie-punt toe.')
             ontbrekend.append('Evaluatie')
@@ -933,21 +827,6 @@ def bewerken(kaart_id):
             if hasattr(form, 'werkwijze_stappen_json'):
                 form.werkwijze_stappen_json.data = processed_werkwijze_json
 
-    # Kenniskaart-hoofdstukken (v0.7.13): één JSON met max 5 hoofdstukken. Per
-    # hoofdstuk: titel (plain), tekst_html (rich, gesanitized met bleach) én
-    # foto's (dezelfde file-input-conventie werkwijze_foto_<slot>).
-    processed_kennis_hoofdstukken_json = None
-    if request.method == 'POST' and kaart.type == 'kennis':
-        _incoming_h = request.form.get('kernboodschap_hoofdstukken_json') or '[]'
-        processed_kennis_hoofdstukken_json = verwerk_kennis_hoofdstukken(_incoming_h)
-        if processed_kennis_hoofdstukken_json != _incoming_h:
-            _inh = kaart.get_inhoud()
-            _inh['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
-            kaart.set_inhoud(_inh)
-            db.session.commit()
-            if hasattr(form, 'kernboodschap_hoofdstukken_json'):
-                form.kernboodschap_hoofdstukken_json.data = processed_kennis_hoofdstukken_json
-
     # Opdracht-foto's: idem — bij POST altijd verwerken zodat uploads niet verloren gaan.
     processed_opdracht_json = None
     if request.method == 'POST' and kaart.type == 'opdracht':
@@ -998,8 +877,6 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kennis_hoofdstukken_json is not None and 'kernboodschap_hoofdstukken_json' in inhoud:
-            inhoud['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
 
         kaart.naam = _kaart_naam_uit_request(request.form, kaart.type, fallback=kaart.naam)
         kaart.kerntaak = (request.form.get('kerntaak') or kaart.kerntaak) or None
@@ -1135,8 +1012,6 @@ def bewerken(kaart_id):
             inhoud['opdrachten_json'] = processed_opdracht_json
         if processed_tips_json is not None and 'ensceneringstips' in inhoud:
             inhoud['ensceneringstips'] = processed_tips_json
-        if processed_kennis_hoofdstukken_json is not None and 'kernboodschap_hoofdstukken_json' in inhoud:
-            inhoud['kernboodschap_hoofdstukken_json'] = processed_kennis_hoofdstukken_json
 
         kaart.naam = _kaart_naam_uit_form(form, kaart.type)
         _subcat_raw = (form.subcategorie_id.data or '').strip() if form.subcategorie_id.data else ''
@@ -1255,11 +1130,11 @@ def bewerken(kaart_id):
             if rijen:
                 beschikbaar_per_type[type_key] = {'naam': t_info['naam'], 'kaarten': rijen}
 
-    # Instructie-, opdracht- én kenniskaart-achtergrond: QR-koppelingen + beschikbare QR-codes.
-    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus dekt alle 3 types.
+    # Instructie- én opdrachtkaart-achtergrond: QR-koppelingen + beschikbare QR-codes.
+    # De InstructieQRLink-tabel is generiek gestructureerd (kaart_id FK), dus dekt beide types.
     instructie_qr_links = []
     instructie_beschikbare_qrs_per_categorie = {}
-    if kaart.type in ('instructie', 'opdracht', 'kennis'):
+    if kaart.type in ('instructie', 'opdracht'):
         instructie_qr_links = kaart.get_instructie_qr_links()
         gekoppelde_qr_ids = {r.qr_code_id for r in instructie_qr_links}
         beschikbare_qrs = QRCode.query.filter(
@@ -1277,7 +1152,7 @@ def bewerken(kaart_id):
     # Themakaart: koppelingen aan andere kaarten (per tussentitel) + QR-codes (één lijst)
     thema_kaart_links = {0: [], 1: [], 2: []}
     thema_qr_links_op_volgorde = []
-    thema_beschikbare_kaarten_per_type = {}  # {'instructie': [...], 'scenario': [...], 'opdracht': [...], 'kennis': [...]}
+    thema_beschikbare_kaarten_per_type = {}  # {'instructie': [...], 'scenario': [...], 'opdracht': [...]}
     thema_beschikbare_qrs_per_categorie = {}  # {'oefening': [...], ...}
     if kaart.type == 'thema':
         thema_kaart_links = kaart.get_thema_kaart_links()
@@ -1290,8 +1165,8 @@ def bewerken(kaart_id):
             Kaart.status != 'gearchiveerd',
             ~Kaart.id.in_(gekoppelde_ids),
         ).order_by(Kaart.nummer).all()
-        # Groepeer per type, in vaste volgorde (instructie / scenario / opdracht / kennis)
-        for type_key in ('instructie', 'scenario', 'opdracht', 'kennis'):
+        # Groepeer per type, in vaste volgorde (instructie / scenario / opdracht)
+        for type_key in ('instructie', 'scenario', 'opdracht'):
             kaarten = [k for k in beschikbare_kaarten if k.type == type_key]
             if kaarten:
                 thema_beschikbare_kaarten_per_type[type_key] = {
@@ -1559,7 +1434,7 @@ def thema_qr_link_verwijderen(kaart_id, link_id):
 def instructie_qr_link_toevoegen(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht', 'kennis'):
+    if kaart.type not in ('instructie', 'opdracht'):
         abort(404)
     qr_id = request.form.get('qr_id', type=int)
     if not qr_id:
@@ -1589,7 +1464,7 @@ def instructie_qr_link_toevoegen(kaart_id):
 def instructie_qr_link_verwijderen(kaart_id, link_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_bewerken(kaart)
-    if kaart.type not in ('instructie', 'opdracht', 'kennis'):
+    if kaart.type not in ('instructie', 'opdracht'):
         abort(404)
     link = InstructieQRLink.query.filter_by(id=link_id, kaart_id=kaart.id).first()
     if not link:

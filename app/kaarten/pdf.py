@@ -96,7 +96,6 @@ def genereer_pdf(kaart):
         'instructie': '#4C7F52', # THV groen
         'scenario': '#B6463D',   # Brand rood
         'opdracht': '#DAB94F',   # IBGS geel
-        'kennis': '#6B4C93',     # Kennis indigo/paars
     }
     type_kleur = type_kleuren.get(kaart.type, '#CC9933')
 
@@ -196,73 +195,6 @@ def genereer_pdf(kaart):
                                       header_foto_pad=header_foto_pad,
                                       logo_wit_pad=logo_wit_pad,
                                       kerntaak_kleur=kerntaak_kleur,
-                                      versie_tekst=versie_tekst,
-                                      versie_datum_tekst=versie_datum_tekst,
-                                      font_paden=font_paden)
-        return HTML(string=html_string).write_pdf()
-
-    # === KENNISKAART: A4-staand multi-page layout ===
-    if kaart.type == 'kennis':
-        # v0.7.13: max 5 hoofdstukken, elk met titel + rich HTML + 1-3 foto's.
-        # De HTML in elk hoofdstuk is server-side gesanitized bij opslaan.
-        try:
-            kennis_hoofdstukken = json.loads(inhoud.get('kernboodschap_hoofdstukken_json') or '[]')
-            if not isinstance(kennis_hoofdstukken, list):
-                kennis_hoofdstukken = []
-        except (ValueError, TypeError):
-            kennis_hoofdstukken = []
-
-        for hoofdstuk in kennis_hoofdstukken:
-            if not isinstance(hoofdstuk, dict):
-                continue
-            for foto in (hoofdstuk.get('fotos') or []):
-                if not isinstance(foto, dict):
-                    continue
-                bestand = (foto.get('bestand') or '').strip()
-                if bestand:
-                    pad = os.path.join(upload_folder, bestand)
-                    foto['pad'] = 'file://' + pad if os.path.exists(pad) else None
-                else:
-                    foto['pad'] = None
-
-        # Doelgroep-tekst: dropdown-keuze of vrije tekst bij 'anders'.
-        _dg_keuzes = dict(DOELGROEP_KEUZES)
-        _dg_val = (inhoud.get('doelgroep') or '').strip()
-        if _dg_val == 'anders':
-            doelgroep_tekst = (inhoud.get('doelgroep_anders') or '').strip()
-        else:
-            doelgroep_tekst = _dg_keuzes.get(_dg_val, '') if _dg_val else ''
-
-        # Evaluatie: regel-per-punt in het textarea (verdiepende vragen zijn
-        # sinds v0.7.12 uit de kenniskaart verwijderd).
-        def _lijst_uit_tekst(veld):
-            ruw = (inhoud.get(veld) or '').strip()
-            return [r.strip() for r in ruw.split('\n') if r.strip()]
-        evaluatie_punten = _lijst_uit_tekst('evaluatie')
-
-        # Gekoppelde QR-codes uit de bank (dezelfde tabel als instructie/opdracht).
-        kennis_qrs = []
-        for link in kaart.get_instructie_qr_links():
-            if link.qr_code is None:
-                continue
-            kennis_qrs.append({
-                'data_uri': _qr_data_uri(link.qr_code),
-                'naam': link.qr_code.naam,
-                'categorie': link.qr_code.categorie_naam,
-            })
-
-        html_string = render_template('kaarten/pdf_kennis.html',
-                                      kaart=kaart,
-                                      inhoud=inhoud,
-                                      doelgroep_tekst=doelgroep_tekst,
-                                      kennis_hoofdstukken=kennis_hoofdstukken,
-                                      evaluatie_punten=evaluatie_punten,
-                                      kennis_qrs=kennis_qrs,
-                                      header_foto_pad=header_foto_pad,
-                                      logo_pad=logo_pad,
-                                      logo_wit_pad=logo_wit_pad,
-                                      kerntaak_kleur=kerntaak_kleur,
-                                      kerntaak_afk=kerntaak_afk,
                                       versie_tekst=versie_tekst,
                                       versie_datum_tekst=versie_datum_tekst,
                                       font_paden=font_paden)
