@@ -1274,7 +1274,7 @@
                 <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
                 <path d="M3 13h18" stroke="{{ kerntaak_kleur }}" stroke-width="1.5"/>
             </svg>
-            <div class="pdf-infostrip-label">Basis (eigen post)</div>
+            <div class="pdf-infostrip-label">Wat regel jij</div>
             <div class="pdf-infostrip-detail">
                 {% if oefenmiddelen_basis_labels %}
                     {% for label in oefenmiddelen_basis_labels %}<div>{{ label }}</div>{% endfor %}
@@ -1287,7 +1287,7 @@
                         <rect x="3" y="5" width="18" height="14" rx="1.5" stroke="#666" stroke-width="2" fill="none"/>
                         <path d="M3 7l9 6 9-6" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                     </svg>
-                    Extra bestellen
+                    Wat regelen wij
                 </div>
                 <div class="pdf-infostrip-detail">
                     {% for label in oefenmiddelen_extra_labels %}<div>{{ label }}</div>{% endfor %}
@@ -1299,8 +1299,8 @@
 </div>
 {% endif %}
 
-<!-- OPDRACHTKAART: infostrip (doelgroep + oefenmiddelen basis + extra) -->
-{% if kaart.type == 'opdracht' and (inhoud.get('doelgroep') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels) %}
+<!-- OPDRACHTKAART: infostrip (doelgroep + tijdsduur + oefenmiddelen basis + extra) -->
+{% if kaart.type == 'opdracht' and (inhoud.get('doelgroep') or inhoud.get('tijdsduur') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels) %}
 <div class="pdf-infostrip">
     <div class="pdf-infostrip-rij">
         {% if inhoud.get('doelgroep') %}
@@ -1313,6 +1313,16 @@
             <div class="pdf-infostrip-waarde">{{ doelgroep_tekst or '—' }}</div>
         </div>
         {% endif %}
+        {% if inhoud.get('tijdsduur') %}
+        <div class="pdf-infostrip-kolom">
+            <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
+                <path d="M12 7v5l3 2" stroke="{{ kerntaak_kleur }}" stroke-width="2" stroke-linecap="round" fill="none"/>
+            </svg>
+            <div class="pdf-infostrip-label">Tijdsduur</div>
+            <div class="pdf-infostrip-waarde">{{ inhoud.get('tijdsduur') }}</div>
+        </div>
+        {% endif %}
         {% if oefenmiddelen_basis_labels %}
         <div class="pdf-infostrip-kolom">
             <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1320,7 +1330,7 @@
                 <path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
                 <path d="M3 13h18" stroke="{{ kerntaak_kleur }}" stroke-width="1.5"/>
             </svg>
-            <div class="pdf-infostrip-label">Basis (eigen post)</div>
+            <div class="pdf-infostrip-label">Wat regel jij</div>
             <div class="pdf-infostrip-detail">
                 {% for label in oefenmiddelen_basis_labels %}<div>{{ label }}</div>{% endfor %}
             </div>
@@ -1332,7 +1342,7 @@
                 <rect x="3" y="5" width="18" height="14" rx="1.5" stroke="{{ kerntaak_kleur }}" stroke-width="2" fill="none"/>
                 <path d="M3 7l9 6 9-6" stroke="{{ kerntaak_kleur }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </svg>
-            <div class="pdf-infostrip-label">Extra bestellen</div>
+            <div class="pdf-infostrip-label">Wat regelen wij</div>
             <div class="pdf-infostrip-detail">
                 {% for label in oefenmiddelen_extra_labels %}<div>{{ label }}</div>{% endfor %}
             </div>

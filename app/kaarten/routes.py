@@ -312,6 +312,49 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             gevuld = [x for x in data if x]
         return len(gevuld) < min_aantal
 
+    def _praktisch_missende_aantallen(veld_naam, vereist_types, label_map):
+        """Return een lijst leesbare labels van items waar type een aantal vereist
+        maar het aantal-veld leeg is. Lege lijst = alles OK."""
+        try:
+            data = json.loads(request_form.get(veld_naam) or '[]')
+        except (ValueError, TypeError):
+            return []
+        if not isinstance(data, list):
+            return []
+        missers = []
+        for it in data:
+            if not isinstance(it, dict):
+                continue
+            t = (it.get('type') or '').strip()
+            if t not in vereist_types:
+                continue
+            aantal = (it.get('aantal') or '').strip()
+            if aantal:
+                continue
+            if t == 'anders':
+                tekst = (it.get('tekst') or '').strip()
+                missers.append(tekst or 'Andere')
+            else:
+                missers.append(label_map.get(t, t))
+        return missers
+
+    # Types die een aantal-veld tonen in de UI → aantal verplicht als dit type gekozen is.
+    _BASIS_VEREIST_AANTAL = {'anders'}
+    _EXTRA_VEREIST_AANTAL = {'extra_gespreksgroep', 'cirrus', 'zware_oefenpop',
+                              'ademlucht', 'anders'}
+    _BASIS_LABELS = {
+        'ts': 'TS', 'basisoefenset': 'Basisoefenset',
+        'lokaal_beamer': 'Lokaal met beamer en scherm',
+        'oefenterrein': 'Oefenterrein / buitenlocatie',
+        'flipover': 'Flipover of whiteboard', 'laptop': 'Laptop',
+    }
+    _EXTRA_LABELS = {
+        'extra_ts': 'Extra TS', 'extra_gespreksgroep': 'Extra gespreksgroep',
+        'cirrus': 'Cirrus', 'moi': 'MOI-oefenset',
+        'zware_oefenpop': 'Zware oefenpop',
+        'autoambulance': 'Autoambulance', 'ademlucht': 'Ademlucht',
+    }
+
     ontbrekend = []
 
     # Verplicht voor élk kaart-type: subcategorie (bepaalt 2e cijfer van nummer).
@@ -412,8 +455,20 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             _add_error('aanleiding_doelen', 'Vul een oefendoel in.')
             ontbrekend.append('Oefendoel')
         if _json_lijst_min('oefenmiddelen_basis', 1):
-            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 basis-oefenmiddel toe.')
-            ontbrekend.append('Basis-oefenmiddelen')
+            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 item toe bij "Wat regel jij".')
+            ontbrekend.append('Praktisch — Wat regel jij')
+        _basis_missers = _praktisch_missende_aantallen(
+            'oefenmiddelen_basis', _BASIS_VEREIST_AANTAL, _BASIS_LABELS)
+        if _basis_missers:
+            _add_error('oefenmiddelen_basis',
+                       'Vul een aantal in bij: ' + ', '.join(_basis_missers) + '.')
+            ontbrekend.append('Praktisch — aantal "Wat regel jij"')
+        _extra_missers = _praktisch_missende_aantallen(
+            'oefenmiddelen_extra', _EXTRA_VEREIST_AANTAL, _EXTRA_LABELS)
+        if _extra_missers:
+            _add_error('oefenmiddelen_extra',
+                       'Vul een aantal in bij: ' + ', '.join(_extra_missers) + '.')
+            ontbrekend.append('Praktisch — aantal "Wat regelen wij"')
         if _tekst_leeg('pager_prio'):
             _add_error('pager_prio', 'Kies een prioriteit.')
             ontbrekend.append('Pager-prioriteit')
@@ -442,8 +497,20 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             _add_error('doelgroep', 'Kies een doelgroep.')
             ontbrekend.append('Doelgroep')
         if _json_lijst_min('oefenmiddelen_basis', 1):
-            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 basis-oefenmiddel toe.')
-            ontbrekend.append('Basis-oefenmiddelen')
+            _add_error('oefenmiddelen_basis', 'Voeg minstens 1 item toe bij "Wat regel jij".')
+            ontbrekend.append('Praktisch — Wat regel jij')
+        _basis_missers_op = _praktisch_missende_aantallen(
+            'oefenmiddelen_basis', _BASIS_VEREIST_AANTAL, _BASIS_LABELS)
+        if _basis_missers_op:
+            _add_error('oefenmiddelen_basis',
+                       'Vul een aantal in bij: ' + ', '.join(_basis_missers_op) + '.')
+            ontbrekend.append('Praktisch — aantal "Wat regel jij"')
+        _extra_missers_op = _praktisch_missende_aantallen(
+            'oefenmiddelen_extra', _EXTRA_VEREIST_AANTAL, _EXTRA_LABELS)
+        if _extra_missers_op:
+            _add_error('oefenmiddelen_extra',
+                       'Vul een aantal in bij: ' + ', '.join(_extra_missers_op) + '.')
+            ontbrekend.append('Praktisch — aantal "Wat regelen wij"')
         if _tekst_leeg('oefendoel'):
             _add_error('oefendoel', 'Vul een oefendoel in.')
             ontbrekend.append('Oefendoel')

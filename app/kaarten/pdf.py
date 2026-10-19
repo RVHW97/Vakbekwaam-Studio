@@ -290,10 +290,32 @@ def genereer_pdf(kaart):
     oefenmiddelen_extra_labels = []
     opdracht_qrs = []
 
-    # Oefenmiddelen JSON → labels — gedeeld tussen scenario- en opdrachtkaart.
+    # "Praktisch" JSON → labels — gedeeld tussen scenario- en opdrachtkaart.
+    # Veld-namen blijven `oefenmiddelen_basis`/`oefenmiddelen_extra` in de DB,
+    # UI toont ze als "Wat regel jij" / "Wat regelen wij".
     if kaart.type in ('scenario', 'opdracht'):
-        BASIS_LABELS = {'ts': 'TS', 'basisoefenset': 'Basisoefenset'}
-        EXTRA_LABELS = {'ademlucht': 'Ademlucht'}
+        BASIS_LABELS = {
+            'ts':             'TS',
+            'basisoefenset':  'Basisoefenset',
+            'lokaal_beamer':  'Lokaal met beamer en scherm',
+            'oefenterrein':   'Oefenterrein / buitenlocatie',
+            'flipover':       'Flipover of whiteboard',
+            'laptop':         'Laptop',
+        }
+        EXTRA_LABELS = {
+            'extra_ts':             'Extra TS',
+            'extra_gespreksgroep':  'Extra gespreksgroep',
+            'cirrus':               'Cirrus',
+            'moi':                  'MOI-oefenset',
+            'zware_oefenpop':       'Zware oefenpop',
+            'autoambulance':        'Autoambulance',
+            'ademlucht':            'Ademlucht',
+        }
+        # Opties waar een aantal (× N) nooit logisch is — ook als een oude kaart
+        # er toch een aantal bij heeft opgeslagen, laten we het in de PDF weg.
+        BASIS_ZONDER_AANTAL = {'ts', 'basisoefenset',
+                                'lokaal_beamer', 'oefenterrein', 'flipover', 'laptop'}
+        EXTRA_ZONDER_AANTAL = {'extra_ts', 'moi', 'autoambulance'}
         try:
             basis_items = json.loads(inhoud.get('oefenmiddelen_basis') or '[]')
         except (ValueError, TypeError):
@@ -304,6 +326,8 @@ def genereer_pdf(kaart):
                     continue
                 t = (it.get('type') or '').strip()
                 aantal = (it.get('aantal') or '').strip()
+                if t in BASIS_ZONDER_AANTAL:
+                    aantal = ''
                 if t == 'anders':
                     tekst = (it.get('tekst') or '').strip()
                     if tekst:
@@ -321,6 +345,8 @@ def genereer_pdf(kaart):
                     continue
                 t = (it.get('type') or '').strip()
                 aantal = (it.get('aantal') or '').strip()
+                if t in EXTRA_ZONDER_AANTAL:
+                    aantal = ''
                 if t == 'anders':
                     tekst = (it.get('tekst') or '').strip()
                     if tekst:

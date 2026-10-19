@@ -35,6 +35,15 @@ TIJDSDUUR_KEUZES = [
     ('2_dagdelen', '2 dagdelen'),
 ]
 
+# Opdrachtkaart kent kortere opties — een opdracht duurt doorgaans een kwartier tot drie kwartier,
+# niet een hele oefenavond zoals bij een scenariokaart.
+OPDRACHT_TIJDSDUUR_KEUZES = [
+    ('', '— kies tijdsduur —'),
+    ('15 minuten', '15 minuten'),
+    ('30 minuten', '30 minuten'),
+    ('45 minuten', '45 minuten'),
+]
+
 PAGER_PRIO_KEUZES = [
     ('', '— kies prioriteit —'),
     ('1', 'Prio 1'),
@@ -171,10 +180,12 @@ class ScenariokaartForm(FlaskForm):
     overig_functie = StringField('Overige functie', validators=[Optional(), Length(max=40)])
     overig_aantal = IntegerField('Aantal', validators=[Optional(), NumberRange(min=0, max=20)])
     tijdsduur = SelectField('Tijdsduur', choices=TIJDSDUUR_KEUZES, validators=[Optional()])
-    # Oefenmiddelen gesplitst (zelfde patroon als opdrachtkaart):
-    # basis (op eigen post) + extra (bestellen bij oefencoördinator). Beide opgeslagen als JSON.
-    oefenmiddelen_basis = StringField('Basis (eigen post)', validators=[Optional(), Length(max=2000)])
-    oefenmiddelen_extra = StringField('Extra bestellen', validators=[Optional(), Length(max=2000)])
+    # "Praktisch" gesplitst (zelfde patroon als opdrachtkaart):
+    # "Wat regel jij" (op eigen post / zelf te regelen) + "Wat regelen wij"
+    # (bestellen bij oefencoördinator). Beide opgeslagen als JSON.
+    # Veld-namen behouden om bestaande data compatibel te houden.
+    oefenmiddelen_basis = StringField('Wat regel jij', validators=[Optional(), Length(max=2000)])
+    oefenmiddelen_extra = StringField('Wat regelen wij', validators=[Optional(), Length(max=2000)])
     aanleiding_doelen = TextAreaField('Oefendoel', validators=[Optional(), Length(max=500)])
     # Pagerbericht (C35) — prio + soort + (optioneel) voertuigen
     pager_prio = SelectField('Prioriteit', choices=PAGER_PRIO_KEUZES, validators=[Optional()])
@@ -211,10 +222,13 @@ class OpdrachtkaartForm(FlaskForm):
     # Voorbereiding
     doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
-    # Oefenmiddelen gesplitst: (1) basis-set op eigen post, (2) extra te bestellen bij coördinator.
-    # Beide opgeslagen als JSON-string in een verborgen input; JS-editor rendert de rijen.
-    oefenmiddelen_basis = StringField('Basis (eigen post)', validators=[Optional(), Length(max=2000)])
-    oefenmiddelen_extra = StringField('Extra bestellen', validators=[Optional(), Length(max=2000)])
+    # Tijdsduur van de opdracht — korte opties (15/30/45 minuten).
+    tijdsduur = SelectField('Tijdsduur', choices=OPDRACHT_TIJDSDUUR_KEUZES, validators=[Optional()])
+    # "Praktisch" gesplitst: (1) "Wat regel jij" = zelf te regelen (post/lokaal/materiaal),
+    # (2) "Wat regelen wij" = bestellen bij oefencoördinator.
+    # Veld-namen behouden om bestaande data compatibel te houden.
+    oefenmiddelen_basis = StringField('Wat regel jij', validators=[Optional(), Length(max=2000)])
+    oefenmiddelen_extra = StringField('Wat regelen wij', validators=[Optional(), Length(max=2000)])
     # Veiligheid: LMRA centraal + 5 korte zinnen (net als instructiekaart).
     veiligheid_zin_1 = StringField('Veiligheidspunt 1', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
     veiligheid_zin_2 = StringField('Veiligheidspunt 2', validators=[Optional(), Length(max=VEILIGHEID_ZIN_MAX)])
@@ -261,7 +275,7 @@ INHOUD_VELDEN = {
                  'kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken',
                  'omgevingskenmerken', 'interventiekenmerken',
                  'evaluatie'],
-    'opdracht': ['doelgroep', 'doelgroep_anders',
+    'opdracht': ['doelgroep', 'doelgroep_anders', 'tijdsduur',
                  'oefenmiddelen_basis', 'oefenmiddelen_extra',
                  'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                  'veiligheid_zin_4', 'veiligheid_zin_5',
