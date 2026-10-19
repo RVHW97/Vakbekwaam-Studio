@@ -3,14 +3,23 @@ from flask import render_template, redirect, url_for, abort, send_from_directory
 from flask_login import login_required, current_user
 from app import db
 from app.main import bp
-from app.models import Kaart, QRCode, QRKlik
+from app.models import Kaart, QRCode, QRKlik, Review
 
 
 @bp.route('/')
 @login_required
 def dashboard():
     recente_kaarten = Kaart.query.order_by(Kaart.bijgewerkt_op.desc()).limit(5).all()
-    return render_template('main/dashboard.html', recente_kaarten=recente_kaarten)
+    # Openstaande review-taken: direct toegewezen aan de gebruiker. Collega-taken
+    # (die hij zou kunnen overnemen bij afwezigheid) tonen we vooralsnog niet in
+    # het lijstje — anders wordt het dashboard te druk.
+    openstaande_reviews = (Review.query
+                            .filter_by(reviewer_id=current_user.id, status='open')
+                            .order_by(Review.aangemaakt_op.asc())
+                            .all())
+    return render_template('main/dashboard.html',
+                           recente_kaarten=recente_kaarten,
+                           openstaande_reviews=openstaande_reviews)
 
 
 @bp.route('/q/<slug>')

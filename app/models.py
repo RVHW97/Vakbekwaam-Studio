@@ -15,15 +15,46 @@ KAART_TYPES = {
     'check':    {'prefix': 'CK', 'naam': 'Checkkaart'},
 }
 
-# Gebruikersrollen — volgorde = oplopend in rechten
+# Gebruikersrollen — volgorde = oplopend in rechten.
+# 'medewerker_oo' = Medewerker Opleiden & Oefenen (geen kerngroep; mag enkel
+# instructiekaart-materieel aanmaken + ensceneringstips reviewen op scenariokaart).
+# 'oefencoordinator' en 'specialist' krijgen daarnaast nog een kerngroep (zie KERNGROEPEN).
 ROLLEN = {
-    'medewerker':  {'naam': 'Medewerker',  'niveau': 1},
-    'coordinator': {'naam': 'Coördinator', 'niveau': 2},
-    'specialist':  {'naam': 'Specialist',  'niveau': 3},
-    'admin':       {'naam': 'Admin',       'niveau': 4},
+    'medewerker_oo':    {'naam': 'Medewerker O&O',   'niveau': 1},
+    'oefencoordinator': {'naam': 'Oefencoördinator', 'niveau': 2},
+    'specialist':       {'naam': 'Specialist',       'niveau': 3},
+    'admin':            {'naam': 'Admin',            'niveau': 4},
 }
 
 ROL_KEUZES = [(k, v['naam']) for k, v in ROLLEN.items()]
+
+# Kerngroepen voor rol-onderscheiding. Oefencoördinatoren kennen alle 6; specialisten
+# kennen alleen de eerste 5 (geen specialist ROI). 'Algemeen' is géén kerngroep hier —
+# algemene kaarten krijgen bij indienen door de maker een kerngroep met meeste affiniteit.
+KERNGROEPEN = {
+    'brand':       'Brand',
+    'natuurbrand': 'Natuurbrand',
+    'water':       'Waterongevallen',
+    'thv':         'THV',
+    'ibgs':        'IBGS',
+    'roi':         'ROI',
+}
+KERNGROEP_KEUZES = [(k, v) for k, v in KERNGROEPEN.items()]
+
+# Specialisten kennen géén ROI; voor een ROI-kaart gaat de eindcheck naar één van alle 5.
+SPECIALIST_KERNGROEPEN = {k: v for k, v in KERNGROEPEN.items() if k != 'roi'}
+SPECIALIST_KERNGROEP_KEUZES = [(k, v) for k, v in SPECIALIST_KERNGROEPEN.items()]
+
+# Rollen die een kerngroep MOETEN hebben.
+ROLLEN_MET_KERNGROEP = {'oefencoordinator', 'specialist'}
+
+# Kaart-status-waarden (voorheen alleen 'concept' / 'gepubliceerd').
+KAART_STATUS = {
+    'concept':            'Concept',
+    'peer_review':        'Peer-review',
+    'specialist_review':  'Specialist-review',
+    'gepubliceerd':       'Gepubliceerd',
+}
 
 # Kerntaken van de brandweer — bepaalt kleur van zijbalk en badge.
 # Afgeleid van KERNTAKEN_SEED (bron van waarheid, verderop in dit bestand).
@@ -68,7 +99,10 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     wachtwoord_hash = db.Column(db.String(256), nullable=False)
     naam = db.Column(db.String(100), nullable=False)
-    rol = db.Column(db.String(20), nullable=False, default='medewerker')
+    rol = db.Column(db.String(20), nullable=False, default='medewerker_oo')
+    # Kerngroep is alleen gevuld voor oefencoordinator + specialist. Admin en
+    # medewerker_oo hebben geen kerngroep. Zie KERNGROEPEN voor de waarden.
+    kerngroep = db.Column(db.String(20), nullable=True)
     actief = db.Column(db.Boolean, default=True)
     aangemaakt_op = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -83,6 +117,10 @@ class User(UserMixin, db.Model):
         return ROLLEN.get(self.rol, {}).get('naam', self.rol.capitalize())
 
     @property
+    def kerngroep_naam(self):
+        return KERNGROEPEN.get(self.kerngroep) if self.kerngroep else None
+
+    @property
     def is_admin(self):
         return self.rol == 'admin'
 
@@ -91,13 +129,47 @@ class User(UserMixin, db.Model):
         return self.rol == 'specialist'
 
     @property
+    def is_oefencoordinator(self):
+        return self.rol == 'oefencoordinator'
+
+    @property
+    def is_medewerker_oo(self):
+        return self.rol == 'medewerker_oo'
+
+    @property
     def is_coordinator(self):
-        return self.rol == 'coordinator'
+        # Backward-compat alias zodat oude code (coordinator-checks) blijft werken
+        # als oefencoördinator-check. Nieuwe code gebruikt is_oefencoordinator.
+        return self.rol == 'oefencoordinator'
 
     @property
     def is_beheerder(self):
         # Backward-compat: ooit = admin; nu alias zodat admin_required blijft werken
         return self.rol == 'admin'
+
+    def mag_peer_review(self, kaart):
+        """Mag deze gebruiker peer-review doen voor deze kaart?
+        Regel: oefencoördinator uit kerngroep van de kaart, niet de maker zelf.
+        Bij kerntaak algemeen gebruikt systeem kaart.peer_kerngroep (door maker gekozen).
+        """
+        if not self.is_oefencoordinator or not self.kerngroep:
+            return False
+        if kaart.auteur_id == self.id:
+            return False
+        doel = kaart.peer_kerngroep or kaart.kerntaak
+        return self.kerngroep == doel
+
+    def mag_specialist_review(self, kaart):
+        """Mag deze gebruiker specialist-eindcheck doen voor deze kaart?
+        Regel: specialist, NIET van dezelfde kerngroep als de kaart.
+        ROI-kaarten: alle 5 specialisten mogen (specialist ROI bestaat niet).
+        """
+        if not self.is_specialist or not self.kerngroep:
+            return False
+        doel = kaart.peer_kerngroep or kaart.kerntaak
+        if doel == 'roi':
+            return True
+        return self.kerngroep != doel
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -120,6 +192,10 @@ class Kaart(db.Model):
     nummer = db.Column(db.String(20), unique=True, nullable=False)
     naam = db.Column(db.String(200), nullable=False)
     status = db.Column(db.String(20), default='concept')
+    # Als kerntaak 'algemeen' is, kiest de maker bij indienen een kerngroep
+    # met meeste affiniteit — die bepaalt wie peer- en specialist-review doet.
+    # Null = volg kerntaak van de kaart (standaardgeval).
+    peer_kerngroep = db.Column(db.String(20), nullable=True)
     inhoud = db.Column(db.Text, default='{}')
     auteur_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     bijgewerkt_door_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -153,6 +229,19 @@ class Kaart(db.Model):
     @property
     def type_naam(self):
         return KAART_TYPES.get(self.type, {}).get('naam', self.type)
+
+    @property
+    def status_naam(self):
+        return KAART_STATUS.get(self.status, self.status.capitalize())
+
+    @property
+    def effectieve_kerngroep(self):
+        """De kerngroep die reviews aanstuurt. Standaard = kerntaak; bij 'algemeen'
+        kijkt-ie naar peer_kerngroep (gezet door maker bij indienen).
+        """
+        if self.kerntaak and self.kerntaak != 'algemeen':
+            return self.kerntaak
+        return self.peer_kerngroep
 
     @property
     def kerntaak_info(self):
@@ -401,6 +490,57 @@ class KaartWijziging(db.Model):
 
     def __repr__(self):
         return f'<Wijziging {self.actie} op {self.kaart_id}>'
+
+
+# ---------- Reviews (peer / ensceneringstips / specialist) ----------
+
+REVIEW_FASEN = {
+    'peer':             'Peer-review',
+    'ensceneringstips': 'Ensceneringstips-review',
+    'specialist':       'Specialist-eindcheck',
+}
+
+REVIEW_STATUSSEN = {
+    'open':         'Open',
+    'goedgekeurd':  'Goedgekeurd',
+    'afgekeurd':    'Afgekeurd',
+}
+
+
+class Review(db.Model):
+    """Een review-taak gekoppeld aan één kaart. Elke indieningsronde van een kaart
+    maakt één nieuwe Review per fase aan: peer + (bij scenariokaart) ensceneringstips
+    parallel; na beider GO één specialist-review. Afgekeurd = taak gesloten en kaart
+    terug naar concept bij de maker. Bij afwezigheid mogen collega-reviewers de
+    reviewer_id overnemen (dashboard: 'Taak overnemen').
+    """
+    __tablename__ = 'reviews'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kaart_id = db.Column(db.Integer, db.ForeignKey('kaarten.id'), nullable=False)
+    fase = db.Column(db.String(30), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='open')
+    opmerking = db.Column(db.Text, nullable=True)
+    # Checklist-antwoorden (JSON string) — invulling komt in latere fase.
+    checklist_json = db.Column(db.Text, nullable=True)
+    aangemaakt_op = db.Column(db.DateTime, default=datetime.utcnow)
+    voltooid_op = db.Column(db.DateTime, nullable=True)
+
+    kaart = db.relationship('Kaart', backref=db.backref('reviews', lazy='dynamic',
+                                                        cascade='all, delete-orphan'))
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id])
+
+    @property
+    def fase_naam(self):
+        return REVIEW_FASEN.get(self.fase, self.fase)
+
+    @property
+    def status_naam(self):
+        return REVIEW_STATUSSEN.get(self.status, self.status.capitalize())
+
+    def __repr__(self):
+        return f'<Review {self.fase} {self.status} kaart={self.kaart_id}>'
 
 
 # ---------- QR-codes ----------
@@ -732,11 +872,39 @@ def migreer_schema():
             with db.engine.begin() as conn:
                 conn.execute(text("ALTER TABLE kaart_koppelingen ADD COLUMN toelichting VARCHAR(60) DEFAULT ''"))
 
-    # Rollen hernoemen: beheerder → admin, redacteur → medewerker
+    # Rollen hernoemen (historische stappen behouden voor oude DB's):
+    #   beheerder   → admin
+    #   redacteur   → medewerker       (oude naam vóór v0.8-rolwijziging)
+    # En vervolgens de v0.8-rolwijziging:
+    #   coordinator → oefencoordinator
+    #   medewerker  → medewerker_oo
+    #   specialist blijft; admin blijft.
+    # Nieuwe kolom `kerngroep` wordt leeg aangemaakt — admin vult 'm per gebruiker
+    # in via /beheer. Oefencoördinatoren en specialisten zonder kerngroep worden
+    # door de UI zichtbaar gemarkeerd ('kerngroep ontbreekt').
     if 'users' in inspector.get_table_names():
+        kolommen = [c['name'] for c in inspector.get_columns('users')]
+        if 'kerngroep' not in kolommen:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE users ADD COLUMN kerngroep VARCHAR(20)'))
         with db.engine.begin() as conn:
             conn.execute(text("UPDATE users SET rol='admin' WHERE rol='beheerder'"))
             conn.execute(text("UPDATE users SET rol='medewerker' WHERE rol='redacteur'"))
+            conn.execute(text("UPDATE users SET rol='oefencoordinator' WHERE rol='coordinator'"))
+            conn.execute(text("UPDATE users SET rol='medewerker_oo' WHERE rol='medewerker'"))
+
+    # Kaart: peer_kerngroep-kolom toevoegen. Bij EERSTE toevoeging (= deze
+    # migratie draait voor het eerst op een bestaande DB) zetten we meteen
+    # ALLE bestaande kaarten op 'gepubliceerd' — zonder dat zouden ze allemaal
+    # als 'concept' in de nieuwe workflow belanden en de QR's offline gaan.
+    # De `peer_kerngroep`-check werkt als idempotentie-sentinel: na toevoegen
+    # loopt deze UPDATE nooit opnieuw.
+    if 'kaarten' in inspector.get_table_names():
+        kolommen = [c['name'] for c in inspector.get_columns('kaarten')]
+        if 'peer_kerngroep' not in kolommen:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE kaarten ADD COLUMN peer_kerngroep VARCHAR(20)'))
+                conn.execute(text("UPDATE kaarten SET status='gepubliceerd'"))
 
     # QR-codes: transparante_achtergrond kolom toevoegen als die ontbreekt
     if 'qr_codes' in inspector.get_table_names():

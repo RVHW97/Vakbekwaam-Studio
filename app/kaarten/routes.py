@@ -122,11 +122,12 @@ HEADER_FOTO_RATIO = 3.0
 
 # --- Autorisatie -------------------------------------------------------------
 # Rollen (oplopend): medewerker < coordinator < specialist < admin.
-# - admin / specialist: mogen alles op alle kaarten
-# - coordinator: mag kaarten aanmaken en enkel eigen kaarten bewerken
-# - medewerker: alleen-lezen
+# Voorlopige rechten (fase 2) — volledige workflow-rechten komen in fase 3+:
+# - admin / specialist mogen alles bewerken en publiceren
+# - oefencoordinator / medewerker_oo mogen aanmaken + eigen kaarten bewerken
+#   (medewerker_oo wordt in fase 3 beperkt tot instructiekaart materieel)
 BEWERK_ROLLEN = {'admin', 'specialist'}
-AANMAAK_ROLLEN = {'admin', 'specialist', 'coordinator'}
+AANMAAK_ROLLEN = {'admin', 'specialist', 'oefencoordinator', 'medewerker_oo'}
 PUBLICATIE_ROLLEN = {'admin', 'specialist'}
 
 
@@ -135,7 +136,8 @@ def kan_kaart_bewerken(user, kaart):
         return False
     if user.rol in BEWERK_ROLLEN:
         return True
-    if user.rol == 'coordinator' and kaart.auteur_id == user.id:
+    # Oefencoördinator / medewerker O&O: alleen eigen kaarten (tot fase 3+).
+    if user.rol in ('oefencoordinator', 'medewerker_oo') and kaart.auteur_id == user.id:
         return True
     return False
 
@@ -910,7 +912,13 @@ def aanmaken(kaart_type):
 @login_required
 def bewerken(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
-    _vereis_bewerken(kaart)
+    # GET = openen in read-only als user geen bewerk-rechten heeft (iedereen die
+    # ingelogd is mag kaarten lezen; dit zorgt dat specialist/oefencoord. uit
+    # andere kerngroepen de inhoud kunnen zien zonder "forbidden"-modal).
+    # POST = altijd strikte bewerk-check (geen bypass via directe form-submit).
+    mag_bewerken = kan_kaart_bewerken(current_user, kaart)
+    if request.method == 'POST':
+        _vereis_bewerken(kaart)
     if kaart.type not in FORMULIEREN:
         abort(404)
     form_class = FORMULIEREN[kaart.type]
@@ -1314,6 +1322,7 @@ def bewerken(kaart_id):
 
     return render_template('kaarten/formulier.html', form=form, kaart_type=kaart.type,
                            type_info=type_info, bewerken=True, kaart=kaart,
+                           mag_bewerken=mag_bewerken,
                            wijziging_toelichting=wijziging_toelichting,
                            toelichting_fout=toelichting_fout,
                            kaart_heeft_wijzigingen=kaart_heeft_wijzigingen,
@@ -1648,6 +1657,131 @@ def zoeken():
     return render_template('kaarten/zoeken.html', resultaten=resultaten,
                            q=query_string, kaart_type=kaart_type, status=status,
                            types=KAART_TYPES)
+
+
+@bp.route('/<int:kaart_id>/indienen', methods=['POST'])
+@login_required
+def indienen(kaart_id):
+    """Zet een concept-kaart in peer-review. De route accepteert optioneel
+    `peer_kerngroep` (voor Algemene kaarten waar de maker kerngroep met meeste
+    affiniteit kiest). Bewerk-rechten op de kaart zijn vereist.
+
+    Antwoord: JSON als client X-Requested-With: XMLHttpRequest meestuurt
+    (voor de fetch-knop in formulier.html), anders flash + redirect.
+    """
+    from app.workflow import dien_in_voor_review
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    _vereis_bewerken(kaart)
+
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _antwoord(ok, boodschap, redirect_url=None, extra=None):
+        if is_ajax:
+            data = {'ok': ok, 'boodschap': boodschap}
+            if redirect_url:
+                data['redirect'] = redirect_url
+            if extra:
+                data.update(extra)
+            return jsonify(data), (200 if ok else 400)
+        flash(boodschap, 'success' if ok else 'danger')
+        return redirect(redirect_url or url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    gekozen_kg = (request.form.get('peer_kerngroep') or '').strip()
+    if gekozen_kg:
+        from app.models import KERNGROEPEN
+        if gekozen_kg not in KERNGROEPEN:
+            return _antwoord(False, 'Ongeldige kerngroep gekozen.')
+        kaart.peer_kerngroep = gekozen_kg
+
+    resultaat = dien_in_voor_review(kaart, current_user)
+    if not resultaat['ok']:
+        return _antwoord(False, resultaat['fout'])
+
+    db.session.commit()
+    aantal = len(resultaat['reviews'])
+    boodschap = (f'Kaart "{kaart.naam}" is ingediend voor review '
+                 f'({aantal} reviewer{"s" if aantal != 1 else ""} toegewezen).')
+    return _antwoord(True, boodschap, redirect_url=url_for('kaarten.overzicht'))
+
+
+@bp.route('/<int:kaart_id>/review/<int:review_id>', methods=['GET'])
+@login_required
+def review_pagina(kaart_id, review_id):
+    """Review-taak openen. Alleen de toegewezen reviewer, een collega-reviewer
+    (zelfde fase/kerngroep bij afwezigheid) of admin kan deze pagina openen."""
+    from app.models import Review
+    kaart = Kaart.query.get_or_404(kaart_id)
+    review = Review.query.get_or_404(review_id)
+    if review.kaart_id != kaart.id:
+        abort(404)
+    if not _mag_review_doen(current_user, review):
+        abort(403)
+    return render_template('kaarten/review.html',
+                           kaart=kaart, review=review,
+                           kerntaak_info=kaart.kerntaak_info,
+                           status_badge_class='badge-' + kaart.status)
+
+
+@bp.route('/<int:kaart_id>/review/<int:review_id>/besluit', methods=['POST'])
+@login_required
+def review_besluit(kaart_id, review_id):
+    """Verwerk GO of Afkeuren op een review. Antwoord via JSON (modal-friendly)
+    als client X-Requested-With meestuurt, anders flash + redirect."""
+    from app.models import Review
+    from app.workflow import verwerk_review_besluit
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    review = Review.query.get_or_404(review_id)
+    if review.kaart_id != kaart.id:
+        abort(404)
+    if not _mag_review_doen(current_user, review):
+        abort(403)
+
+    besluit = (request.form.get('besluit') or '').strip()
+    opmerking = (request.form.get('opmerking') or '').strip()
+    resultaat = verwerk_review_besluit(review, besluit, opmerking, current_user)
+
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if not resultaat['ok']:
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': resultaat['fout']}), 400
+        flash(resultaat['fout'], 'danger')
+        return redirect(url_for('kaarten.review_pagina',
+                                 kaart_id=kaart.id, review_id=review.id))
+
+    db.session.commit()
+    terug_url = url_for('main.dashboard')
+    if is_ajax:
+        return jsonify({'ok': True,
+                         'boodschap': resultaat['boodschap'],
+                         'redirect': terug_url})
+    flash(resultaat['boodschap'], 'success')
+    return redirect(terug_url)
+
+
+def _mag_review_doen(user, review):
+    """Toegewezen reviewer, collega uit zelfde pool bij afwezigheid, of admin."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_admin:
+        return True
+    if review.reviewer_id == user.id:
+        return True
+    # Collega-reviewer uit zelfde "pool" mag overnemen (bv. afwezigheid):
+    kaart = review.kaart
+    if review.fase == 'peer':
+        return user.is_oefencoordinator and user.kerngroep == kaart.effectieve_kerngroep \
+               and user.id != kaart.auteur_id
+    if review.fase == 'ensceneringstips':
+        return user.is_medewerker_oo and user.id != kaart.auteur_id
+    if review.fase == 'specialist':
+        if not user.is_specialist or not user.kerngroep:
+            return False
+        if kaart.effectieve_kerngroep == 'roi':
+            return True
+        return user.kerngroep != kaart.effectieve_kerngroep
+    return False
 
 
 @bp.route('/<int:kaart_id>/publiceren', methods=['POST'])

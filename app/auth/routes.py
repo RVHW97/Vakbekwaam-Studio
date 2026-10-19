@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, NieuweGebruikerForm, GebruikerBewerkenForm
-from app.models import User
+from app.models import User, ROLLEN_MET_KERNGROEP, SPECIALIST_KERNGROEPEN, KERNGROEPEN
 
 # Dummy-hash om de check_password_hash-tijd óók te betalen bij onbekende e-mailadressen.
 # Zonder deze extra hash is een timing-side-channel te meten.
@@ -31,10 +31,44 @@ def admin_required(f):
     @login_required
     def decorated_function(*args, **kwargs):
         if not current_user.is_beheerder:
-            flash('Je hebt geen toegang tot deze pagina.', 'danger')
+            # Flash-category 'toegang_geweigerd' triggert in base.html een modal
+            # i.p.v. de gewone banner — zodat Rebecca & co meteen zien WAAROM de
+            # link niets deed, en niet overrompeld worden door een harde redirect.
+            flash('Deze pagina is alleen toegankelijk voor admins.',
+                   'toegang_geweigerd')
             return redirect(url_for('main.dashboard'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+def _valideer_rol_kerngroep(rol, kerngroep, form):
+    """Zorgt dat rol en kerngroep bij elkaar passen voordat we opslaan.
+    - Oefencoordinator moet een kerngroep hebben (één van de 6 inclusief ROI).
+    - Specialist moet een kerngroep hebben, maar GEEN ROI (specialist ROI bestaat niet).
+    - Admin en medewerker_oo mogen géén kerngroep hebben (we wissen 'm anders).
+    Retourneert een foutmelding (string) of None als alles OK is. Vult tegelijk
+    form.kerngroep.errors voor inline weergave.
+    """
+    if rol in ROLLEN_MET_KERNGROEP:
+        if not kerngroep:
+            form.kerngroep.errors = list(form.kerngroep.errors) + [
+                'Kies een kerngroep voor deze rol.']
+            return 'Deze rol vereist een kerngroep.'
+        if kerngroep not in KERNGROEPEN:
+            form.kerngroep.errors = list(form.kerngroep.errors) + [
+                'Ongeldige kerngroep.']
+            return 'Ongeldige kerngroep.'
+        if rol == 'specialist' and kerngroep not in SPECIALIST_KERNGROEPEN:
+            form.kerngroep.errors = list(form.kerngroep.errors) + [
+                'Specialist ROI bestaat niet — kies een andere kerngroep.']
+            return 'Specialist ROI bestaat niet.'
+    else:
+        # Admin / medewerker_oo mogen géén kerngroep hebben.
+        if kerngroep:
+            form.kerngroep.errors = list(form.kerngroep.errors) + [
+                'Deze rol heeft geen kerngroep nodig — kies "— geen kerngroep —".']
+            return 'Deze rol mag geen kerngroep hebben.'
+    return None
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -76,13 +110,17 @@ def gebruikers():
 def gebruiker_nieuw():
     form = NieuweGebruikerForm()
     if form.validate_on_submit():
-        if User.query.filter_by(email=form.email.data.lower().strip()).first():
+        rol_fout = _valideer_rol_kerngroep(form.rol.data, form.kerngroep.data, form)
+        if rol_fout:
+            flash(rol_fout, 'danger')
+        elif User.query.filter_by(email=form.email.data.lower().strip()).first():
             flash('Dit e-mailadres is al in gebruik.', 'danger')
         else:
             user = User(
                 email=form.email.data.lower().strip(),
                 naam=form.naam.data.strip(),
-                rol=form.rol.data
+                rol=form.rol.data,
+                kerngroep=(form.kerngroep.data or None)
             )
             user.set_wachtwoord(form.wachtwoord.data)
             db.session.add(user)
@@ -108,6 +146,7 @@ def gebruiker_bewerken(user_id):
             flash('Dit e-mailadres is al in gebruik.', 'danger')
         else:
             nieuwe_rol = form.rol.data
+            nieuwe_kerngroep = form.kerngroep.data or None
             nieuw_actief = form.actief.data
             # Guard 1: admin mag zichzelf niet degraderen of deactiveren.
             if user.id == current_user.id:
@@ -126,10 +165,17 @@ def gebruiker_bewerken(user_id):
                           'admin aan voordat je deze wijzigt.', 'danger')
                     return render_template('auth/gebruiker_form.html', form=form,
                                            titel='Gebruiker bewerken')
+            # Guard 3: rol + kerngroep moeten bij elkaar passen.
+            rol_fout = _valideer_rol_kerngroep(nieuwe_rol, nieuwe_kerngroep, form)
+            if rol_fout:
+                flash(rol_fout, 'danger')
+                return render_template('auth/gebruiker_form.html', form=form,
+                                       titel='Gebruiker bewerken')
 
             user.naam = form.naam.data.strip()
             user.email = form.email.data.lower().strip()
             user.rol = nieuwe_rol
+            user.kerngroep = nieuwe_kerngroep
             user.actief = nieuw_actief
             if form.nieuw_wachtwoord.data:
                 user.set_wachtwoord(form.nieuw_wachtwoord.data)

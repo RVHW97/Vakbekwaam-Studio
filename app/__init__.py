@@ -1,6 +1,6 @@
-from flask import Flask
+from flask import Flask, flash, redirect, request, jsonify, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -19,7 +19,7 @@ def _enable_sqlite_fk(dbapi_conn, _connection_record):
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.7.38'
+__version__ = '0.7.39'
 __version_date__ = '19 oktober 2026'
 
 db = SQLAlchemy()
@@ -68,6 +68,34 @@ def create_app():
 
     from app.beheer import bp as beheer_bp
     app.register_blueprint(beheer_bp)
+
+    # 403-handler: Flask's standaard "Forbidden"-pagina is te hard.
+    # In plaats daarvan: toon een duidelijke modal (via flash-category
+    # 'toegang_geweigerd' die base.html in een popup rendert) en redirect
+    # naar het dashboard. AJAX/JSON-requests krijgen een JSON-403 terug zodat
+    # client-side JS netjes kan afhandelen zonder redirect.
+    @app.errorhandler(403)
+    def _toegang_geweigerd(err):
+        wants_json = (request.is_json
+                      or 'application/json' in (request.accept_mimetypes.best or '')
+                      or request.headers.get('X-Requested-With') == 'XMLHttpRequest')
+        boodschap = 'Je hebt niet de juiste rol om deze actie uit te voeren.'
+        if wants_json:
+            return jsonify({'ok': False, 'fout': boodschap, 'code': 'toegang_geweigerd'}), 403
+        flash(boodschap, 'toegang_geweigerd')
+        # Ga terug naar waar de user vandaan kwam (bv. kaart-detail) i.p.v. hem
+        # altijd naar dashboard te slingeren. Alleen in-app URLs vertrouwen we.
+        from urllib.parse import urlparse
+        referrer = request.referrer or ''
+        parsed = urlparse(referrer)
+        is_veilige_referrer = (referrer
+                                and not parsed.scheme and not parsed.netloc
+                                or (parsed.netloc and parsed.netloc == request.host))
+        if current_user.is_authenticated and is_veilige_referrer and referrer != request.url:
+            return redirect(referrer)
+        if current_user.is_authenticated:
+            return redirect(url_for('main.dashboard'))
+        return redirect(url_for('auth.login'))
 
     with app.app_context():
         from app import models

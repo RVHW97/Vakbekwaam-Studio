@@ -32,6 +32,8 @@
             <select name="status">
                 <option value="">Concept + gepubliceerd</option>
                 <option value="concept" {% if status == 'concept' %}selected{% endif %}>Concept</option>
+                <option value="peer_review" {% if status == 'peer_review' %}selected{% endif %}>Peer-review</option>
+                <option value="specialist_review" {% if status == 'specialist_review' %}selected{% endif %}>Specialist-review</option>
                 <option value="gepubliceerd" {% if status == 'gepubliceerd' %}selected{% endif %}>Gepubliceerd</option>
                 <option value="gearchiveerd" {% if status == 'gearchiveerd' %}selected{% endif %}>Gearchiveerd</option>
             </select>
@@ -67,7 +69,7 @@
                 <td><strong>{{ kaart.nummer }}</strong></td>
                 <td>{{ kaart.naam }}</td>
                 <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
-                <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status|capitalize }}</span></td>
+                <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>
                 <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
                 <td>
                     <div class="rij-acties">

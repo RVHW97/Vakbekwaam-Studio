@@ -14,6 +14,7 @@
                 <th>Naam</th>
                 <th>E-mailadres</th>
                 <th>Rol</th>
+                <th>Kerngroep</th>
                 <th>Status</th>
                 <th>Acties</th>
             </tr>
@@ -24,6 +25,15 @@
                 <td>{{ user.naam }}</td>
                 <td>{{ user.email }}</td>
                 <td><span class="badge badge-rol badge-rol-{{ user.rol }}">{{ user.rol_naam }}</span></td>
+                <td>
+                    {% if user.kerngroep_naam %}
+                        {{ user.kerngroep_naam }}
+                    {% elif user.rol in ('oefencoordinator', 'specialist') %}
+                        <span class="badge badge-inactive" title="Kerngroep ontbreekt — klik bewerken">⚠ ontbreekt</span>
+                    {% else %}
+                        <span style="color:#999;">—</span>
+                    {% endif %}
+                </td>
                 <td><span class="badge badge-{{ 'active' if user.actief else 'inactive' }}">{{ 'Actief' if user.actief else 'Inactief' }}</span></td>
                 <td>
                     <a href="{{ url_for('auth.gebruiker_bewerken', user_id=user.id) }}" class="btn btn-small">Bewerken</a>

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ review.fase_naam }} — {{ kaart.nummer }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>
+        {{ review.fase_naam }}
+        <span class="kaart-nummer">— {{ kaart.nummer }}</span>
+    </h1>
+    <div class="btn-group">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Terug naar dashboard</a>
+    </div>
+</div>
+
+<div class="review-card">
+    <div class="review-kaart-info">
+        <div class="review-info-rij">
+            <span class="review-info-label">Type:</span>
+            <span class="review-info-waarde">{{ kaart.type_naam }}</span>
+        </div>
+        <div class="review-info-rij">
+            <span class="review-info-label">Naam:</span>
+            <span class="review-info-waarde"><strong>{{ kaart.naam }}</strong></span>
+        </div>
+        <div class="review-info-rij">
+            <span class="review-info-label">Kerntaak:</span>
+            <span class="review-info-waarde">
+                {% if kerntaak_info %}
+                <span class="badge" style="background:{{ kerntaak_info.kleur }};color:#fff;">
+                    {{ kerntaak_info.naam }}
+                </span>
+                {% else %}—{% endif %}
+                {% if kaart.peer_kerngroep %}
+                <small style="color:#666;">(review-kerngroep: {{ kaart.peer_kerngroep|capitalize }})</small>
+                {% endif %}
+            </span>
+        </div>
+        <div class="review-info-rij">
+            <span class="review-info-label">Maker:</span>
+            <span class="review-info-waarde">{{ kaart.auteur.naam }} ({{ kaart.auteur.rol_naam }})</span>
+        </div>
+        <div class="review-info-rij">
+            <span class="review-info-label">Status:</span>
+            <span class="review-info-waarde">
+                <span class="badge badge-status {{ status_badge_class }}">{{ kaart.status_naam }}</span>
+            </span>
+        </div>
+        <div class="review-info-rij">
+            <span class="review-info-label">Jouw rol in deze review:</span>
+            <span class="review-info-waarde">
+                {% if review.reviewer_id == current_user.id %}
+                    <strong>Toegewezen reviewer</strong>
+                {% else %}
+                    Overgenomen van {{ review.reviewer.naam }} (collega uit zelfde groep)
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="review-actie-blok">
+        <h2>Bekijk de kaart</h2>
+        <p class="form-hint">
+            Open de kaart in alleen-lezen weergave om de inhoud te controleren. Daarna
+            kom je terug naar deze pagina om GO te geven of af te keuren.
+        </p>
+        <a href="{{ url_for('kaarten.bewerken', kaart_id=kaart.id) }}"
+           class="btn btn-secondary btn-large" target="_blank" rel="noopener">
+            Kaart openen in nieuwe tab
+        </a>
+        <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}"
+           class="btn btn-secondary btn-large" target="_blank" rel="noopener">
+            PDF bekijken
+        </a>
+    </div>
+
+    <div class="review-actie-blok">
+        <h2>Checklist</h2>
+        <p class="form-hint" style="font-style:italic;">
+            De specifieke checklist per kaart-type volgt in een latere fase (jij levert
+            de items). Voor nu: controleer op basis van je ervaring.
+        </p>
+    </div>
+
+    <div class="review-actie-blok">
+        <h2>Jouw besluit</h2>
+        <form id="review-form" method="POST"
+              action="{{ url_for('kaarten.review_besluit', kaart_id=kaart.id, review_id=review.id) }}"
+              novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="besluit" id="review-besluit-veld" value="">
+
+            <div class="form-group">
+                <label for="review-opmerking" class="form-label">
+                    Opmerkingen
+                    <small style="font-weight:normal;color:#666;">
+                        (verplicht bij afkeuren — motiveer wat de maker moet aanpassen)
+                    </small>
+                </label>
+                <textarea id="review-opmerking" name="opmerking" rows="4"
+                          class="form-input form-textarea"
+                          placeholder="Bijv. 'Veiligheidspunt 3 ontbreekt — graag toevoegen.'"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary btn-large btn-review-go"
+                        id="btn-review-go">
+                    ✓ GO — goedkeuren
+                </button>
+                <button type="button" class="btn btn-review-afkeuren btn-large"
+                        id="btn-review-afkeuren">
+                    ✗ Afkeuren (met opmerking)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    var form        = document.getElementById('review-form');
+    var besluitInp  = document.getElementById('review-besluit-veld');
+    var opmerkingEl = document.getElementById('review-opmerking');
+    var btnGo       = document.getElementById('btn-review-go');
+    var btnAfk      = document.getElementById('btn-review-afkeuren');
+
+    function toonModal(ok, boodschap, redirectUrl) {
+        var oud = document.getElementById('review-resultaat-modal');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'review-resultaat-modal';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">' + (ok ? '✅' : '⚠️') + '</div>'
+            + '<h2 class="vs-modal-titel">' + (ok ? 'Verwerkt' : 'Niet gelukt') + '</h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-primary" id="review-ok-knop">Ok</button>'
+            + '</div></div>';
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        document.body.appendChild(overlay);
+        document.getElementById('review-ok-knop').addEventListener('click', function() {
+            overlay.remove();
+            if (ok && redirectUrl) window.location.href = redirectUrl;
+        });
+    }
+
+    function versturen(besluit) {
+        besluitInp.value = besluit;
+        if (besluit === 'afgekeurd' && !opmerkingEl.value.trim()) {
+            toonModal(false, 'Vul een opmerking in waarom je afkeurt — zonder uitleg kan de maker niet corrigeren.');
+            opmerkingEl.focus();
+            return;
+        }
+        btnGo.disabled = true;
+        btnAfk.disabled = true;
+        var fd = new FormData(form);
+        fetch(form.action, {
+            method: 'POST', body: fd, credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function(resp) {
+            if (resp.status === 403) {
+                toonModal(false, 'Je hebt geen rechten voor deze review.');
+                return;
+            }
+            return resp.json().then(function(data) {
+                btnGo.disabled = false;
+                btnAfk.disabled = false;
+                toonModal(!!data.ok, data.boodschap || 'Onbekende respons.', data.redirect);
+            });
+        }).catch(function(err) {
+            btnGo.disabled = false;
+            btnAfk.disabled = false;
+            toonModal(false, 'Fout: ' + err.message);
+        });
+    }
+
+    btnGo.addEventListener('click', function()  { versturen('goedgekeurd'); });
+    btnAfk.addEventListener('click', function() { versturen('afgekeurd');  });
+})();
+</script>
+{% endblock %}

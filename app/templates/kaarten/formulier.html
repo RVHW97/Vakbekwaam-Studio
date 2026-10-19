@@ -1203,9 +1203,13 @@
 {% endblock %}
 
 {% block content %}
+{# Readonly-modus: user mag deze kaart wel LEZEN maar niet bewerken (bv. specialist
+   uit andere kerngroep). Toont een gele banner + disabled form-controls. Server-side
+   POST wordt nog steeds afgewezen via _vereis_bewerken — dit is pure UI-hint. #}
+{% set readonly_modus = (bewerken and mag_bewerken is defined and not mag_bewerken) %}
 <div class="page-header">
     <h1>
-        {{ type_info.naam }} {{ 'bewerken' if bewerken else 'aanmaken' }}
+        {{ type_info.naam }} {{ 'bekijken' if readonly_modus else ('bewerken' if bewerken else 'aanmaken') }}
         {% if bewerken and kaart %}<span class="kaart-nummer">— {{ kaart.nummer }}</span>{% endif %}
     </h1>
     <div class="btn-group">
@@ -1217,8 +1221,17 @@
     </div>
 </div>
 
-<form method="POST" enctype="multipart/form-data" class="kaart-form" novalidate
-      data-modus="{{ 'bewerken' if bewerken else 'aanmaken' }}">
+{% if readonly_modus %}
+<div class="readonly-banner">
+    <strong>Alleen-lezen weergave.</strong>
+    Je bekijkt deze kaart in jouw rol <strong>{{ current_user.rol_naam }}{% if current_user.kerngroep_naam %} — {{ current_user.kerngroep_naam }}{% endif %}</strong>.
+    Je kunt de inhoud niet wijzigen; alleen de maker, een collega uit zijn kerngroep of een admin kan dat.
+</div>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data" class="kaart-form{% if readonly_modus %} is-readonly{% endif %}" novalidate
+      data-modus="{{ 'bewerken' if bewerken else 'aanmaken' }}"
+      data-readonly="{{ '1' if readonly_modus else '0' }}">
     {{ form.hidden_tag() }}
     <input type="hidden" name="auto_save_tab" id="auto-save-tab" value="">
 
@@ -2891,9 +2904,25 @@
 
     <div id="form-fouten-onderaan"></div>
     <div class="form-actions">
-        {{ form.submit(class="btn btn-primary btn-large") }}
+        {% if not readonly_modus %}
+            {{ form.submit(class="btn btn-primary btn-large") }}
+        {% endif %}
         {% if bewerken and kaart %}
+            {% if not readonly_modus %}
             <button type="submit" name="volgende_actie" value="pdf" class="btn btn-secondary btn-large" formtarget="_blank">Opslaan & bekijk PDF</button>
+                {% if kaart.status == 'concept' %}
+                {# "Indienen voor review" — gebruikt een fetch-POST naar /indienen
+                   met CSRF-token uit dit hoofd-form (nooit geneste <form>!).
+                   Bij kerntaak algemeen: eerst modal met kerngroep-keuze. #}
+                <button type="button" id="indienen-knop" class="btn btn-indienen btn-large"
+                        data-kerntaak="{{ (kaart.kerntaak or '') }}"
+                        data-url="{{ url_for('kaarten.indienen', kaart_id=kaart.id) }}">
+                    Indienen voor review
+                </button>
+                {% endif %}
+            {% else %}
+            <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary btn-large" target="_blank">Bekijk PDF</a>
+            {% endif %}
             <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
         {% else %}
             <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
@@ -2903,12 +2932,182 @@
     </div>{# /form-card #}
 </form>
 
+{% if bewerken and kaart and kaart.status == 'concept' and not readonly_modus %}
+{# Kerngroep-keuze modal — alleen gebruikt als kerntaak = algemeen. Staat BUITEN
+   het hoofd-form (nooit geneste forms) en is standaard verborgen. #}
+<div class="vs-modal-overlay" id="indienen-kerngroep-modal" style="display:none;">
+    <div class="vs-modal" style="text-align:left; max-width:500px;">
+        <h2 class="vs-modal-titel" style="text-align:center;">Welke kerngroep reviewt deze kaart?</h2>
+        <p class="vs-modal-tekst">
+            Deze kaart heeft kerntaak <strong>Algemeen</strong>. Kies de kerngroep met
+            de meeste affiniteit — die bepaalt wie peer-review doet en welke specialist
+            de eindcheck.
+        </p>
+        <div class="form-group">
+            <select id="indienen-kerngroep-select" class="form-input form-select">
+                <option value="">— kies kerngroep —</option>
+                <option value="brand">Brand</option>
+                <option value="natuurbrand">Natuurbrand</option>
+                <option value="water">Waterongevallen</option>
+                <option value="thv">THV</option>
+                <option value="ibgs">IBGS</option>
+                <option value="roi">ROI</option>
+            </select>
+            <span id="indienen-kerngroep-fout" class="form-error" style="display:none;">
+                Kies een kerngroep.
+            </span>
+        </div>
+        <div class="vs-modal-acties" style="justify-content:space-between;">
+            <button type="button" class="btn btn-secondary"
+                    onclick="document.getElementById('indienen-kerngroep-modal').style.display='none'">
+                Annuleren
+            </button>
+            <button type="button" class="btn btn-primary" id="indienen-kerngroep-bevestigen">
+                Indienen
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ==================== SCRIPTS ==================== #}
+<script>
+/* === "Indienen voor review"-knop ===
+   Volgt het patroon uit CLAUDE.md voor koppel-acties:
+   1. Volledige auto-save van hoofdform (window.__vsSaveHoofdformAlleVelden)
+   2. Fetch POST naar /indienen met CSRF-token uit hoofdform
+   3. Dispatch 'vs-form-opgeslagen' vóór redirect zodat beforeunload niet triggert
+*/
+(function() {
+    var knop = document.getElementById('indienen-knop');
+    if (!knop) return;
+
+    var modal     = document.getElementById('indienen-kerngroep-modal');
+    var modalSel  = document.getElementById('indienen-kerngroep-select');
+    var modalFout = document.getElementById('indienen-kerngroep-fout');
+    var modalBev  = document.getElementById('indienen-kerngroep-bevestigen');
+
+    function toonResultaatModal(ok, boodschap, redirectUrl) {
+        // Verwijder eventuele bestaande resultaat-modal eerst.
+        var oud = document.getElementById('indienen-resultaat-modal');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'indienen-resultaat-modal';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">' + (ok ? '✅' : '⚠️') + '</div>'
+            + '<h2 class="vs-modal-titel">' + (ok ? 'Ingediend' : 'Niet gelukt') + '</h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-primary" id="indienen-resultaat-ok">Ok</button>'
+            + '</div>'
+            + '</div>';
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        document.body.appendChild(overlay);
+        document.getElementById('indienen-resultaat-ok').addEventListener('click', function() {
+            overlay.remove();
+            if (ok && redirectUrl) {
+                document.dispatchEvent(new CustomEvent('vs-form-opgeslagen'));
+                window.location.href = redirectUrl;
+            }
+        });
+    }
+
+    function diendIn(peerKerngroep) {
+        var url = knop.dataset.url;
+        var csrfInput = document.querySelector('form.kaart-form input[name="csrf_token"]');
+        var csrf = csrfInput ? csrfInput.value : '';
+        knop.disabled = true;
+
+        // Eerst volledige auto-save, dan POST. Zie CLAUDE.md over koppel-acties.
+        var bewaar = (window.__vsSaveHoofdformAlleVelden
+                       || function() { return Promise.resolve(); })();
+        bewaar.then(function() {
+            var fd = new FormData();
+            fd.append('csrf_token', csrf);
+            if (peerKerngroep) fd.append('peer_kerngroep', peerKerngroep);
+            return fetch(url, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+        }).then(function(resp) {
+            if (resp.status === 403) {
+                knop.disabled = false;
+                toonResultaatModal(false, 'Je hebt geen rechten om deze kaart in te dienen.');
+                return;
+            }
+            return resp.json().then(function(data) {
+                knop.disabled = false;
+                toonResultaatModal(!!data.ok,
+                                   data.boodschap || 'Onbekende respons van server.',
+                                   data.redirect);
+            });
+        }).catch(function(err) {
+            knop.disabled = false;
+            toonResultaatModal(false, 'Fout tijdens indienen: ' + err.message);
+        });
+    }
+
+    knop.addEventListener('click', function() {
+        var kerntaak = knop.dataset.kerntaak;
+        if (kerntaak === 'algemeen') {
+            // Algemene kaart → vraag kerngroep via modal
+            if (modal) {
+                modalFout.style.display = 'none';
+                modalSel.value = '';
+                modal.style.display = '';
+            }
+        } else {
+            diendIn('');
+        }
+    });
+
+    if (modalBev) {
+        modalBev.addEventListener('click', function() {
+            var kg = modalSel.value;
+            if (!kg) {
+                modalFout.style.display = '';
+                return;
+            }
+            modal.style.display = 'none';
+            diendIn(kg);
+        });
+    }
+})();
+</script>
+
+<script>
+/* === READONLY-MODUS: alle inputs disabled, contenteditable uit === */
+(function() {
+    var form = document.querySelector('form.kaart-form');
+    if (!form || form.dataset.readonly !== '1') return;
+    form.querySelectorAll('input, select, textarea').forEach(function(el) {
+        // Hidden-fields houden hun waarde zodat de server-side state intact blijft
+        // als per ongeluk toch gesubmit wordt (en server-side valideert verder).
+        if (el.type === 'hidden') return;
+        el.disabled = true;
+    });
+    form.querySelectorAll('[contenteditable="true"]').forEach(function(el) {
+        el.setAttribute('contenteditable', 'false');
+    });
+    // Beveiliging: block de submit-event voor als er toch iets probeert te submitten.
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
+})();
+</script>
+
 <script>
 /* === Waarschuwing bij verlaten formulier met niet-opgeslagen wijzigingen === */
 (function() {
     var form = document.querySelector('form.kaart-form');
     if (!form) return;
+    // In readonly-modus geen beforeunload-waarschuwing (er valt niets te verliezen).
+    if (form.dataset.readonly === '1') return;
 
     var gewijzigd = false;
     var actief = false;

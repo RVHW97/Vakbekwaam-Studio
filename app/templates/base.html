@@ -48,14 +48,35 @@
     <main class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
+        {# Toegang-geweigerd-meldingen tonen we als duidelijke modal (prominenter
+           dan een banner-flash). Overige flashes blijven inline bovenaan de pagina. #}
+        {% set modal_toegang = [] %}
         <div class="flash-messages">
             {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">
-                {{ message }}
-                <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
-            </div>
+                {% if category == 'toegang_geweigerd' %}
+                    {# vul modal, toon niet inline #}
+                    {% set _ = modal_toegang.append(message) %}
+                {% else %}
+                <div class="flash flash-{{ category }}">
+                    {{ message }}
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endif %}
             {% endfor %}
         </div>
+        {% if modal_toegang %}
+        <div class="vs-modal-overlay" id="toegang-geweigerd-modal">
+            <div class="vs-modal">
+                <div class="vs-modal-icoon" aria-hidden="true">🔒</div>
+                <h2 class="vs-modal-titel">Geen toegang</h2>
+                <p class="vs-modal-tekst">{{ modal_toegang[0] }}</p>
+                <p class="vs-modal-rol">Jouw rol: <strong>{{ current_user.rol_naam if current_user.is_authenticated else '—' }}</strong></p>
+                <div class="vs-modal-acties">
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('toegang-geweigerd-modal').remove()">Begrepen</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         {% endif %}
         {% endwith %}
 

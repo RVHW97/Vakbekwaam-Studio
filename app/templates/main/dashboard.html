@@ -7,6 +7,26 @@
     <p>Vakbekwaam Studio — het platform voor opleidings- en oefendocumenten.</p>
 </div>
 
+{% if openstaande_reviews %}
+<div class="dashboard-taken">
+    <h2>⚡ Mijn openstaande reviews ({{ openstaande_reviews|length }})</h2>
+    <div class="dashboard-taken-lijst">
+        {% for r in openstaande_reviews %}
+        <div class="dashboard-taak-rij">
+            <div class="dashboard-taak-info">
+                <strong>{{ r.kaart.nummer }}</strong> &mdash; {{ r.kaart.naam }}
+                <span class="dashboard-taak-fase">
+                    {{ r.fase_naam }} &middot; ingediend op {{ r.aangemaakt_op.strftime('%d-%m-%Y') }}
+                </span>
+            </div>
+            <a href="{{ url_for('kaarten.review_pagina', kaart_id=r.kaart_id, review_id=r.id) }}"
+               class="btn btn-primary">Review doen</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="card-grid">
     <a href="{{ url_for('kaarten.kies_type') }}" class="action-card active">
         <div class="action-icon">&#x1F4DD;</div>
@@ -67,7 +87,7 @@
                     <td><strong>{{ kaart.nummer }}</strong></td>
                     <td>{{ kaart.naam }}</td>
                     <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
-                    <td><span class="badge badge-concept">{{ kaart.status|capitalize }}</span></td>
+                    <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>
                     <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
                     <td>
                         <div class="rij-acties">
