@@ -27,6 +27,73 @@
 </div>
 {% endif %}
 
+{% if rechten_verzoeken %}
+<div class="dashboard-verzoeken">
+    <h2>📩 Rechten-verzoeken ({{ rechten_verzoeken|length }})</h2>
+    <p class="section-hint">Een collega-oefencoördinator uit jouw kerngroep vraagt het makerschap van een kaart over te nemen. Keur het verzoek goed → de kaart komt op zijn naam. Wijs af → verzoek wordt gesloten.</p>
+    <div class="dashboard-taken-lijst">
+        {% for v in rechten_verzoeken %}
+        <div class="dashboard-taak-rij dashboard-taak-verzoek">
+            <div class="dashboard-taak-info">
+                <strong>{{ v.kaart.nummer }}</strong> &mdash; {{ v.kaart.naam }}
+                <span class="dashboard-taak-fase">
+                    Aanvrager: <strong>{{ v.aanvrager.naam }}</strong>
+                    &middot; huidige maker: {{ v.kaart.auteur.naam }}
+                    &middot; {{ v.aangemaakt_op.strftime('%d-%m-%Y') }}
+                </span>
+                {% if v.bericht %}
+                <div class="dashboard-taak-opmerking"><em>“{{ v.bericht }}”</em></div>
+                {% endif %}
+            </div>
+            <div class="rij-acties">
+                <form method="POST"
+                      action="{{ url_for('kaarten.overdraag_verzoek_beslissen', verzoek_id=v.id) }}"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" name="actie" value="goedkeuren"
+                            class="btn btn-small btn-primary">Goedkeuren</button>
+                </form>
+                <form method="POST"
+                      action="{{ url_for('kaarten.overdraag_verzoek_beslissen', verzoek_id=v.id) }}"
+                      style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" name="actie" value="afwijzen"
+                            class="btn btn-small btn-secondary">Afwijzen</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if afkeur_meldingen %}
+<div class="dashboard-afkeur">
+    <h2>⚠️ Mijn kaarten met opmerkingen ({{ afkeur_meldingen|length }})</h2>
+    <p class="section-hint">Deze kaarten zijn tijdens de review afgekeurd en staan terug op concept. Lees de opmerking, pas de kaart aan en dien opnieuw in.</p>
+    <div class="dashboard-taken-lijst">
+        {% for r in afkeur_meldingen %}
+        <div class="dashboard-taak-rij dashboard-taak-afkeur">
+            <div class="dashboard-taak-info">
+                <strong>{{ r.kaart.nummer }}</strong> &mdash; {{ r.kaart.naam }}
+                <span class="dashboard-taak-fase">
+                    {{ r.fase_naam }} afgekeurd door {{ r.reviewer.naam }}
+                    {% if r.voltooid_op %}&middot; {{ r.voltooid_op.strftime('%d-%m-%Y') }}{% endif %}
+                </span>
+                {% if r.opmerking %}
+                <div class="dashboard-taak-opmerking">
+                    <em>“{{ r.opmerking }}”</em>
+                </div>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('kaarten.bewerken', kaart_id=r.kaart_id) }}"
+               class="btn btn-primary">Aanpassen</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="card-grid">
     <a href="{{ url_for('kaarten.kies_type') }}" class="action-card active">
         <div class="action-icon">&#x1F4DD;</div>
@@ -49,13 +116,6 @@
         <span class="badge badge-active">Beschikbaar</span>
     </a>
 
-    <div class="action-card disabled">
-        <div class="action-icon">&#x1F50D;</div>
-        <h2>Zoeken</h2>
-        <p>Zoek door alle kaarten en documenten.</p>
-        <span class="badge badge-soon">Beschikbaar in fase 5</span>
-    </div>
-
     {% if current_user.is_beheerder %}
     <a href="{{ url_for('auth.gebruikers') }}" class="action-card active">
         <div class="action-icon">&#x1F465;</div>
@@ -66,9 +126,8 @@
     {% endif %}
 </div>
 
-<div class="recent-section">
-    <h2>Recente kaarten</h2>
-    {% if recente_kaarten %}
+{% macro kaarten_tabel(kaarten, lege_tekst) %}
+    {% if kaarten %}
     <div class="table-wrapper">
         <table class="table">
             <thead>
@@ -77,17 +136,22 @@
                     <th>Naam</th>
                     <th>Type</th>
                     <th>Status</th>
+                    <th>Ligt nu bij</th>
                     <th>Datum</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                {% for kaart in recente_kaarten %}
+                {% for kaart in kaarten %}
                 <tr>
                     <td><strong>{{ kaart.nummer }}</strong></td>
                     <td>{{ kaart.naam }}</td>
                     <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
                     <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>
+                    <td class="cell-locatie">
+                        {% set loc = kaart.huidige_review_locatie %}
+                        {% if loc %}{{ loc }}{% else %}—{% endif %}
+                    </td>
                     <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
                     <td>
                         <div class="rij-acties">
@@ -102,8 +166,22 @@
     </div>
     {% else %}
     <div class="empty-state">
-        <p>Er zijn nog geen kaarten aangemaakt.</p>
+        <p>{{ lege_tekst }}</p>
     </div>
     {% endif %}
+{% endmacro %}
+
+<div class="recent-section">
+    <h2>📝 Mijn kaarten</h2>
+    <p class="section-hint">Kaarten waar je zelf aan hebt gewerkt (als maker of bijdrager).</p>
+    {{ kaarten_tabel(mijn_kaarten, 'Je hebt nog geen kaarten gemaakt of bewerkt.') }}
 </div>
+
+{% if current_user.kerngroep %}
+<div class="recent-section">
+    <h2>🏷 Kaarten uit mijn kerngroep — {{ current_user.kerngroep_naam }}</h2>
+    <p class="section-hint">Andere kaarten binnen jouw kerngroep.</p>
+    {{ kaarten_tabel(kerngroep_kaarten, 'Er staan nog geen andere kaarten in jouw kerngroep.') }}
+</div>
+{% endif %}
 {% endblock %}

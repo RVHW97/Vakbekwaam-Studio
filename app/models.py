@@ -235,6 +235,26 @@ class Kaart(db.Model):
         return KAART_STATUS.get(self.status, self.status.capitalize())
 
     @property
+    def huidige_review_locatie(self):
+        """Korte tekst die zegt bij wie de kaart NU in de flow ligt.
+        Leeg als de kaart niet in review staat. Gebruikt in dashboard/overzicht
+        zodat elke gebruiker ziet wie er aan zet is.
+        """
+        if self.status not in ('peer_review', 'specialist_review'):
+            return ''
+        open_rs = self.reviews.filter_by(status='open').order_by(
+            db.case((Review.fase == 'specialist', 2), else_=1),
+            Review.fase.asc()
+        ).all() if hasattr(self, 'reviews') else []
+        if not open_rs:
+            return self.status_naam
+        onderdelen = []
+        for r in open_rs:
+            naam = r.reviewer.naam if r.reviewer else '?'
+            onderdelen.append(f'{r.fase_naam} bij {naam}')
+        return ' + '.join(onderdelen)
+
+    @property
     def effectieve_kerngroep(self):
         """De kerngroep die reviews aanstuurt. Standaard = kerntaak; bij 'algemeen'
         kijkt-ie naar peer_kerngroep (gezet door maker bij indienen).
@@ -504,6 +524,10 @@ REVIEW_STATUSSEN = {
     'open':         'Open',
     'goedgekeurd':  'Goedgekeurd',
     'afgekeurd':    'Afgekeurd',
+    # 'ingetrokken' = maker heeft de kaart teruggetrokken uit de flow terwijl er
+    # nog reviews open stonden. De review-taak verdwijnt dan van het dashboard;
+    # de kaart gaat terug naar concept en moet opnieuw ingediend worden.
+    'ingetrokken':  'Ingetrokken',
 }
 
 
@@ -541,6 +565,46 @@ class Review(db.Model):
 
     def __repr__(self):
         return f'<Review {self.fase} {self.status} kaart={self.kaart_id}>'
+
+
+# ---------- OverdraagVerzoek (rechten-aanvraag bij ziekte/afwezigheid) ----------
+# Een collega-oefencoördinator in dezelfde kerngroep kan níet zomaar bewerken
+# (alleen de maker mag). Bij ziekte vraagt hij via dit model de specialist uit
+# zijn kerngroep om het makerschap over te dragen. De specialist handelt het af
+# via zijn dashboard — door de kaart aan de aanvrager toe te wijzen (goedkeuren)
+# of het verzoek te weigeren.
+OVERDRAAG_STATUSSEN = {
+    'open':         'Open',
+    'goedgekeurd':  'Goedgekeurd',
+    'afgewezen':    'Afgewezen',
+    'ingetrokken':  'Ingetrokken',
+}
+
+
+class OverdraagVerzoek(db.Model):
+    __tablename__ = 'overdraag_verzoeken'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kaart_id = db.Column(db.Integer, db.ForeignKey('kaarten.id'), nullable=False, index=True)
+    aanvrager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    bericht = db.Column(db.String(500), default='')
+    status = db.Column(db.String(20), nullable=False, default='open')
+    aangemaakt_op = db.Column(db.DateTime, default=datetime.utcnow)
+    afgehandeld_door_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    afgehandeld_op = db.Column(db.DateTime, nullable=True)
+
+    kaart = db.relationship('Kaart',
+                             backref=db.backref('overdraag_verzoeken', lazy='dynamic',
+                                                cascade='all, delete-orphan'))
+    aanvrager = db.relationship('User', foreign_keys=[aanvrager_id])
+    afgehandeld_door = db.relationship('User', foreign_keys=[afgehandeld_door_id])
+
+    @property
+    def status_naam(self):
+        return OVERDRAAG_STATUSSEN.get(self.status, self.status.capitalize())
+
+    def __repr__(self):
+        return f'<OverdraagVerzoek {self.status} kaart={self.kaart_id} aanvrager={self.aanvrager_id}>'
 
 
 # ---------- QR-codes ----------

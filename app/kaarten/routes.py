@@ -132,14 +132,24 @@ PUBLICATIE_ROLLEN = {'admin', 'specialist'}
 
 
 def kan_kaart_bewerken(user, kaart):
+    """Mag deze gebruiker deze kaart bewerken?
+
+    Strikte regel (afspraak met Rebecca, nov 2026): **alleen de maker** mag
+    bewerken. Er is dus geen 'collega uit kerngroep'-bypass meer. Bij ziekte/
+    afwezigheid draagt een specialist of admin de kaart expliciet over naar
+    een andere maker via `/eigenaar-wijzigen` — daarna is die nieuwe maker
+    de enige die mag bewerken. Admin blijft als vangnet alles kunnen.
+    """
     if not (user and user.is_authenticated):
         return False
-    if user.rol in BEWERK_ROLLEN:
+    if user.is_admin:
         return True
-    # Oefencoördinator / medewerker O&O: alleen eigen kaarten (tot fase 3+).
-    if user.rol in ('oefencoordinator', 'medewerker_oo') and kaart.auteur_id == user.id:
-        return True
-    return False
+    return kaart.auteur_id == user.id
+
+
+def kaart_is_in_review(kaart):
+    """True als de kaart momenteel bij een reviewer ligt (peer of specialist)."""
+    return kaart.status in ('peer_review', 'specialist_review')
 
 
 def kan_kaart_aanmaken(user):
@@ -151,8 +161,16 @@ def kan_publiceren(user):
 
 
 def _vereis_bewerken(kaart):
-    """Roep bovenaan elke write-route aan; stopt de request als de gebruiker niet mag."""
+    """Roep bovenaan elke write-route aan; stopt de request als de gebruiker niet mag.
+
+    Extra regel (v0.7.40): zolang de kaart bij een reviewer ligt (peer_review of
+    specialist_review) mag ook de maker zelf niet schrijven. Hij moet eerst de
+    kaart terugtrekken (POST /<id>/terugtrekken), dan is-ie weer concept en start
+    de workflow opnieuw bij indienen.
+    """
     if not kan_kaart_bewerken(current_user, kaart):
+        abort(403)
+    if kaart_is_in_review(kaart) and not current_user.is_admin:
         abort(403)
 
 
@@ -1320,9 +1338,33 @@ def bewerken(kaart_id):
                     'qrs': qrs,
                 }
 
+    # Bij specialist/admin: lijst met kandidaat-makers meegeven zodat zij de
+    # kaart via een UI-blok kunnen overdragen (ziekte/afwezigheid).
+    eigenaar_kandidaten = []
+    if current_user.is_admin or current_user.is_specialist:
+        eigenaar_kandidaten = _mogelijke_nieuwe_makers(kaart)
+
+    # Geschiedenis zichtbaar voor: admin, specialist (any), of een bijdrager
+    # (iemand die ooit in de wijzigingen-log op deze kaart voorkomt). Zo zien
+    # specialisten en betrokkenen altijd wat er met de kaart gebeurd is (incl.
+    # overdrachten en review-besluiten).
+    bijdrager_ids = {w.gebruiker_id for w in kaart.wijzigingen.all()
+                      if w.gebruiker_id is not None}
+    geschiedenis_zichtbaar = (
+        current_user.is_admin
+        or current_user.is_specialist
+        or current_user.id in bijdrager_ids
+        or current_user.id == kaart.auteur_id
+    )
+    kaart_wijzigingen = kaart.wijzigingen.order_by(KaartWijziging.datum.desc()).limit(50).all() \
+        if geschiedenis_zichtbaar else []
+
     return render_template('kaarten/formulier.html', form=form, kaart_type=kaart.type,
                            type_info=type_info, bewerken=True, kaart=kaart,
                            mag_bewerken=mag_bewerken,
+                           eigenaar_kandidaten=eigenaar_kandidaten,
+                           geschiedenis_zichtbaar=geschiedenis_zichtbaar,
+                           kaart_wijzigingen=kaart_wijzigingen,
                            wijziging_toelichting=wijziging_toelichting,
                            toelichting_fout=toelichting_fout,
                            kaart_heeft_wijzigingen=kaart_heeft_wijzigingen,
@@ -1687,6 +1729,13 @@ def indienen(kaart_id):
         flash(boodschap, 'success' if ok else 'danger')
         return redirect(redirect_url or url_for('kaarten.bewerken', kaart_id=kaart.id))
 
+    # Specialisten doen alléén reviews — niet indienen. Hun eigen kaarten
+    # publiceren ze direct via /publiceren. Admin mag wél indienen (noodgeval).
+    if current_user.is_specialist and not current_user.is_admin:
+        return _antwoord(False,
+                          'Specialisten dienen zelf geen kaarten in voor review — '
+                          'publiceer je eigen kaart direct met "Publiceren".')
+
     gekozen_kg = (request.form.get('peer_kerngroep') or '').strip()
     if gekozen_kg:
         from app.models import KERNGROEPEN
@@ -1694,14 +1743,37 @@ def indienen(kaart_id):
             return _antwoord(False, 'Ongeldige kerngroep gekozen.')
         kaart.peer_kerngroep = gekozen_kg
 
+    # v0.7.40 — Een kaart mag alleen in review als alle verplichte velden gevuld
+    # zijn. Reviewers moeten geen half-leeg concept op hun bord krijgen. We
+    # hergebruiken dezelfde validator als bij "Opslaan" (_controleer_verplichte_velden):
+    # bouw een MultiDict van de huidige kaart-inhoud + subcategorie, laat de
+    # validator per veld checken, en weiger met een duidelijke lijst.
+    ontbrekend = _valideer_kaart_volledig(kaart)
+    if ontbrekend:
+        kort = ', '.join(ontbrekend[:6]) + ('…' if len(ontbrekend) > 6 else '')
+        return _antwoord(False,
+                          'Kaart kan nog niet ingediend worden — vul eerst alle '
+                          'verplichte velden in: ' + kort)
+
     resultaat = dien_in_voor_review(kaart, current_user)
     if not resultaat['ok']:
         return _antwoord(False, resultaat['fout'])
 
     db.session.commit()
-    aantal = len(resultaat['reviews'])
-    boodschap = (f'Kaart "{kaart.naam}" is ingediend voor review '
-                 f'({aantal} reviewer{"s" if aantal != 1 else ""} toegewezen).')
+    # Verrijkte boodschap: bij wie ligt de kaart nu + wat gebeurt er daarna?
+    # Zo ziet de maker direct dat er bv. ook een ensceneringstips-review loopt
+    # (parallel aan de peer-review) en dat specialist-eindcheck het sluitstuk is.
+    toegewezen = []
+    for r in resultaat['reviews']:
+        reviewer = r.reviewer
+        kg = (reviewer.kerngroep_naam or reviewer.kerngroep or '').strip()
+        toegewezen.append(f'{r.fase_naam} bij {reviewer.naam}'
+                           + (f' ({kg})' if kg else ''))
+    reviewers_tekst = '; '.join(toegewezen) if toegewezen else 'geen reviewers'
+    boodschap = (f'Kaart "{kaart.naam}" is ingediend voor review. '
+                 f'Ligt nu bij: {reviewers_tekst}. '
+                 f'Na goedkeuring van alle 1e-ronde reviews gaat de kaart door '
+                 f'naar de specialist-eindcheck.')
     return _antwoord(True, boodschap, redirect_url=url_for('kaarten.overzicht'))
 
 
@@ -1717,10 +1789,12 @@ def review_pagina(kaart_id, review_id):
         abort(404)
     if not _mag_review_doen(current_user, review):
         abort(403)
+    collegas = _collega_reviewers(review, current_user)
     return render_template('kaarten/review.html',
                            kaart=kaart, review=review,
                            kerntaak_info=kaart.kerntaak_info,
-                           status_badge_class='badge-' + kaart.status)
+                           status_badge_class='badge-' + kaart.status,
+                           overdraag_collegas=collegas)
 
 
 @bp.route('/<int:kaart_id>/review/<int:review_id>/besluit', methods=['POST'])
@@ -1758,6 +1832,395 @@ def review_besluit(kaart_id, review_id):
                          'redirect': terug_url})
     flash(resultaat['boodschap'], 'success')
     return redirect(terug_url)
+
+
+def _valideer_kaart_volledig(kaart):
+    """Check of alle verplichte velden gevuld zijn. Retourneert lijst ontbrekende
+    labels (leeg = kaart is compleet).
+
+    Werkt bovenop `_controleer_verplichte_velden` (dezelfde validator als bij
+    'Opslaan') zodat we de regels maar één keer hoeven te onderhouden.
+    """
+    from werkzeug.datastructures import MultiDict
+    inhoud = kaart.get_inhoud()
+    rf = MultiDict()
+    for veld, val in inhoud.items():
+        if isinstance(val, list):
+            for v in val:
+                rf.add(veld, v if isinstance(v, str) else str(v))
+        else:
+            rf.add(veld, val if isinstance(val, str) else (str(val) if val is not None else ''))
+    rf.add('subcategorie_id', str(kaart.subcategorie_id or ''))
+    rf.add('kerntaak', kaart.kerntaak or '')
+    rf.add('naam', kaart.naam or '')
+
+    form_class = FORMULIEREN.get(kaart.type)
+    if form_class is None:
+        return []
+    # meta={'csrf': False}: deze "nep"-form draait zonder CSRF-check — hij wordt
+    # niet via een echte POST ingediend maar alleen gebruikt om errors op te hangen.
+    nep = form_class(formdata=None, meta={'csrf': False})
+    return _controleer_verplichte_velden(kaart.type, nep, rf, kaart=kaart)
+
+
+def _mogelijke_nieuwe_makers(kaart):
+    """Kandidaten om een kaart aan over te dragen bij ziekte/afwezigheid.
+
+    - Oefencoördinatoren in de effectieve kerngroep van de kaart.
+    - Medewerker O&O (alleen als het een materieel-instructiekaart betreft of
+      de huidige maker ook O&O is — die zijn verder niet gebonden aan een
+      kerngroep). Voor nu: altijd O&O meenemen; admin kiest wie het past.
+    - Specialisten mogen géén kaart als maker nemen (zij reviewen alleen).
+    """
+    from app.models import User
+    kand = []
+    kg = kaart.effectieve_kerngroep
+    for u in User.query.filter_by(actief=True).order_by(User.naam).all():
+        if u.id == kaart.auteur_id:
+            continue
+        if u.is_oefencoordinator and kg and u.kerngroep == kg:
+            kand.append(u)
+        elif u.is_medewerker_oo:
+            kand.append(u)
+    return kand
+
+
+@bp.route('/<int:kaart_id>/rechten-aanvragen', methods=['POST'])
+@login_required
+def rechten_aanvragen(kaart_id):
+    """Een collega-oefencoord uit dezelfde kerngroep als de kaart vraagt bewerk-
+    rechten aan. Dit creëert een OverdraagVerzoek waar de specialist uit zijn
+    kerngroep op kan reageren via zijn dashboard.
+    """
+    from flask import jsonify
+    from app.models import OverdraagVerzoek
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    # Regel: aanvrager moet oefencoördinator zijn uit DEZELFDE kerngroep als
+    # de kaart. Buiten jouw kerngroep ben je geen logische vervanger. Admin
+    # en specialist hebben eigen overdraag-knoppen.
+    if kaart.auteur_id == current_user.id:
+        return _fout('Jij bent de maker — je hebt al bewerk-rechten.')
+    if not current_user.is_oefencoordinator:
+        return _fout('Alleen een oefencoördinator uit de kerngroep van deze '
+                      'kaart kan rechten aanvragen.', 403)
+    if not current_user.kerngroep or current_user.kerngroep != kaart.effectieve_kerngroep:
+        return _fout('Je kunt alleen rechten aanvragen op kaarten uit jouw '
+                      'eigen kerngroep.', 403)
+
+    bestaand = OverdraagVerzoek.query.filter_by(
+        kaart_id=kaart.id, aanvrager_id=current_user.id, status='open').first()
+    if bestaand:
+        return _fout('Je hebt al een open verzoek op deze kaart lopen — '
+                      'wacht op antwoord van de specialist.')
+
+    bericht = (request.form.get('bericht') or '').strip()[:500]
+    verzoek = OverdraagVerzoek(
+        kaart_id=kaart.id, aanvrager_id=current_user.id,
+        bericht=bericht, status='open'
+    )
+    db.session.add(verzoek)
+    log_wijziging(
+        kaart, 'rechten_aangevraagd',
+        f'{current_user.naam} vraagt bewerk-rechten aan (specialist beslist).'
+    )
+    db.session.commit()
+
+    bood = ('Verzoek verstuurd. De specialist uit jouw kerngroep ziet het op '
+            'zijn dashboard en kan de kaart aan jou overdragen.')
+    terug = url_for('kaarten.bewerken', kaart_id=kaart.id)
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': bood, 'redirect': terug})
+    flash(bood, 'success')
+    return redirect(terug)
+
+
+@bp.route('/overdraag-verzoek/<int:verzoek_id>/beslissen', methods=['POST'])
+@login_required
+def overdraag_verzoek_beslissen(verzoek_id):
+    """Specialist beslist op een OverdraagVerzoek. Actie 'goedkeuren' draagt het
+    makerschap over aan de aanvrager; 'afwijzen' sluit het verzoek.
+    """
+    from flask import jsonify
+    from app.models import OverdraagVerzoek
+    verzoek = OverdraagVerzoek.query.get_or_404(verzoek_id)
+    kaart = verzoek.kaart
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    # Toegestaan voor: admin, of specialist uit zelfde kerngroep als de kaart.
+    if not current_user.is_admin:
+        if not (current_user.is_specialist and current_user.kerngroep
+                and current_user.kerngroep == kaart.effectieve_kerngroep):
+            return _fout('Alleen de specialist uit de kerngroep van deze kaart '
+                          '(of een admin) kan dit verzoek afhandelen.', 403)
+
+    if verzoek.status != 'open':
+        return _fout(f'Dit verzoek is al afgehandeld ({verzoek.status_naam}).')
+
+    actie = (request.form.get('actie') or '').strip()
+    from datetime import datetime as _dt
+    if actie == 'goedkeuren':
+        oude = kaart.auteur
+        kaart.auteur_id = verzoek.aanvrager_id
+        kaart.bijgewerkt_door_id = current_user.id
+        verzoek.status = 'goedgekeurd'
+        verzoek.afgehandeld_door_id = current_user.id
+        verzoek.afgehandeld_op = _dt.utcnow()
+        log_wijziging(
+            kaart, 'eigenaar_gewijzigd',
+            f'Rechten-verzoek goedgekeurd: makerschap overgedragen van '
+            f'{oude.naam if oude else "?"} naar {verzoek.aanvrager.naam} '
+            f'door specialist {current_user.naam}.'
+        )
+        db.session.commit()
+        bood = (f'Verzoek goedgekeurd. Kaart "{kaart.naam}" is nu op naam van '
+                f'{verzoek.aanvrager.naam}.')
+    elif actie == 'afwijzen':
+        verzoek.status = 'afgewezen'
+        verzoek.afgehandeld_door_id = current_user.id
+        verzoek.afgehandeld_op = _dt.utcnow()
+        log_wijziging(
+            kaart, 'rechten_afgewezen',
+            f'Rechten-verzoek van {verzoek.aanvrager.naam} afgewezen door '
+            f'{current_user.naam}.'
+        )
+        db.session.commit()
+        bood = f'Verzoek van {verzoek.aanvrager.naam} is afgewezen.'
+    else:
+        return _fout('Onbekende actie.')
+
+    terug = url_for('main.dashboard')
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': bood, 'redirect': terug})
+    flash(bood, 'success')
+    return redirect(terug)
+
+
+@bp.route('/<int:kaart_id>/eigenaar-wijzigen', methods=['POST'])
+@login_required
+def eigenaar_wijzigen(kaart_id):
+    """Draag het makerschap van een kaart over aan een andere gebruiker.
+
+    Reden: bij ziekte of langdurige afwezigheid van de maker moet iemand anders
+    de kaart kunnen verderzetten (bewerken, intrekken, opnieuw indienen).
+    Omdat alleen de maker bewerk-rechten heeft, is overdragen de enige weg.
+
+    Toegestaan voor: admin + specialist (gezagsfunctie). Na de wissel is de
+    oorspronkelijke maker geen maker meer — 'auteur_id' wordt overschreven.
+    JSON-aware antwoord.
+    """
+    from flask import jsonify
+    from app.models import User
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    if not (current_user.is_admin or current_user.is_specialist):
+        return _fout('Alleen een specialist of admin kan het makerschap van een '
+                      'kaart overdragen.', 403)
+
+    nieuwe_id_raw = (request.form.get('nieuwe_maker_id') or '').strip()
+    if not nieuwe_id_raw.isdigit():
+        return _fout('Kies een nieuwe maker.')
+    nieuwe = User.query.get(int(nieuwe_id_raw))
+    if nieuwe is None or not nieuwe.actief:
+        return _fout('Gekozen gebruiker bestaat niet of is inactief.')
+    if nieuwe.id == kaart.auteur_id:
+        return _fout('Deze gebruiker is al de huidige maker.')
+
+    kand_ids = {u.id for u in _mogelijke_nieuwe_makers(kaart)}
+    if nieuwe.id not in kand_ids:
+        return _fout('Deze gebruiker past niet bij de kerngroep of rol van deze kaart.')
+
+    oude = kaart.auteur
+    kaart.auteur_id = nieuwe.id
+    kaart.bijgewerkt_door_id = current_user.id
+    log_wijziging(
+        kaart, 'eigenaar_gewijzigd',
+        f'Makerschap overgedragen van {oude.naam if oude else "?"} naar '
+        f'{nieuwe.naam} door {current_user.naam}. '
+        f'Alleen {nieuwe.naam} kan deze kaart nu nog bewerken.'
+    )
+    db.session.commit()
+
+    bood = (f'Makerschap van "{kaart.naam}" is overgedragen aan {nieuwe.naam}. '
+            f'{oude.naam if oude else "De vorige maker"} kan de kaart niet meer bewerken.')
+    terug = url_for('kaarten.bewerken', kaart_id=kaart.id)
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': bood, 'redirect': terug})
+    flash(bood, 'success')
+    return redirect(terug)
+
+
+@bp.route('/<int:kaart_id>/terugtrekken', methods=['POST'])
+@login_required
+def terugtrekken(kaart_id):
+    """Haal een kaart uit de review-flow terug naar concept.
+
+    Lopende open reviews worden op 'ingetrokken' gezet (verdwijnen uit het
+    reviewers-dashboard). De kaart gaat terug naar concept en moet opnieuw
+    ingediend worden — de volledige flow (peer + eventueel ensceneringstips +
+    specialist) start dan vers.
+
+    Toegestaan voor: de maker en admin. Zolang de kaart in review ligt, slaat
+    _vereis_bewerken strikter aan dan voor normale POSTs; die bypass gebruiken
+    we hier NIET — we checken rechten expliciet.
+
+    Antwoord: JSON bij X-Requested-With, anders flash + redirect.
+    """
+    from flask import jsonify
+    from app.models import Review
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Terugtrekken mag door: de maker zelf of admin. Bij afwezigheid regelt
+    # een specialist/admin eerst een eigenaar-wijziging (zie /eigenaar-wijzigen);
+    # daarna is de nieuwe maker weer de enige die kan intrekken/bewerken.
+    mag_terugtrekken = (current_user.is_admin
+                        or kaart.auteur_id == current_user.id)
+    if not mag_terugtrekken:
+        if is_ajax:
+            return jsonify({'ok': False,
+                             'boodschap': 'Je mag deze kaart niet terugtrekken.'}), 403
+        abort(403)
+
+    if not kaart_is_in_review(kaart):
+        boodschap = 'Deze kaart staat niet in review — niets om terug te trekken.'
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': boodschap}), 400
+        flash(boodschap, 'warning')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    open_reviews = Review.query.filter_by(kaart_id=kaart.id, status='open').all()
+    from datetime import datetime as _dt
+    for r in open_reviews:
+        r.status = 'ingetrokken'
+        r.voltooid_op = _dt.utcnow()
+
+    kaart.status = 'concept'
+    kaart.bijgewerkt_door_id = current_user.id
+    log_wijziging(
+        kaart, 'Teruggetrokken',
+        f'{len(open_reviews)} open review(s) geannuleerd; kaart terug naar concept.'
+    )
+    db.session.commit()
+
+    boodschap = ('Kaart is teruggetrokken uit de review. '
+                 'Pas aan en dien opnieuw in om de flow opnieuw te starten.')
+    terug = url_for('kaarten.bewerken', kaart_id=kaart.id)
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': boodschap, 'redirect': terug})
+    flash(boodschap, 'success')
+    return redirect(terug)
+
+
+def _collega_reviewers(review, huidige_user):
+    """Alle gebruikers die deze review MOGEN doen, minus de huidige user en de
+    maker. Gebruikt dezelfde regels als _mag_review_doen. Retourneert User-lijst.
+    """
+    from app.models import User
+    kaart = review.kaart
+    kandidaten = []
+    for u in User.query.filter_by(actief=True).order_by(User.naam).all():
+        if u.id == huidige_user.id:
+            continue
+        if u.id == kaart.auteur_id:
+            continue
+        if review.fase == 'peer':
+            if u.is_oefencoordinator and u.kerngroep == kaart.effectieve_kerngroep:
+                kandidaten.append(u)
+        elif review.fase == 'ensceneringstips':
+            if u.is_medewerker_oo:
+                kandidaten.append(u)
+        elif review.fase == 'specialist':
+            if u.is_specialist and u.kerngroep:
+                if kaart.effectieve_kerngroep == 'roi' or u.kerngroep != kaart.effectieve_kerngroep:
+                    kandidaten.append(u)
+    return kandidaten
+
+
+@bp.route('/<int:kaart_id>/review/<int:review_id>/overdragen', methods=['POST'])
+@login_required
+def review_overdragen(kaart_id, review_id):
+    """Draag deze review-taak over aan een andere collega uit dezelfde pool
+    (bv. bij ziekte of te drukke agenda).
+
+    Toegestaan voor: de huidige reviewer, een collega uit zelfde pool, of admin.
+    De nieuwe reviewer MOET uit de reviewer-pool komen (anders hebben we een
+    rechten-lek). JSON-aware antwoord.
+    """
+    from flask import jsonify
+    from app.models import Review, User
+    kaart = Kaart.query.get_or_404(kaart_id)
+    review = Review.query.get_or_404(review_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.review_pagina',
+                                 kaart_id=kaart.id, review_id=review.id))
+
+    if review.kaart_id != kaart.id:
+        abort(404)
+    if review.status != 'open':
+        return _fout('Deze review-taak is al afgerond — overdragen kan niet meer.')
+    # Alleen admin mag review-taken handmatig doorzetten; reviewers (medewerker
+    # O&O, specialist, oefencoord) dragen hun eigen taken NIET zelf over.
+    if not current_user.is_admin:
+        return _fout('Alleen een admin kan een review-taak handmatig overdragen.',
+                      403)
+
+    nieuwe_id_raw = (request.form.get('nieuwe_reviewer_id') or '').strip()
+    if not nieuwe_id_raw.isdigit():
+        return _fout('Kies een collega om aan over te dragen.')
+    nieuwe = User.query.get(int(nieuwe_id_raw))
+    if nieuwe is None or not nieuwe.actief:
+        return _fout('Gekozen gebruiker bestaat niet of is inactief.')
+    if nieuwe.id == kaart.auteur_id:
+        return _fout('De maker kan zijn eigen kaart niet reviewen.')
+    # Valideer dat de nieuwe gebruiker daadwerkelijk in de pool zit (zelfde regels
+    # als _mag_review_doen). Zo voorkomen we dat iemand zomaar aan een willekeurige
+    # user kan doorgeven.
+    pool_ids = {u.id for u in _collega_reviewers(review, current_user)}
+    pool_ids.add(current_user.id)  # jezelf mag ook (impliciete overname)
+    if nieuwe.id not in pool_ids:
+        return _fout('Deze collega hoort niet bij de reviewer-pool voor deze fase.')
+
+    oude_naam = review.reviewer.naam if review.reviewer else '?'
+    review.reviewer_id = nieuwe.id
+    log_wijziging(
+        kaart, 'review_overgedragen',
+        f'{review.fase_naam}: overgedragen van {oude_naam} naar {nieuwe.naam} '
+        f'door {current_user.naam}.'
+    )
+    db.session.commit()
+
+    bood = f'Review-taak overgedragen aan {nieuwe.naam}. Het verdwijnt van jouw lijst.'
+    terug = url_for('main.dashboard')
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': bood, 'redirect': terug})
+    flash(bood, 'success')
+    return redirect(terug)
 
 
 def _mag_review_doen(user, review):

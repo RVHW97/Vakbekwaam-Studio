@@ -111,6 +111,101 @@ def dien_in_voor_review(kaart, maker):
 
     nieuwe_reviews = []
 
+    # Smart resume PER FASE. We kijken per fase (peer / ensceneringstips) naar
+    # de MEEST RECENTE review op deze kaart. Alleen de fases die NIET al
+    # goedgekeurd zijn, hoeven opnieuw gedaan te worden. Zo belandt een
+    # scenariokaart waarvan alleen de ensceneringstips werd afgekeurd (peer was
+    # al GO) bij heropsturen direct weer bij de medewerker O&O; en een kaart
+    # waarvan alleen de specialist afkeurde direct bij een specialist.
+    laatste_per_fase = {}
+    for r in (Review.query
+              .filter_by(kaart_id=kaart.id)
+              .order_by(Review.aangemaakt_op.desc())
+              .all()):
+        laatste_per_fase.setdefault(r.fase, r)
+
+    def _fase_al_ok(fase):
+        r = laatste_per_fase.get(fase)
+        return bool(r and r.status == 'goedgekeurd')
+
+    peer_al_ok = _fase_al_ok('peer')
+    tips_al_ok = (kaart.type != 'scenario') or _fase_al_ok('ensceneringstips')
+
+    heeft_1e_rondes = laatste_per_fase.get('peer') is not None or \
+                      laatste_per_fase.get('ensceneringstips') is not None
+
+    def _hergebruik_of_kies(fase, kies_fn):
+        """Als er al een afgekeurde review op deze fase bestaat, krijgt die
+        reviewer de heropsturing terug (continuïteit: hij kent de context).
+        Anders gewone round-robin via kies_fn.
+        """
+        laatste = laatste_per_fase.get(fase)
+        if laatste and laatste.status == 'afgekeurd' and laatste.reviewer and laatste.reviewer.actief:
+            return laatste.reviewer
+        return kies_fn(kaart)
+
+    if heeft_1e_rondes and peer_al_ok and tips_al_ok:
+        # Beide 1e-rondes OK → direct door naar specialist-eindcheck.
+        specialist = _hergebruik_of_kies('specialist', kies_specialist_reviewer)
+        if specialist is None:
+            return {'ok': False,
+                    'fout': 'Geen beschikbare specialist gevonden voor eindcheck. '
+                             'Vraag een admin om een specialist toe te wijzen.',
+                    'reviews': []}
+        laatste_spec = laatste_per_fase.get('specialist')
+        toelichting = (f'Opnieuw ingediend — peer & ensceneringstips blijven geldig; '
+                       f'gaat terug naar specialist {specialist.naam} '
+                       + ('(die eerder afkeurde — behoudt context).'
+                          if laatste_spec and laatste_spec.status == 'afgekeurd'
+                             and laatste_spec.reviewer_id == specialist.id
+                          else '(nieuwe toewijzing).'))
+        rev = Review(kaart_id=kaart.id, fase='specialist',
+                      reviewer_id=specialist.id, status='open')
+        db.session.add(rev)
+        kaart.status = 'specialist_review'
+        db.session.add(KaartWijziging(
+            kaart_id=kaart.id,
+            gebruiker_id=maker.id if maker else None,
+            actie='ingediend',
+            omschrijving=toelichting
+        ))
+        return {'ok': True, 'reviews': [rev]}
+
+    if heeft_1e_rondes and (peer_al_ok or tips_al_ok):
+        # Eén van de 1e-rondes is al OK — start alléén de fase die opnieuw moet.
+        if not peer_al_ok:
+            peer = _hergebruik_of_kies('peer', kies_peer_reviewer)
+            if peer is None:
+                return {'ok': False,
+                        'fout': f'Geen oefencoördinator gevonden in kerngroep '
+                                 f'"{kaart.effectieve_kerngroep}" (behalve jijzelf).',
+                        'reviews': []}
+            nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='peer',
+                                           reviewer_id=peer.id, status='open'))
+        if kaart.type == 'scenario' and not tips_al_ok:
+            tips_rev = _hergebruik_of_kies('ensceneringstips', kies_ensceneringstips_reviewer)
+            if tips_rev is not None:
+                nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='ensceneringstips',
+                                               reviewer_id=tips_rev.id, status='open'))
+        for r in nieuwe_reviews:
+            db.session.add(r)
+        kaart.status = 'peer_review'
+        welke = ', '.join(sorted({r.fase_naam for r in nieuwe_reviews}))
+        andere = []
+        if peer_al_ok:
+            andere.append('peer-review')
+        if kaart.type == 'scenario' and tips_al_ok:
+            andere.append('ensceneringstips')
+        db.session.add(KaartWijziging(
+            kaart_id=kaart.id,
+            gebruiker_id=maker.id if maker else None,
+            actie='ingediend',
+            omschrijving=f'Opnieuw ingediend — alleen {welke} opnieuw gestart '
+                         f'({", ".join(andere)} blijven geldig).'
+        ))
+        return {'ok': True, 'reviews': nieuwe_reviews}
+
+    # Normale eerste-ronde-flow (geen voorgaande geldige reviews).
     peer = kies_peer_reviewer(kaart)
     if peer is None:
         return {'ok': False,
@@ -225,12 +320,16 @@ def verwerk_review_besluit(review, besluit, opmerking, uitvoerder):
         Review.kaart_id == kaart.id,
         Review.fase.in_(['peer', 'ensceneringstips']),
         Review.status == 'open'
-    ).count()
-    if open_eerste_ronde > 0:
-        return {'ok': True,
-                'boodschap': 'Jouw review is opgeslagen. '
-                             f'Nog {open_eerste_ronde} parallelle review(s) open.',
-                'nieuwe_status': 'peer_review'}
+    ).all()
+    if open_eerste_ronde:
+        # Noem wie we nog wachten + wat er dáárna gebeurt, zodat de reviewer die
+        # net goedkeurde begrijpt waar de kaart heen gaat.
+        wachters = [f'{r.fase_naam} bij {r.reviewer.naam}' for r in open_eerste_ronde]
+        boodschap = ('Jouw review is goedgekeurd. We wachten nog op: '
+                     + '; '.join(wachters)
+                     + '. Zodra die ook GO geven, gaat de kaart door naar de '
+                       'specialist-eindcheck.')
+        return {'ok': True, 'boodschap': boodschap, 'nieuwe_status': 'peer_review'}
 
     # Beide eerste-ronde-reviews GO → start specialist-fase
     specialist = kies_specialist_reviewer(kaart)
@@ -241,7 +340,9 @@ def verwerk_review_besluit(review, besluit, opmerking, uitvoerder):
     db.session.add(Review(kaart_id=kaart.id, fase='specialist',
                            reviewer_id=specialist.id, status='open'))
     kaart.status = 'specialist_review'
+    specialist_kg = specialist.kerngroep_naam or specialist.kerngroep or '—'
     return {'ok': True,
-            'boodschap': f'Peer-review afgerond — kaart is doorgezet naar '
-                          f'specialist {specialist.naam} voor eindcheck.',
+            'boodschap': f'Jouw review is goedgekeurd — alle 1e-ronde reviews zijn '
+                          f'nu GO. De kaart ligt nu bij specialist {specialist.naam} '
+                          f'({specialist_kg}) voor de eindcheck.',
             'nieuwe_status': 'specialist_review'}

@@ -253,6 +253,44 @@ body {
     background: var(--kleur-brand-rood);
     color: #fff;
 }
+.overdraag-rij {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.overdraag-rij .form-select { flex: 1 1 240px; min-width: 200px; }
+
+.geschiedenis-blok {
+    background: #FBFAF6;
+    border: 1px solid #E4E1D8;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+}
+.geschiedenis-blok > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--kleur-blauw);
+    padding: 0.25rem 0;
+}
+.geschiedenis-tabel { margin-top: 0.75rem; font-size: 0.9rem; }
+.geschiedenis-tabel td, .geschiedenis-tabel th { vertical-align: top; }
+
+.eigenaar-wijzig-blok {
+    background: #F7F6F3;
+    border: 1px solid #E4E1D8;
+    border-left: 4px solid var(--kleur-blauw);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+}
+.eigenaar-wijzig-blok h3 {
+    margin: 0 0 0.25rem;
+    color: var(--kleur-blauw);
+    font-size: 1.05rem;
+}
+.eigenaar-wijzig-blok .section-hint { margin: 0 0 0.75rem; color: #555; font-size: 0.9rem; }
 
 /* === Dashboard: openstaande taken sectie === */
 .dashboard-taken {
@@ -291,6 +329,60 @@ body {
     margin-top: 2px;
 }
 
+/* Afkeur-meldingen: zelfde layout als openstaande reviews maar in brandweer-rood
+   zodat de maker direct ziet dat er iets gecorrigeerd moet worden. */
+.dashboard-afkeur {
+    background: #FDECEE;
+    border: 1px solid #E8B6BC;
+    border-left: 4px solid #C8102E;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.dashboard-afkeur h2 {
+    margin: 0 0 0.25rem;
+    color: #5A1620;
+    font-size: 1.2rem;
+}
+.dashboard-afkeur .section-hint { margin: 0 0 0.75rem; color: #5A1620; font-size: 0.85rem; }
+.dashboard-taak-afkeur {
+    border-color: #E8B6BC !important;
+}
+.dashboard-verzoeken {
+    background: #E8F1FB;
+    border: 1px solid #A7C5E6;
+    border-left: 4px solid #1B2A4A;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.dashboard-verzoeken h2 { margin: 0 0 0.25rem; color: #1B2A4A; font-size: 1.2rem; }
+.dashboard-verzoeken .section-hint { margin: 0 0 0.75rem; color: #1B2A4A; font-size: 0.85rem; }
+.dashboard-taak-verzoek { border-color: #A7C5E6 !important; }
+
+.cell-locatie {
+    font-size: 0.85rem;
+    color: #333;
+    max-width: 260px;
+}
+.readonly-banner-acties { margin-top: 0.75rem; }
+.readonly-banner-hint {
+    display: block;
+    margin-top: 0.4rem;
+    color: #5A4810;
+    font-size: 0.85rem;
+}
+
+.dashboard-taak-opmerking {
+    margin-top: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    background: #FBF4F6;
+    border-left: 3px solid #C8102E;
+    color: #3E0E16;
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+
 /* === "Indienen voor review"-knop (groen, workflow-start) === */
 .btn-indienen {
     background: #2E7D32;
@@ -317,6 +409,24 @@ body {
 .readonly-banner strong {
     color: #3E320A;
 }
+
+/* Lock-banner als een kaart in review ligt (zelfs maker mag niet bewerken). */
+.review-lock-banner {
+    background: #FDECEE;
+    border: 1px solid #E8B6BC;
+    border-left: 4px solid #C8102E;
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.25rem;
+    color: #5A1620;
+    line-height: 1.5;
+}
+.review-lock-banner strong { color: #3E0E16; }
+.review-lock-banner em { font-style: italic; color: #3E0E16; }
+.review-lock-acties {
+    margin-top: 0.75rem;
+}
+
 /* Form in readonly: alle inputs/selects/textareas visueel + functioneel vergrendeld.
    JS zet daadwerkelijk `disabled` op elke input zodat niets gesubmit kan worden
    per ongeluk — deze CSS is de visuele hint. */
@@ -815,14 +925,20 @@ body {
 }
 
 /* === RECENT ACTIVITEIT === */
+.recent-section { margin-top: 2rem; }
 .recent-section h2 {
     font-family: var(--lettertype-kop);
     font-size: 1.3rem;
     color: var(--kleur-blauw);
-    margin-bottom: 1rem;
+    margin-bottom: 0.25rem;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid var(--kleur-goud);
     display: inline-block;
+}
+.recent-section .section-hint {
+    font-size: 0.9rem;
+    color: var(--kleur-tekst-licht);
+    margin: 0 0 0.75rem;
 }
 
 .empty-state {

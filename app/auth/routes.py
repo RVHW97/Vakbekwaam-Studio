@@ -77,15 +77,30 @@ def login():
         return redirect(url_for('main.dashboard'))
 
     form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower().strip()).first()
-        if user and user.actief and user.check_wachtwoord(form.wachtwoord.data):
-            login_user(user, remember=form.onthoud_mij.data)
-            next_page = _veilige_next_url(request.args.get('next'))
-            return redirect(next_page or url_for('main.dashboard'))
-        # Betaal altijd de hash-tijd, ook bij onbekende gebruiker of gedeactiveerd account.
-        check_password_hash(_DUMMY_HASH, form.wachtwoord.data)
-        flash('Ongeldige inloggegevens of account is gedeactiveerd.', 'danger')
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            user = User.query.filter_by(email=form.email.data.lower().strip()).first()
+            if user and user.actief and user.check_wachtwoord(form.wachtwoord.data):
+                login_user(user, remember=form.onthoud_mij.data)
+                next_page = _veilige_next_url(request.args.get('next'))
+                return redirect(next_page or url_for('main.dashboard'))
+            # Betaal altijd de hash-tijd, ook bij onbekende gebruiker of gedeactiveerd account.
+            check_password_hash(_DUMMY_HASH, form.wachtwoord.data)
+            flash('Ongeldige inloggegevens of account is gedeactiveerd.', 'danger')
+        else:
+            # validate_on_submit faalt stilletjes (bv. ongeldig e-mailformaat of leeg
+            # veld) — toon de ECHTE reden zodat de gebruiker weet waarom het niet lukt
+            # i.p.v. een lege form zonder uitleg.
+            foutmeldingen = []
+            for veld_naam, errors in form.errors.items():
+                veld = getattr(form, veld_naam, None)
+                label = veld.label.text if veld and veld.label else veld_naam
+                for e in errors:
+                    foutmeldingen.append(f'{label}: {e}')
+            if foutmeldingen:
+                flash('Inloggen mislukt — ' + ' | '.join(foutmeldingen), 'danger')
+            else:
+                flash('Inloggen mislukt — probeer het opnieuw.', 'danger')
 
     return render_template('auth/login.html', form=form)
 
