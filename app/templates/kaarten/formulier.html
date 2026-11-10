@@ -1236,9 +1236,12 @@
     de kaart gaat terug naar <em>concept</em> en start na opnieuw indienen de hele flow vers.
     {# Intrekken: alleen de maker (of admin, server valideert strikt). #}
     {% if kaart.auteur_id == current_user.id or current_user.is_admin %}
+    {# kaart_heeft_wijzigingen = ooit gepubliceerd (of nu gepubliceerd); komt uit
+       de view-context. In dat geval dwingt de terugtrekken-flow een reden af. #}
     <div class="review-lock-acties">
         <button type="button" class="btn btn-secondary btn-small" id="terugtrekken-knop"
-                data-url="{{ url_for('kaarten.terugtrekken', kaart_id=kaart.id) }}">
+                data-url="{{ url_for('kaarten.terugtrekken', kaart_id=kaart.id) }}"
+                data-reden-vereist="{{ '1' if kaart_heeft_wijzigingen else '0' }}">
             Intrekken en opnieuw bewerken
         </button>
     </div>
@@ -3249,12 +3252,24 @@
     }
 
     function toonBevestig(onJa) {
+        var redenVereist = knop.dataset.redenVereist === '1';
+        var redenBlokHtml = redenVereist
+            ? ('<div class="vs-modal-reden-blok">'
+                + '<label class="vs-modal-reden-label" for="terugtrekken-reden">'
+                +   'Reden intrekken <small>(deze kaart is eerder gepubliceerd — leg kort uit waarom je ze terughaalt)</small>'
+                + '</label>'
+                + '<textarea id="terugtrekken-reden" class="form-input form-textarea" rows="3" maxlength="500" '
+                +   'placeholder="Bv. foutieve procedure gevonden, inhoud niet meer up-to-date, vraag van specialist..."></textarea>'
+                + '<p class="vs-modal-reden-fout" style="display:none;"></p>'
+                + '</div>')
+            : '';
         var overlay = bouwOverlay(
             '<div class="vs-modal">'
             + '<div class="vs-modal-icoon">⚠️</div>'
             + '<h2 class="vs-modal-titel">Kaart terugtrekken?</h2>'
             + '<p class="vs-modal-tekst">De lopende reviews worden geannuleerd en de kaart gaat terug naar concept. '
             + 'Na opnieuw indienen start de hele workflow (peer + specialist) opnieuw.</p>'
+            + redenBlokHtml
             + '<div class="vs-modal-acties" style="justify-content:space-between;">'
             +   '<button type="button" class="btn btn-secondary" data-actie="annuleren">Annuleren</button>'
             +   '<button type="button" class="btn btn-danger" data-actie="bevestigen">Ja, terugtrekken</button>'
@@ -3265,8 +3280,22 @@
             overlay.remove();
         });
         overlay.querySelector('[data-actie="bevestigen"]').addEventListener('click', function() {
+            var reden = '';
+            if (redenVereist) {
+                var ta = overlay.querySelector('#terugtrekken-reden');
+                reden = (ta ? ta.value : '').trim();
+                if (reden.length < 5) {
+                    var fout = overlay.querySelector('.vs-modal-reden-fout');
+                    if (fout) {
+                        fout.textContent = 'Geef minstens 5 tekens als reden op.';
+                        fout.style.display = 'block';
+                    }
+                    if (ta) ta.focus();
+                    return;
+                }
+            }
             overlay.remove();
-            onJa();
+            onJa(reden);
         });
     }
 
@@ -3292,11 +3321,12 @@
     }
 
     knop.addEventListener('click', function() {
-        toonBevestig(function() {
+        toonBevestig(function(reden) {
             var csrfInput = document.querySelector('form.kaart-form input[name="csrf_token"]');
             var csrf = csrfInput ? csrfInput.value : '';
             var fd = new FormData();
             fd.append('csrf_token', csrf);
+            if (reden) fd.append('reden', reden);
             knop.disabled = true;
             fetch(knop.dataset.url, {
                 method: 'POST',

@@ -2157,6 +2157,25 @@ def terugtrekken(kaart_id):
         flash(boodschap, 'warning')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
 
+    # Als deze kaart ooit gepubliceerd is geweest, moet de intrekker een reden
+    # opgeven. Zo blijft in de audit-trail traceerbaar waarom een eerder
+    # vrijgegeven versie uit circulatie is gehaald.
+    ooit_gepubliceerd = (
+        KaartWijziging.query
+        .filter_by(kaart_id=kaart.id, actie='Gepubliceerd')
+        .count() > 0
+    )
+    reden = (request.form.get('reden') or '').strip()
+    if ooit_gepubliceerd and len(reden) < 5:
+        boodschap = ('Geef een korte reden op waarom deze eerder gepubliceerde kaart '
+                     'wordt teruggetrokken (min. 5 tekens).')
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': boodschap,
+                             'reden_vereist': True}), 400
+        flash(boodschap, 'warning')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+    reden = reden[:500]  # harde cap tegen overvolle log-notities
+
     open_reviews = Review.query.filter_by(kaart_id=kaart.id, status='open').all()
     from datetime import datetime as _dt
     for r in open_reviews:
@@ -2165,10 +2184,10 @@ def terugtrekken(kaart_id):
 
     kaart.status = 'concept'
     kaart.bijgewerkt_door_id = current_user.id
-    log_wijziging(
-        kaart, 'Teruggetrokken',
-        f'{len(open_reviews)} open review(s) geannuleerd; kaart terug naar concept.'
-    )
+    notitie = f'{len(open_reviews)} open review(s) geannuleerd; kaart terug naar concept.'
+    if ooit_gepubliceerd:
+        notitie += f' Eerder gepubliceerd — reden intrekken: "{reden}"'
+    log_wijziging(kaart, 'Teruggetrokken', notitie)
     db.session.commit()
 
     boodschap = ('Kaart is teruggetrokken uit de review. '
@@ -2523,9 +2542,18 @@ def depubliceren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_publiceren()
     _vereis_bewerken(kaart)
+    # Een depublicatie komt per definitie vanaf 'gepubliceerd' → altijd een
+    # reden vereist voor de audit-trail.
+    reden = (request.form.get('reden') or '').strip()
+    if len(reden) < 5:
+        flash('Geef een korte reden op waarom deze kaart gedepubliceerd wordt (min. 5 tekens).',
+              'warning')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+    reden = reden[:500]
     kaart.status = 'concept'
     kaart.bijgewerkt_door_id = current_user.id
-    log_wijziging(kaart, 'Teruggezet naar concept')
+    log_wijziging(kaart, 'Teruggezet naar concept',
+                   f'Reden depublicatie: "{reden}"')
     db.session.commit()
     flash(f'Kaart "{kaart.naam}" staat weer als concept.', 'info')
     return redirect(url_for('kaarten.overzicht'))

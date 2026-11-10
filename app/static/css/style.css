@@ -526,6 +526,37 @@ body {
     gap: 0.5rem;
 }
 
+/* Reden-blok in de terugtrekken-modal: textarea met korte uitleg erboven.
+   Alleen zichtbaar wanneer de kaart ooit gepubliceerd is geweest. */
+.vs-modal-reden-blok {
+    margin: 0 0 1rem;
+    text-align: left;
+}
+.vs-modal-reden-label {
+    display: block;
+    font-weight: 600;
+    color: var(--kleur-navy, #1B2A4A);
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+}
+.vs-modal-reden-label small {
+    display: block;
+    font-weight: 400;
+    color: #666;
+    font-size: 0.82rem;
+    margin-top: 0.15rem;
+}
+.vs-modal-reden-blok textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 3.5rem;
+}
+.vs-modal-reden-fout {
+    color: var(--kleur-fout, #C8102E);
+    font-size: 0.85rem;
+    margin: 0.35rem 0 0;
+}
+
 /* === LOGIN === */
 .login-wrapper {
     display: flex;
