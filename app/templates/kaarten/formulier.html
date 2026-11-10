@@ -1689,7 +1689,17 @@
             <div class="form-groep-kolom">
                 <div class="form-group">
                     {{ form.pager_voertuigen.label(class="form-label") }}
-                    {{ form.pager_voertuigen(class="form-input", maxlength=24, placeholder="Bv. TS 2441 MAARN") }}
+                    <div class="pager-voertuig-chips">
+                        {% set geselecteerd = form.pager_voertuigen.data or [] %}
+                        {% for waarde, label in form.pager_voertuigen.choices %}
+                        <label class="pager-voertuig-chip">
+                            <input type="checkbox" name="pager_voertuigen" value="{{ waarde }}"
+                                   {% if waarde in geselecteerd %}checked{% endif %}>
+                            <span>{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="form-hint">Kies alle voertuig-/eenheids-types die uitgestuurd worden. In de PDF-pager verschijnen ze gescheiden door een spatie.</p>
                 </div>
             </div>
         </div>
@@ -4494,7 +4504,6 @@ setupCropper({
         'scenario': [
             { id: 'pager_prio', label: 'Prioriteit' },
             { id: 'pager-soort-select', label: 'Soort melding' },
-            { id: 'pager_voertuigen', label: 'Voertuigen / eenheden' },
             { id: 'scenariobeschrijving', label: 'Scenariobeschrijving' },
             { id: 'kenmerken_kerntaak', label: 'Kerntaak-kenmerken' },
             { id: 'gebouwkenmerken', label: 'Gebouwkenmerken' },

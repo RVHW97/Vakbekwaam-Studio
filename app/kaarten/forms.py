@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, IntegerField, RadioField
+from wtforms import StringField, TextAreaField, MultipleFileField, FileField, SubmitField, SelectField, SelectMultipleField, IntegerField, RadioField
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
 
 NAAM_MAX = 40
@@ -30,9 +30,10 @@ DOELGROEP_KEUZES = [
 
 TIJDSDUUR_KEUZES = [
     ('', '— kies tijdsduur —'),
-    ('1_oefenavond', '1 oefenavond'),
-    ('1_dagdeel', '1 dagdeel'),
-    ('2_dagdelen', '2 dagdelen'),
+    ('30 minuten', '30 minuten'),
+    ('1 uur', '1 uur'),
+    ('1,5 uur', '1,5 uur'),
+    ('2 uur', '2 uur'),
 ]
 
 # Opdrachtkaart kent kortere opties — een opdracht duurt doorgaans een kwartier tot drie kwartier,
@@ -61,6 +62,22 @@ OEFENLEIDER_ROL_KEUZES = [
     ('PKD-zagen', 'PKD Zagen'),
     ('anders', 'Anders (zelf invullen)'),
 ]
+
+# Pager toont uitsluitend voertuig-/eenheids-TYPES (geen specifieke voertuignummers).
+# Dit is de standaardlijst voor Brandweer Limburg-Noord.
+PAGER_VOERTUIG_KEUZES = [
+    ('TS', 'TS'),
+    ('OVD', 'OVD'),
+    ('WTH', 'WTH'),
+    ('RV', 'RV'),
+    ('SHE', 'SHE'),
+    ('BOE', 'BOE'),
+    ('GSE', 'GSE'),
+    ('AGS', 'AGS'),
+    ('SBE', 'SBE'),
+    ('SIV', 'SIV'),
+]
+
 
 PAGER_SOORT_KEUZES = [
     ('', '— kies soort melding —'),
@@ -191,7 +208,10 @@ class ScenariokaartForm(FlaskForm):
     pager_prio = SelectField('Prioriteit', choices=PAGER_PRIO_KEUZES, validators=[Optional()])
     pager_soort = SelectField('Soort melding', choices=PAGER_SOORT_KEUZES, validators=[Optional()])
     pager_soort_anders = StringField('Eigen soort melding', validators=[Optional(), Length(max=24)])
-    pager_voertuigen = StringField('Voertuigen / eenheden', validators=[Optional(), Length(max=24)])
+    # Meerdere voertuigtypen tegelijk (checkboxes). Opgeslagen als lijst in INHOUD_LIJST_VELDEN.
+    pager_voertuigen = SelectMultipleField('Voertuigen / eenheden',
+                                            choices=PAGER_VOERTUIG_KEUZES,
+                                            validators=[Optional()])
     scenariobeschrijving = TextAreaField('Scenariobeschrijving', validators=[Optional(), Length(max=800)])
     # Kenmerkenschema (5 velden, max 270 tekens ≈ 3 regels). Label van kenmerken_kerntaak is dynamisch.
     # In de UITGEPRINTE PDF krijgt elk kenmerk rechts nog een lege schrijfruimte
@@ -271,7 +291,7 @@ INHOUD_VELDEN = {
                  'ensceneerder_aantal',
                  'waarnemer_aantal', 'overig_functie', 'overig_aantal',
                  'tijdsduur', 'oefenmiddelen_basis', 'oefenmiddelen_extra', 'aanleiding_doelen',
-                 'pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen',
+                 'pager_prio', 'pager_soort', 'pager_soort_anders',
                  'scenariobeschrijving',
                  'ensceneringstips',
                  'kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken',
@@ -288,4 +308,6 @@ INHOUD_VELDEN = {
 
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).
 # Vereisen request.form.getlist() bij opslaan en lijst-prefill bij bewerken.
-INHOUD_LIJST_VELDEN = {}
+INHOUD_LIJST_VELDEN = {
+    'scenario': ['pager_voertuigen'],
+}

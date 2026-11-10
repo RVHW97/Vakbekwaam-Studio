@@ -969,7 +969,13 @@ def bewerken(kaart_id):
         for veld in INHOUD_VELDEN[kaart.type]:
             data[veld] = huidige.get(veld, '')
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
-            data[veld] = huidige.get(veld, []) or []
+            raw = huidige.get(veld, []) or []
+            # Backward-compat: ouder pager_voertuigen was een vrije string
+            # ("TS 2441"). Split op spaties zodat de SelectMultipleField
+            # de losse tokens kan matchen op zijn choices.
+            if isinstance(raw, str):
+                raw = [t for t in raw.split() if t]
+            data[veld] = raw
         form = form_class(data=data)
 
     wijziging_toelichting = (request.form.get('wijziging_toelichting') or '').strip()

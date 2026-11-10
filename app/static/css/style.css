@@ -634,6 +634,50 @@ body {
     accent-color: var(--kleur-rood);
 }
 
+/* Voertuig-type chips voor de pager-selectie: compacte knopjes waarop
+   de gebruiker meerdere opties kan aanvinken. De checkbox is onzichtbaar,
+   het label toont de staat via background/border. */
+.pager-voertuig-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.pager-voertuig-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.9rem;
+    border: 1.5px solid var(--kleur-grijs-rand, #c7c2b4);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--kleur-navy, #1B2A4A);
+    user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    margin-bottom: 0;
+}
+
+.pager-voertuig-chip:hover {
+    border-color: var(--kleur-navy, #1B2A4A);
+}
+
+.pager-voertuig-chip input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.pager-voertuig-chip:has(input:checked) {
+    background: var(--kleur-navy, #1B2A4A);
+    border-color: var(--kleur-navy, #1B2A4A);
+    color: #fff;
+}
+
 .form-error {
     color: var(--kleur-fout);
     font-size: 0.85rem;

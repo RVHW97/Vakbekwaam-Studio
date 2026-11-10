@@ -790,8 +790,22 @@
         overflow: hidden;
     }
     .pdf-pager-regel {
-        white-space: nowrap;
+        white-space: normal;
+        word-break: keep-all;
+        overflow-wrap: normal;
         overflow: hidden;
+    }
+    /* Voertuigen-regel mag over meerdere regels wrappen, maar NOOIT midden in
+       een woord — zo blijven TS, OVD, WTH etc. altijd leesbaar in hun geheel.
+       Iets kleinere font-size dan de kop-regel zodat 10 types op max 2 regels passen. */
+    .pdf-pager-regel-voertuigen {
+        white-space: normal;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        overflow: hidden;
+        font-size: 5.5pt;
+        line-height: 1.2;
+        margin-top: 0.3mm;
     }
 
     /* === KENMERKENSCHEMA — navy tint, gecentreerd === */
@@ -1265,7 +1279,14 @@
 {% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen', 'oefenmiddelen_basis', 'oefenmiddelen_extra'] %}
 {% set pager_velden = ['pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen'] %}
 {% set pager_soort_tekst = inhoud.get('pager_soort_anders') if inhoud.get('pager_soort') == 'anders' else inhoud.get('pager_soort', '') %}
-{% set heeft_pager = inhoud.get('pager_prio') or pager_soort_tekst or inhoud.get('pager_voertuigen') %}
+{# pager_voertuigen kan lijst (nieuw) of string (oude kaarten) zijn — normaliseer naar spatie-gescheiden tekst. #}
+{% set _pv_raw = inhoud.get('pager_voertuigen') or '' %}
+{% if _pv_raw is string %}
+    {% set pager_voertuigen_tekst = _pv_raw %}
+{% else %}
+    {% set pager_voertuigen_tekst = _pv_raw | join(' ') %}
+{% endif %}
+{% set heeft_pager = inhoud.get('pager_prio') or pager_soort_tekst or pager_voertuigen_tekst %}
 {% set kenmerken_velden = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
 {# Veiligheid-zinnen worden bij opdrachtkaart al in het LMRA-blok gerenderd — hier overslaan. #}
 {% set veiligheid_velden = ['veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3', 'veiligheid_zin_4', 'veiligheid_zin_5'] %}
@@ -1448,10 +1469,10 @@
                         <img class="pdf-pager-bg" src="{{ pager_c35_pad }}">
                         <div class="pdf-pager-overlay">
                             {% if inhoud.get('pager_prio') or pager_soort_tekst %}
-                            <div class="pdf-pager-regel">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
+                            <div class="pdf-pager-regel pdf-pager-regel-kop">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
                             {% endif %}
-                            {% if inhoud.get('pager_voertuigen') %}
-                            <div class="pdf-pager-regel">{{ inhoud.get('pager_voertuigen') }}</div>
+                            {% if pager_voertuigen_tekst %}
+                            <div class="pdf-pager-regel pdf-pager-regel-voertuigen">{{ pager_voertuigen_tekst }}</div>
                             {% endif %}
                         </div>
                     </div>
@@ -1469,10 +1490,10 @@
                 <img class="pdf-pager-bg" src="{{ pager_c35_pad }}">
                 <div class="pdf-pager-overlay">
                     {% if inhoud.get('pager_prio') or pager_soort_tekst %}
-                    <div class="pdf-pager-regel">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
+                    <div class="pdf-pager-regel pdf-pager-regel-kop">PRIO {{ inhoud.get('pager_prio', '') }} {{ pager_soort_tekst }}</div>
                     {% endif %}
-                    {% if inhoud.get('pager_voertuigen') %}
-                    <div class="pdf-pager-regel">{{ inhoud.get('pager_voertuigen') }}</div>
+                    {% if pager_voertuigen_tekst %}
+                    <div class="pdf-pager-regel pdf-pager-regel-voertuigen">{{ pager_voertuigen_tekst }}</div>
                     {% endif %}
                 </div>
             </div>
