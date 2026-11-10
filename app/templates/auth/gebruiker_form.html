@@ -29,7 +29,11 @@
         <div class="form-group">
             {{ form.rol.label }}
             {{ form.rol(class="form-input", id="rol-select") }}
-            <small class="form-hint">Medewerker O&amp;O mag alleen instructiekaarten (materieel) aanmaken en ensceneringstips reviewen. Oefencoördinator en Specialist krijgen een kerngroep.</small>
+            <small class="form-hint">
+                Medewerker O&amp;O mag alleen instructiekaarten (materieel) aanmaken en ensceneringstips reviewen.
+                Oefencoördinator en Specialist krijgen een kerngroep.
+                Oefencoördinator ROI krijgt een kerntaak-koppeling (reviewt alle niet-scenario-kaarten binnen die kerntaak).
+            </small>
         </div>
 
         <div class="form-group" id="kerngroep-groep">
@@ -38,8 +42,16 @@
             {% for error in form.kerngroep.errors %}
             <span class="form-error">{{ error }}</span>
             {% endfor %}
-            <small class="form-hint" id="kerngroep-hint-specialist" style="display:none;">
-                Specialist ROI bestaat niet — kies een andere kerngroep.
+        </div>
+
+        <div class="form-group" id="roi-kerntaak-groep">
+            {{ form.roi_kerntaak.label }}
+            {{ form.roi_kerntaak(class="form-input", id="roi-kerntaak-select") }}
+            {% for error in form.roi_kerntaak.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+            <small class="form-hint">
+                "Specialistisch materieel" bundelt redvoertuig, bijzondere blusmiddelen, overig materieel, algemeen en leiding &amp; coördinatie.
             </small>
         </div>
 
@@ -94,35 +106,29 @@
 </div>
 
 <script>
-// Toon kerngroep-dropdown alleen bij rol oefencoördinator / specialist.
-// Verberg + leegmaken bij admin / medewerker_oo. Blokkeer ROI bij specialist
-// (specialist ROI bestaat niet).
+// Toont enkel het relevante dropdown-blok per rol:
+//  - oefencoordinator / specialist → kerngroep
+//  - oefencoordinator_roi          → ROI-kerntaak
+//  - admin / medewerker_oo         → niets (beide leeg)
 (function() {
-    var rolSel = document.getElementById('rol-select');
-    var kgGroep = document.getElementById('kerngroep-groep');
-    var kgSel = document.getElementById('kerngroep-select');
-    var hintSpec = document.getElementById('kerngroep-hint-specialist');
-    if (!rolSel || !kgGroep || !kgSel) return;
+    var rolSel   = document.getElementById('rol-select');
+    var kgGroep  = document.getElementById('kerngroep-groep');
+    var kgSel    = document.getElementById('kerngroep-select');
+    var roiGroep = document.getElementById('roi-kerntaak-groep');
+    var roiSel   = document.getElementById('roi-kerntaak-select');
+    if (!rolSel || !kgGroep || !kgSel || !roiGroep || !roiSel) return;
 
-    var ROLLEN_MET_KG = ['oefencoordinator', 'specialist'];
+    var ROLLEN_MET_KG  = ['oefencoordinator', 'specialist'];
+    var ROLLEN_MET_ROI = ['oefencoordinator_roi'];
 
     function pasAan() {
         var rol = rolSel.value;
-        var toonKg = ROLLEN_MET_KG.indexOf(rol) !== -1;
-        kgGroep.style.display = toonKg ? '' : 'none';
-        if (!toonKg) {
-            kgSel.value = '';
-        }
-        // ROI-optie uitschakelen bij specialist.
-        for (var i = 0; i < kgSel.options.length; i++) {
-            var opt = kgSel.options[i];
-            if (opt.value === 'roi') {
-                var blokkeer = (rol === 'specialist');
-                opt.disabled = blokkeer;
-                if (blokkeer && kgSel.value === 'roi') kgSel.value = '';
-            }
-        }
-        if (hintSpec) hintSpec.style.display = (rol === 'specialist') ? '' : 'none';
+        var toonKg  = ROLLEN_MET_KG.indexOf(rol)  !== -1;
+        var toonRoi = ROLLEN_MET_ROI.indexOf(rol) !== -1;
+        kgGroep.style.display  = toonKg  ? '' : 'none';
+        roiGroep.style.display = toonRoi ? '' : 'none';
+        if (!toonKg)  kgSel.value  = '';
+        if (!toonRoi) roiSel.value = '';
     }
 
     rolSel.addEventListener('change', pasAan);

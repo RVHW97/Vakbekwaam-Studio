@@ -35,7 +35,7 @@
                 <option value="peer_review" {% if status == 'peer_review' %}selected{% endif %}>Peer-review</option>
                 <option value="specialist_review" {% if status == 'specialist_review' %}selected{% endif %}>Specialist-review</option>
                 <option value="gepubliceerd" {% if status == 'gepubliceerd' %}selected{% endif %}>Gepubliceerd</option>
-                <option value="gearchiveerd" {% if status == 'gearchiveerd' %}selected{% endif %}>Gearchiveerd</option>
+                <option value="archief" {% if status == 'archief' %}selected{% endif %}>Archief</option>
             </select>
         </label>
     </div>
@@ -66,7 +66,7 @@
         <tbody>
             {% for kaart in resultaten %}
             <tr>
-                <td><strong>{{ kaart.nummer }}</strong></td>
+                <td><strong>{{ kaart.nummer_leesbaar }}</strong></td>
                 <td>{{ kaart.naam }}</td>
                 <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
                 <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>

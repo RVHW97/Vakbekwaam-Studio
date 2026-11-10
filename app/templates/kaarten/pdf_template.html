@@ -822,14 +822,67 @@
         margin-bottom: 1mm;
     }
     .pdf-doc-rij { page-break-inside: avoid; }
-    .pdf-doc-links {
-        width: 62mm;
-        vertical-align: top;
-        padding: 0 4mm 4mm 0;
+    /* Kenmerken-schema: één blok per kenmerk, met gekleurde kop-strip in de
+       kerntaak-kleur. Daaronder twee gelijke kolommen: links de ingevulde
+       kenmerk-tekst, rechts een lege schrijfruimte voor de oefenleider. */
+    .pdf-kenmerk-legenda {
+        font-size: 8pt;
+        font-style: italic;
+        color: #1B2A4A;
+        opacity: 0.7;
+        margin-bottom: 2mm;
     }
-    .pdf-doc-rechts {
+    .pdf-kenmerk-blok {
+        page-break-inside: avoid;
+        margin-bottom: 3mm;
+        /* schoon, geen kader of achtergrond — iconen + onderstreping doen het werk */
+    }
+    .pdf-kenmerk-kop {
+        padding: 0 0 1mm 0;
+        color: #1B2A4A;
+        font-size: 9pt;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        border-bottom: 0.3mm solid #B8B2A4;
+    }
+    .pdf-kenmerk-icoon-badge {
+        display: inline-block;
+        width: 6mm;
+        height: 6mm;
+        border-radius: 50%;
+        text-align: center;
+        padding: 0.8mm 0;
+        box-sizing: border-box;
+        vertical-align: middle;
+        margin-right: 2mm;
+    }
+    .pdf-kenmerk-icoon-badge span,
+    .pdf-kenmerk-icoon-badge svg {
+        width: 4.5mm !important;
+        height: 4.5mm !important;
+    }
+    .pdf-kenmerk-titel {
+        vertical-align: middle;
+    }
+    .pdf-kenmerk-content {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .pdf-kenmerk-tekst-cel {
+        width: 50%;
         vertical-align: top;
-        padding: 0 0 4mm 0;
+        padding: 2mm 3mm 2mm 0;
+    }
+    .pdf-kenmerk-notitie-cel {
+        width: 50%;
+        vertical-align: top;
+        padding: 2mm 0 2mm 3mm;
+        border-left: 0.2mm dashed #B8B2A4;
+    }
+    /* Lege schrijfregels voor de oefenleider in de notitie-kolom. */
+    .pdf-doc-locatie-lijn {
+        height: 5.5mm;
+        border-bottom: 0.2mm solid #B8B2A4;
     }
     .pdf-doc-kop {
         width: 100%;
@@ -1160,7 +1213,7 @@
             <polygon fill="{{ kerntaak_kleur }}" points="7,0 18,0 41,56 151,56 148,68 141,94 7,94"/>
         </svg>
         <div class="pdf-header-first-titel">{{ kaart.naam }}</div>
-        <div class="pdf-header-first-nummer">{{ kaart.nummer }}</div>
+        <div class="pdf-header-first-nummer">{{ kaart.nummer_leesbaar }}</div>
     </div>
 </div>
 
@@ -1172,7 +1225,7 @@
             <polygon fill="{{ kerntaak_kleur }}" points="7,0 165,0 160,20 126,20 7,20"/>
         </svg>
         <div class="pdf-header-rest-titel">{{ kaart.naam }}</div>
-        <div class="pdf-header-rest-nummer">{{ kaart.nummer }}</div>
+        <div class="pdf-header-rest-nummer">{{ kaart.nummer_leesbaar }}</div>
     </div>
 </div>
 
@@ -1432,27 +1485,31 @@
     {% elif veld == 'kenmerken_kerntaak' and heeft_kenmerken.v %}
     <div class="pdf-kenmerken-wrapper">
         <div class="pdf-sectie-titel-plain">Kenmerkenschema</div>
-        <table class="pdf-doc-tabel">
+        <div class="pdf-kenmerk-legenda">
+            Rechts: ruimte voor notities van de oefenleider — eigen aan de oefenlocatie.
+        </div>
         {% for k in kenmerken_velden %}
             {% if inhoud.get(k) %}
-            <tr class="pdf-doc-rij">
-                <td class="pdf-doc-links">
-                    <table class="pdf-doc-kop"><tr>
-                        <td class="pdf-doc-icoon-cel">
-                            <span class="pdf-doc-icoon-badge" style="background: #1B2A4A25;">{{ kenmerk_icoon_pdf(k, kaart.kerntaak, '#1B2A4A') }}</span>
+            <div class="pdf-kenmerk-blok">
+                <div class="pdf-kenmerk-kop">
+                    <span class="pdf-kenmerk-icoon-badge" style="background: {{ kerntaak_kleur }}20;">{{ kenmerk_icoon_pdf(k, kaart.kerntaak, kerntaak_kleur) }}</span>
+                    <span class="pdf-kenmerk-titel">{{ labels[k] }}</span>
+                </div>
+                <table class="pdf-kenmerk-content">
+                    <tr>
+                        <td class="pdf-kenmerk-tekst-cel">
+                            <div class="pdf-doc-tekst">{{ inhoud[k] | replace('\n', '<br>')|safe }}</div>
                         </td>
-                        <td class="pdf-doc-titel-cel">
-                            <div class="pdf-doc-titel">{{ labels[k] }}</div>
+                        <td class="pdf-kenmerk-notitie-cel">
+                            <div class="pdf-doc-locatie-lijn"></div>
+                            <div class="pdf-doc-locatie-lijn"></div>
+                            <div class="pdf-doc-locatie-lijn"></div>
                         </td>
-                    </tr></table>
-                </td>
-                <td class="pdf-doc-rechts">
-                    <div class="pdf-doc-tekst">{{ inhoud[k] | replace('\n', '<br>')|safe }}</div>
-                </td>
-            </tr>
+                    </tr>
+                </table>
+            </div>
             {% endif %}
         {% endfor %}
-        </table>
     </div>
     {% elif veld == 'ensceneringstips' and heeft_tips %}
     <div class="pdf-sectie pdf-sectie--stappen">

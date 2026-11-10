@@ -14,7 +14,7 @@
         {% for r in openstaande_reviews %}
         <div class="dashboard-taak-rij">
             <div class="dashboard-taak-info">
-                <strong>{{ r.kaart.nummer }}</strong> &mdash; {{ r.kaart.naam }}
+                <strong>{{ r.kaart.nummer_leesbaar }}</strong> &mdash; {{ r.kaart.naam }}
                 <span class="dashboard-taak-fase">
                     {{ r.fase_naam }} &middot; ingediend op {{ r.aangemaakt_op.strftime('%d-%m-%Y') }}
                 </span>
@@ -35,7 +35,7 @@
         {% for v in rechten_verzoeken %}
         <div class="dashboard-taak-rij dashboard-taak-verzoek">
             <div class="dashboard-taak-info">
-                <strong>{{ v.kaart.nummer }}</strong> &mdash; {{ v.kaart.naam }}
+                <strong>{{ v.kaart.nummer_leesbaar }}</strong> &mdash; {{ v.kaart.naam }}
                 <span class="dashboard-taak-fase">
                     Aanvrager: <strong>{{ v.aanvrager.naam }}</strong>
                     &middot; huidige maker: {{ v.kaart.auteur.naam }}
@@ -75,7 +75,7 @@
         {% for r in afkeur_meldingen %}
         <div class="dashboard-taak-rij dashboard-taak-afkeur">
             <div class="dashboard-taak-info">
-                <strong>{{ r.kaart.nummer }}</strong> &mdash; {{ r.kaart.naam }}
+                <strong>{{ r.kaart.nummer_leesbaar }}</strong> &mdash; {{ r.kaart.naam }}
                 <span class="dashboard-taak-fase">
                     {{ r.fase_naam }} afgekeurd door {{ r.reviewer.naam }}
                     {% if r.voltooid_op %}&middot; {{ r.voltooid_op.strftime('%d-%m-%Y') }}{% endif %}
@@ -144,13 +144,20 @@
             <tbody>
                 {% for kaart in kaarten %}
                 <tr>
-                    <td><strong>{{ kaart.nummer }}</strong></td>
+                    <td><strong>{{ kaart.nummer_leesbaar }}</strong></td>
                     <td>{{ kaart.naam }}</td>
                     <td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>
                     <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>
                     <td class="cell-locatie">
-                        {% set loc = kaart.huidige_review_locatie %}
-                        {% if loc %}{{ loc }}{% else %}—{% endif %}
+                        {% set regels = kaart.review_locatie_regels %}
+                        {% if regels %}
+                            {% for r in regels %}
+                            <div class="locatie-rij locatie-{{ r.status }}">
+                                <span class="locatie-icoon" aria-hidden="true">{{ r.icoon }}</span>
+                                <span class="locatie-tekst">{{ r.tekst }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}—{% endif %}
                     </td>
                     <td>{{ kaart.bijgewerkt_op.strftime('%d-%m-%Y') }}</td>
                     <td>
@@ -177,11 +184,11 @@
     {{ kaarten_tabel(mijn_kaarten, 'Je hebt nog geen kaarten gemaakt of bewerkt.') }}
 </div>
 
-{% if current_user.kerngroep %}
+{% if kerngroep_label %}
 <div class="recent-section">
-    <h2>🏷 Kaarten uit mijn kerngroep — {{ current_user.kerngroep_naam }}</h2>
-    <p class="section-hint">Andere kaarten binnen jouw kerngroep.</p>
-    {{ kaarten_tabel(kerngroep_kaarten, 'Er staan nog geen andere kaarten in jouw kerngroep.') }}
+    <h2>🏷 Kaarten uit mijn {{ 'ROI-kerntaak' if current_user.is_oefencoordinator_roi else 'kerngroep' }} — {{ kerngroep_label }}</h2>
+    <p class="section-hint">Andere kaarten die onder jouw verantwoordelijkheid vallen.</p>
+    {{ kaarten_tabel(kerngroep_kaarten, 'Er staan nog geen andere kaarten in jouw groep.') }}
 </div>
 {% endif %}
 {% endblock %}

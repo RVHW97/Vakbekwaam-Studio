@@ -295,15 +295,17 @@ def genereer_pdf(kaart):
     # UI toont ze als "Wat regel jij" / "Wat regelen wij".
     if kaart.type in ('scenario', 'opdracht'):
         BASIS_LABELS = {
-            'ts':             'TS',
-            'basisoefenset':  'Basisoefenset',
-            'lokaal_beamer':  'Lokaal met beamer en scherm',
-            'oefenterrein':   'Oefenterrein / buitenlocatie',
-            'flipover':       'Flipover of whiteboard',
-            'laptop':         'Laptop',
+            'ts':              'TS',
+            'basisoefenset':   'Basisoefenset',
+            'lokaal_beamer':   'Lokaal met beamer en scherm',
+            'oefenterrein':    'Oefenterrein',
+            'externe_locatie': 'Externe locatie',
+            'flipover':        'Flipover of whiteboard',
+            'laptop':          'Laptop',
         }
         EXTRA_LABELS = {
             'extra_ts':             'Extra TS',
+            'extra_basisoefenset':  'Extra basisoefenset',
             'extra_gespreksgroep':  'Extra gespreksgroep',
             'cirrus':               'Cirrus',
             'moi':                  'MOI-oefenset',
@@ -313,8 +315,9 @@ def genereer_pdf(kaart):
         }
         # Opties waar een aantal (× N) nooit logisch is — ook als een oude kaart
         # er toch een aantal bij heeft opgeslagen, laten we het in de PDF weg.
-        BASIS_ZONDER_AANTAL = {'ts', 'basisoefenset',
-                                'lokaal_beamer', 'oefenterrein', 'flipover', 'laptop'}
+        BASIS_ZONDER_AANTAL = {'ts', 'basisoefenset', 'lokaal_beamer',
+                                'oefenterrein', 'externe_locatie',
+                                'flipover', 'laptop'}
         EXTRA_ZONDER_AANTAL = {'extra_ts', 'moi', 'autoambulance'}
         try:
             basis_items = json.loads(inhoud.get('oefenmiddelen_basis') or '[]')

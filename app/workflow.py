@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy import func
 from app import db
 from app.models import (User, Kaart, Review, KaartWijziging,
-                        SPECIALIST_KERNGROEPEN)
+                        SPECIALIST_KERNGROEPEN, roi_groep_voor_kaart)
 
 
 # -------------------- Reviewer-selectie (round-robin) --------------------
@@ -71,18 +71,29 @@ def kies_ensceneringstips_reviewer(kaart):
     return _kies_round_robin('ensceneringstips', kandidaten)
 
 
-def kies_specialist_reviewer(kaart):
-    """Round-robin uit specialisten BUITEN eigen kerngroep.
-    Voor ROI-kaarten: alle 5 specialisten komen in aanmerking (specialist ROI bestaat niet).
+def kies_roi_reviewer(kaart):
+    """Round-robin uit oefencoordinator_roi gekoppeld aan de ROI-groep van de
+    kaart (via KERNTAAK_NAAR_ROI). Nooit voor scenario- of themakaarten
+    (zie TYPES_ZONDER_ROI). Als er geen passende ROI-oefencoord bestaat,
+    retourneert None — de review wordt dan overgeslagen (geen blokkade).
     """
+    roi_groep = roi_groep_voor_kaart(kaart)
+    if roi_groep is None:
+        return None
+    kandidaten = _actieve_users(lambda u: (u.is_oefencoordinator_roi
+                                            and u.roi_kerntaak == roi_groep
+                                            and u.id != kaart.auteur_id))
+    return _kies_round_robin('roi', kandidaten)
+
+
+def kies_specialist_reviewer(kaart):
+    """Round-robin uit specialisten BUITEN eigen kerngroep."""
     doel = kaart.effectieve_kerngroep
     def _match(u):
         if not u.is_specialist or not u.kerngroep:
             return False
         if u.id == kaart.auteur_id:
             return False
-        if doel == 'roi':
-            return True
         return u.kerngroep != doel
     kandidaten = _actieve_users(_match)
     return _kies_round_robin('specialist', kandidaten)
@@ -130,9 +141,15 @@ def dien_in_voor_review(kaart, maker):
 
     peer_al_ok = _fase_al_ok('peer')
     tips_al_ok = (kaart.type != 'scenario') or _fase_al_ok('ensceneringstips')
+    # ROI: alleen relevant voor kaart-types waarvoor TYPES_ZONDER_ROI False
+    # geeft (= niet scenario en niet thema). Als er geen passende ROI-
+    # oefencoord in het systeem zit, geldt de fase als 'niet van toepassing'.
+    roi_vereist = roi_groep_voor_kaart(kaart) is not None
+    roi_al_ok = (not roi_vereist) or _fase_al_ok('roi')
 
-    heeft_1e_rondes = laatste_per_fase.get('peer') is not None or \
-                      laatste_per_fase.get('ensceneringstips') is not None
+    heeft_1e_rondes = (laatste_per_fase.get('peer') is not None
+                       or laatste_per_fase.get('ensceneringstips') is not None
+                       or laatste_per_fase.get('roi') is not None)
 
     def _hergebruik_of_kies(fase, kies_fn):
         """Als er al een afgekeurde review op deze fase bestaat, krijgt die
@@ -144,8 +161,8 @@ def dien_in_voor_review(kaart, maker):
             return laatste.reviewer
         return kies_fn(kaart)
 
-    if heeft_1e_rondes and peer_al_ok and tips_al_ok:
-        # Beide 1e-rondes OK → direct door naar specialist-eindcheck.
+    if heeft_1e_rondes and peer_al_ok and tips_al_ok and roi_al_ok:
+        # Alle 1e-rondes OK → direct door naar specialist-eindcheck.
         specialist = _hergebruik_of_kies('specialist', kies_specialist_reviewer)
         if specialist is None:
             return {'ok': False,
@@ -171,8 +188,9 @@ def dien_in_voor_review(kaart, maker):
         ))
         return {'ok': True, 'reviews': [rev]}
 
-    if heeft_1e_rondes and (peer_al_ok or tips_al_ok):
-        # Eén van de 1e-rondes is al OK — start alléén de fase die opnieuw moet.
+    if heeft_1e_rondes and (peer_al_ok or tips_al_ok or roi_al_ok):
+        # Eén of meer van de 1e-rondes is al OK — start alléén de fase(s) die
+        # opnieuw moet(en).
         if not peer_al_ok:
             peer = _hergebruik_of_kies('peer', kies_peer_reviewer)
             if peer is None:
@@ -187,6 +205,11 @@ def dien_in_voor_review(kaart, maker):
             if tips_rev is not None:
                 nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='ensceneringstips',
                                                reviewer_id=tips_rev.id, status='open'))
+        if roi_vereist and not roi_al_ok:
+            roi_rev = _hergebruik_of_kies('roi', kies_roi_reviewer)
+            if roi_rev is not None:
+                nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='roi',
+                                               reviewer_id=roi_rev.id, status='open'))
         for r in nieuwe_reviews:
             db.session.add(r)
         kaart.status = 'peer_review'
@@ -196,6 +219,8 @@ def dien_in_voor_review(kaart, maker):
             andere.append('peer-review')
         if kaart.type == 'scenario' and tips_al_ok:
             andere.append('ensceneringstips')
+        if roi_vereist and roi_al_ok:
+            andere.append('ROI-review')
         db.session.add(KaartWijziging(
             kaart_id=kaart.id,
             gebruiker_id=maker.id if maker else None,
@@ -222,6 +247,13 @@ def dien_in_voor_review(kaart, maker):
             # over — de hoofd-peer-flow blijft doorlopen zonder blokkade.
             nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='ensceneringstips',
                                            reviewer_id=tips_rev.id, status='open'))
+
+    # ROI: alleen instructie- en opdrachtkaarten (niet scenario, niet thema).
+    # kies_roi_reviewer gaf None als het type daar niet onder valt.
+    roi_rev = kies_roi_reviewer(kaart)
+    if roi_rev is not None:
+        nieuwe_reviews.append(Review(kaart_id=kaart.id, fase='roi',
+                                       reviewer_id=roi_rev.id, status='open'))
 
     for r in nieuwe_reviews:
         db.session.add(r)
@@ -315,10 +347,10 @@ def verwerk_review_besluit(review, besluit, opmerking, uitvoerder):
                 'boodschap': f'Kaart gepubliceerd als versie {kaart.versie}.',
                 'nieuwe_status': 'gepubliceerd'}
 
-    # peer of ensceneringstips → check of alle 1e-ronde-reviews klaar zijn
+    # peer / ensceneringstips / roi → check of alle 1e-ronde-reviews klaar zijn
     open_eerste_ronde = Review.query.filter(
         Review.kaart_id == kaart.id,
-        Review.fase.in_(['peer', 'ensceneringstips']),
+        Review.fase.in_(['peer', 'ensceneringstips', 'roi']),
         Review.status == 'open'
     ).all()
     if open_eerste_ronde:

@@ -14,7 +14,7 @@
                 <th>Naam</th>
                 <th>E-mailadres</th>
                 <th>Rol</th>
-                <th>Kerngroep</th>
+                <th>Kerngroep / ROI-kerntaak</th>
                 <th>Status</th>
                 <th>Acties</th>
             </tr>
@@ -28,8 +28,12 @@
                 <td>
                     {% if user.kerngroep_naam %}
                         {{ user.kerngroep_naam }}
+                    {% elif user.roi_kerntaak_naam %}
+                        {{ user.roi_kerntaak_naam }} <small style="color:#666;">(ROI)</small>
                     {% elif user.rol in ('oefencoordinator', 'specialist') %}
-                        <span class="badge badge-inactive" title="Kerngroep ontbreekt — klik bewerken">⚠ ontbreekt</span>
+                        <span class="badge badge-inactive" title="Kerngroep ontbreekt — klik bewerken">⚠ kerngroep ontbreekt</span>
+                    {% elif user.rol == 'oefencoordinator_roi' %}
+                        <span class="badge badge-inactive" title="ROI-kerntaak ontbreekt — klik bewerken">⚠ ROI-kerntaak ontbreekt</span>
                     {% else %}
                         <span style="color:#999;">—</span>
                     {% endif %}

@@ -6,7 +6,8 @@ from werkzeug.security import check_password_hash
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, NieuweGebruikerForm, GebruikerBewerkenForm
-from app.models import User, ROLLEN_MET_KERNGROEP, SPECIALIST_KERNGROEPEN, KERNGROEPEN
+from app.models import (User, ROLLEN_MET_KERNGROEP, SPECIALIST_KERNGROEPEN,
+                        KERNGROEPEN, ROI_KERNTAKEN)
 
 # Dummy-hash om de check_password_hash-tijd óók te betalen bij onbekende e-mailadressen.
 # Zonder deze extra hash is een timing-side-channel te meten.
@@ -41,14 +42,34 @@ def admin_required(f):
     return decorated_function
 
 
-def _valideer_rol_kerngroep(rol, kerngroep, form):
-    """Zorgt dat rol en kerngroep bij elkaar passen voordat we opslaan.
-    - Oefencoordinator moet een kerngroep hebben (één van de 6 inclusief ROI).
-    - Specialist moet een kerngroep hebben, maar GEEN ROI (specialist ROI bestaat niet).
-    - Admin en medewerker_oo mogen géén kerngroep hebben (we wissen 'm anders).
-    Retourneert een foutmelding (string) of None als alles OK is. Vult tegelijk
-    form.kerngroep.errors voor inline weergave.
+def _valideer_rol_kerngroep(rol, kerngroep, form, roi_kerntaak=None):
+    """Zorgt dat rol en kerngroep (resp. ROI-kerntaak) bij elkaar passen voor
+    opslag.
+    - Oefencoordinator en specialist moeten een kerngroep hebben uit KERNGROEPEN
+      (brand/natuurbrand/water/thv/ibgs). Geen ROI meer: kerngroep ROI bestaat
+      niet; oefencoord-ROI is een aparte rol.
+    - Oefencoordinator_roi moet een roi_kerntaak hebben (brand/ibgs/thv/water/
+      natuurbrand/specialistisch) en GEEN kerngroep.
+    - Admin en medewerker_oo mogen géén kerngroep en géén roi_kerntaak hebben.
+    Retourneert een foutmelding (string) of None als alles OK is.
     """
+    if rol == 'oefencoordinator_roi':
+        if kerngroep:
+            form.kerngroep.errors = list(form.kerngroep.errors) + [
+                'Oefencoördinator ROI heeft geen kerngroep nodig — kies "— geen kerngroep —".']
+            return 'Oefencoördinator ROI mag geen kerngroep hebben.'
+        if not roi_kerntaak:
+            if hasattr(form, 'roi_kerntaak'):
+                form.roi_kerntaak.errors = list(form.roi_kerntaak.errors) + [
+                    'Kies een ROI-kerntaak.']
+            return 'Oefencoördinator ROI vereist een kerntaak-koppeling.'
+        if roi_kerntaak not in ROI_KERNTAKEN:
+            if hasattr(form, 'roi_kerntaak'):
+                form.roi_kerntaak.errors = list(form.roi_kerntaak.errors) + [
+                    'Ongeldige ROI-kerntaak.']
+            return 'Ongeldige ROI-kerntaak.'
+        return None
+
     if rol in ROLLEN_MET_KERNGROEP:
         if not kerngroep:
             form.kerngroep.errors = list(form.kerngroep.errors) + [
@@ -58,16 +79,23 @@ def _valideer_rol_kerngroep(rol, kerngroep, form):
             form.kerngroep.errors = list(form.kerngroep.errors) + [
                 'Ongeldige kerngroep.']
             return 'Ongeldige kerngroep.'
-        if rol == 'specialist' and kerngroep not in SPECIALIST_KERNGROEPEN:
-            form.kerngroep.errors = list(form.kerngroep.errors) + [
-                'Specialist ROI bestaat niet — kies een andere kerngroep.']
-            return 'Specialist ROI bestaat niet.'
-    else:
-        # Admin / medewerker_oo mogen géén kerngroep hebben.
-        if kerngroep:
-            form.kerngroep.errors = list(form.kerngroep.errors) + [
-                'Deze rol heeft geen kerngroep nodig — kies "— geen kerngroep —".']
-            return 'Deze rol mag geen kerngroep hebben.'
+        if roi_kerntaak:
+            if hasattr(form, 'roi_kerntaak'):
+                form.roi_kerntaak.errors = list(form.roi_kerntaak.errors) + [
+                    'Deze rol heeft geen ROI-kerntaak nodig.']
+            return 'Deze rol mag geen ROI-kerntaak hebben.'
+        return None
+
+    # Admin / medewerker_oo mogen géén kerngroep en géén roi_kerntaak hebben.
+    if kerngroep:
+        form.kerngroep.errors = list(form.kerngroep.errors) + [
+            'Deze rol heeft geen kerngroep nodig — kies "— geen kerngroep —".']
+        return 'Deze rol mag geen kerngroep hebben.'
+    if roi_kerntaak:
+        if hasattr(form, 'roi_kerntaak'):
+            form.roi_kerntaak.errors = list(form.roi_kerntaak.errors) + [
+                'Deze rol heeft geen ROI-kerntaak nodig.']
+        return 'Deze rol mag geen ROI-kerntaak hebben.'
     return None
 
 
@@ -125,7 +153,8 @@ def gebruikers():
 def gebruiker_nieuw():
     form = NieuweGebruikerForm()
     if form.validate_on_submit():
-        rol_fout = _valideer_rol_kerngroep(form.rol.data, form.kerngroep.data, form)
+        rol_fout = _valideer_rol_kerngroep(form.rol.data, form.kerngroep.data, form,
+                                            roi_kerntaak=(form.roi_kerntaak.data or None))
         if rol_fout:
             flash(rol_fout, 'danger')
         elif User.query.filter_by(email=form.email.data.lower().strip()).first():
@@ -135,7 +164,8 @@ def gebruiker_nieuw():
                 email=form.email.data.lower().strip(),
                 naam=form.naam.data.strip(),
                 rol=form.rol.data,
-                kerngroep=(form.kerngroep.data or None)
+                kerngroep=(form.kerngroep.data or None),
+                roi_kerntaak=(form.roi_kerntaak.data or None),
             )
             user.set_wachtwoord(form.wachtwoord.data)
             db.session.add(user)
@@ -162,6 +192,7 @@ def gebruiker_bewerken(user_id):
         else:
             nieuwe_rol = form.rol.data
             nieuwe_kerngroep = form.kerngroep.data or None
+            nieuwe_roi_kerntaak = form.roi_kerntaak.data or None
             nieuw_actief = form.actief.data
             # Guard 1: admin mag zichzelf niet degraderen of deactiveren.
             if user.id == current_user.id:
@@ -180,8 +211,9 @@ def gebruiker_bewerken(user_id):
                           'admin aan voordat je deze wijzigt.', 'danger')
                     return render_template('auth/gebruiker_form.html', form=form,
                                            titel='Gebruiker bewerken')
-            # Guard 3: rol + kerngroep moeten bij elkaar passen.
-            rol_fout = _valideer_rol_kerngroep(nieuwe_rol, nieuwe_kerngroep, form)
+            # Guard 3: rol + kerngroep (of ROI-kerntaak) moeten bij elkaar passen.
+            rol_fout = _valideer_rol_kerngroep(nieuwe_rol, nieuwe_kerngroep, form,
+                                                roi_kerntaak=nieuwe_roi_kerntaak)
             if rol_fout:
                 flash(rol_fout, 'danger')
                 return render_template('auth/gebruiker_form.html', form=form,
@@ -191,6 +223,7 @@ def gebruiker_bewerken(user_id):
             user.email = form.email.data.lower().strip()
             user.rol = nieuwe_rol
             user.kerngroep = nieuwe_kerngroep
+            user.roi_kerntaak = nieuwe_roi_kerntaak
             user.actief = nieuw_actief
             if form.nieuw_wachtwoord.data:
                 user.set_wachtwoord(form.nieuw_wachtwoord.data)

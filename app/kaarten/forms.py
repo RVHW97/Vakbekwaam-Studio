@@ -193,12 +193,14 @@ class ScenariokaartForm(FlaskForm):
     pager_soort_anders = StringField('Eigen soort melding', validators=[Optional(), Length(max=24)])
     pager_voertuigen = StringField('Voertuigen / eenheden', validators=[Optional(), Length(max=24)])
     scenariobeschrijving = TextAreaField('Scenariobeschrijving', validators=[Optional(), Length(max=800)])
-    # Kenmerkenschema (5 velden, max 180 tekens = ~2 regels). Label van kenmerken_kerntaak is dynamisch.
-    kenmerken_kerntaak = TextAreaField('Kerntaak-kenmerken', validators=[Optional(), Length(max=180)])
-    gebouwkenmerken = TextAreaField('Gebouwkenmerken', validators=[Optional(), Length(max=180)])
-    menskenmerken = TextAreaField('Menskenmerken', validators=[Optional(), Length(max=180)])
-    omgevingskenmerken = TextAreaField('Omgevingskenmerken', validators=[Optional(), Length(max=180)])
-    interventiekenmerken = TextAreaField('Interventiekenmerken', validators=[Optional(), Length(max=180)])
+    # Kenmerkenschema (5 velden, max 270 tekens ≈ 3 regels). Label van kenmerken_kerntaak is dynamisch.
+    # In de UITGEPRINTE PDF krijgt elk kenmerk rechts nog een lege schrijfruimte
+    # voor de oefenleider; dat is puur papier-ruimte zonder app-veld.
+    kenmerken_kerntaak = TextAreaField('Kerntaak-kenmerken', validators=[Optional(), Length(max=270)])
+    gebouwkenmerken = TextAreaField('Gebouwkenmerken', validators=[Optional(), Length(max=270)])
+    menskenmerken = TextAreaField('Menskenmerken', validators=[Optional(), Length(max=270)])
+    omgevingskenmerken = TextAreaField('Omgevingskenmerken', validators=[Optional(), Length(max=270)])
+    interventiekenmerken = TextAreaField('Interventiekenmerken', validators=[Optional(), Length(max=270)])
     # Ensceneringstips — JSON-lijst: [{"id": "<uuid>", "tekst": "...",
     #                                  "fotos": [{"slot": "<uuid>", "bestand": "xxx.jpg",
     #                                             "bestand_origineel": "yyy.jpg"}]}].

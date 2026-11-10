@@ -365,6 +365,23 @@ body {
     color: #333;
     max-width: 260px;
 }
+.cell-locatie .locatie-rij {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    line-height: 1.3;
+    padding: 0.1rem 0;
+}
+.cell-locatie .locatie-icoon {
+    flex-shrink: 0;
+    width: 1.2rem;
+    text-align: center;
+    font-size: 0.95rem;
+}
+.cell-locatie .locatie-open     .locatie-icoon { color: #B6871E; }
+.cell-locatie .locatie-goedgekeurd .locatie-icoon { color: #2E7D32; }
+.cell-locatie .locatie-afgekeurd  .locatie-icoon { color: #C8102E; }
+
 .readonly-banner-acties { margin-top: 0.75rem; }
 .readonly-banner-hint {
     display: block;
@@ -1539,7 +1556,8 @@ body {
     border: 1px solid var(--kleur-brand-rood);
 }
 
-.badge-gearchiveerd {
+.badge-gearchiveerd,
+.badge-archief {
     background-color: #ECECEC;
     color: #666;
     border: 1px solid #BBB;

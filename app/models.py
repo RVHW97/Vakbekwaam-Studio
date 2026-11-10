@@ -18,35 +18,81 @@ KAART_TYPES = {
 # Gebruikersrollen — volgorde = oplopend in rechten.
 # 'medewerker_oo' = Medewerker Opleiden & Oefenen (geen kerngroep; mag enkel
 # instructiekaart-materieel aanmaken + ensceneringstips reviewen op scenariokaart).
-# 'oefencoordinator' en 'specialist' krijgen daarnaast nog een kerngroep (zie KERNGROEPEN).
+# 'oefencoordinator' en 'specialist' krijgen een kerngroep (zie KERNGROEPEN).
+# 'oefencoordinator_roi' = extra review-laag voor Repressieve Oefen Inzet; krijgt
+#   GEEN kerngroep maar een kerntaak-mapping (zie ROI_KERNTAKEN). Mag ook zelf
+#   kaarten maken en indienen.
 ROLLEN = {
-    'medewerker_oo':    {'naam': 'Medewerker O&O',   'niveau': 1},
-    'oefencoordinator': {'naam': 'Oefencoördinator', 'niveau': 2},
-    'specialist':       {'naam': 'Specialist',       'niveau': 3},
-    'admin':            {'naam': 'Admin',            'niveau': 4},
+    'medewerker_oo':        {'naam': 'Medewerker O&O',        'niveau': 1},
+    'oefencoordinator':     {'naam': 'Oefencoördinator',      'niveau': 2},
+    'oefencoordinator_roi': {'naam': 'Oefencoördinator ROI',  'niveau': 2},
+    'specialist':           {'naam': 'Specialist',            'niveau': 3},
+    'admin':                {'naam': 'Admin',                 'niveau': 4},
 }
 
 ROL_KEUZES = [(k, v['naam']) for k, v in ROLLEN.items()]
 
-# Kerngroepen voor rol-onderscheiding. Oefencoördinatoren kennen alle 6; specialisten
-# kennen alleen de eerste 5 (geen specialist ROI). 'Algemeen' is géén kerngroep hier —
-# algemene kaarten krijgen bij indienen door de maker een kerngroep met meeste affiniteit.
+# Kerngroepen voor rol-onderscheiding. Oefencoördinatoren en specialisten kennen
+# dezelfde 5. 'Algemeen' is géén kerngroep hier — algemene kaarten krijgen bij
+# indienen door de maker een kerngroep met meeste affiniteit.
 KERNGROEPEN = {
     'brand':       'Brand',
     'natuurbrand': 'Natuurbrand',
     'water':       'Waterongevallen',
     'thv':         'THV',
     'ibgs':        'IBGS',
-    'roi':         'ROI',
 }
 KERNGROEP_KEUZES = [(k, v) for k, v in KERNGROEPEN.items()]
 
-# Specialisten kennen géén ROI; voor een ROI-kaart gaat de eindcheck naar één van alle 5.
-SPECIALIST_KERNGROEPEN = {k: v for k, v in KERNGROEPEN.items() if k != 'roi'}
+# Specialisten kennen dezelfde 5 kerngroepen.
+SPECIALIST_KERNGROEPEN = dict(KERNGROEPEN)
 SPECIALIST_KERNGROEP_KEUZES = [(k, v) for k, v in SPECIALIST_KERNGROEPEN.items()]
 
 # Rollen die een kerngroep MOETEN hebben.
 ROLLEN_MET_KERNGROEP = {'oefencoordinator', 'specialist'}
+
+# ROI-kerntaak-koppeling. Een oefencoordinator_roi is verantwoordelijk voor ÉÉN
+# ROI-groep. 'specialistisch' bundelt redvoertuig / bijzondere_blusmiddelen /
+# overig / algemeen / leiding_coordinatie — daarvoor is één ROI-oefencoord.
+ROI_KERNTAKEN = {
+    'brand':          'Brand',
+    'ibgs':           'IBGS',
+    'thv':            'THV',
+    'water':          'Waterongevallen',
+    'natuurbrand':    'Natuurbrand',
+    'specialistisch': 'Specialistisch materieel',
+}
+ROI_KERNTAAK_KEUZES = [(k, v) for k, v in ROI_KERNTAKEN.items()]
+
+# Welke kerntaak (bron-sleutel van kaart) valt onder welke ROI-groep?
+# Niet-genoemde kerntaken vallen onder 'specialistisch'.
+KERNTAAK_NAAR_ROI = {
+    'brand':          'brand',
+    'ibgs':           'ibgs',
+    'thv':            'thv',
+    'water':          'water',
+    'natuurbrand':    'natuurbrand',
+    # Alles hieronder (redvoertuig, bijzondere_blusmiddelen, overig, algemeen,
+    # leiding_coordinatie, …) valt onder 'specialistisch'.
+}
+
+
+# Kaart-types waarop GEEN ROI-review wordt gedaan. Scenariokaart heeft al een
+# ensceneringstips-review door medewerker O&O. Themakaart bundelt bestaande
+# kaarten en krijgt daarom zelf geen ROI-controle.
+TYPES_ZONDER_ROI = {'scenario', 'thema'}
+
+
+def roi_groep_voor_kaart(kaart):
+    """Welke ROI-groep hoort bij deze kaart? None als het type GEEN ROI-review
+    krijgt (scenario, thema) of als er geen kerntaak is — dan wordt de ROI-
+    fase overgeslagen.
+    """
+    if kaart.type in TYPES_ZONDER_ROI:
+        return None
+    if not kaart.kerntaak:
+        return None
+    return KERNTAAK_NAAR_ROI.get(kaart.kerntaak, 'specialistisch')
 
 # Kaart-status-waarden (voorheen alleen 'concept' / 'gepubliceerd').
 KAART_STATUS = {
@@ -54,6 +100,10 @@ KAART_STATUS = {
     'peer_review':        'Peer-review',
     'specialist_review':  'Specialist-review',
     'gepubliceerd':       'Gepubliceerd',
+    # Archief: kaart is uit actief gebruik maar blijft raadpleegbaar — gezet
+    # door specialist van de kerntaak of admin. Niet bewerkbaar, niet opnieuw
+    # in te dienen. Kan terug naar 'gepubliceerd' door dezelfde rollen.
+    'archief':            'Archief',
 }
 
 # Kerntaken van de brandweer — bepaalt kleur van zijbalk en badge.
@@ -99,10 +149,13 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     wachtwoord_hash = db.Column(db.String(256), nullable=False)
     naam = db.Column(db.String(100), nullable=False)
-    rol = db.Column(db.String(20), nullable=False, default='medewerker_oo')
-    # Kerngroep is alleen gevuld voor oefencoordinator + specialist. Admin en
-    # medewerker_oo hebben geen kerngroep. Zie KERNGROEPEN voor de waarden.
+    rol = db.Column(db.String(30), nullable=False, default='medewerker_oo')
+    # Kerngroep is alleen gevuld voor oefencoordinator + specialist. Admin,
+    # medewerker_oo en oefencoordinator_roi hebben geen kerngroep.
     kerngroep = db.Column(db.String(20), nullable=True)
+    # ROI-kerntaak is alleen gevuld voor oefencoordinator_roi (brand / ibgs /
+    # thv / water / natuurbrand / specialistisch).
+    roi_kerntaak = db.Column(db.String(30), nullable=True)
     actief = db.Column(db.Boolean, default=True)
     aangemaakt_op = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -121,6 +174,10 @@ class User(UserMixin, db.Model):
         return KERNGROEPEN.get(self.kerngroep) if self.kerngroep else None
 
     @property
+    def roi_kerntaak_naam(self):
+        return ROI_KERNTAKEN.get(self.roi_kerntaak) if self.roi_kerntaak else None
+
+    @property
     def is_admin(self):
         return self.rol == 'admin'
 
@@ -130,7 +187,21 @@ class User(UserMixin, db.Model):
 
     @property
     def is_oefencoordinator(self):
+        # Blijft alléén de "echte" oefencoord (met kerngroep). Een ROI-oefencoord
+        # is een eigen rol — check via `is_oefencoordinator_roi` of de combinatie
+        # `is_oefencoordinator_breed`.
         return self.rol == 'oefencoordinator'
+
+    @property
+    def is_oefencoordinator_roi(self):
+        return self.rol == 'oefencoordinator_roi'
+
+    @property
+    def is_oefencoordinator_breed(self):
+        """Beide soorten oefencoord samen — handig voor rechten/UI-checks die
+        tussen 'gewone' en 'ROI' niet hoeven te onderscheiden (bv. 'mag kaart
+        maken en indienen')."""
+        return self.rol in ('oefencoordinator', 'oefencoordinator_roi')
 
     @property
     def is_medewerker_oo(self):
@@ -162,14 +233,24 @@ class User(UserMixin, db.Model):
     def mag_specialist_review(self, kaart):
         """Mag deze gebruiker specialist-eindcheck doen voor deze kaart?
         Regel: specialist, NIET van dezelfde kerngroep als de kaart.
-        ROI-kaarten: alle 5 specialisten mogen (specialist ROI bestaat niet).
         """
         if not self.is_specialist or not self.kerngroep:
             return False
         doel = kaart.peer_kerngroep or kaart.kerntaak
-        if doel == 'roi':
-            return True
         return self.kerngroep != doel
+
+    def mag_roi_review(self, kaart):
+        """Mag deze gebruiker een ROI-review doen voor deze kaart?
+        Regel: oefencoordinator_roi wiens roi_kerntaak matcht met de ROI-groep
+        van de kaart (via KERNTAAK_NAAR_ROI). Niet voor scenario- of
+        themakaarten (zie TYPES_ZONDER_ROI).
+        """
+        if not self.is_oefencoordinator_roi or not self.roi_kerntaak:
+            return False
+        if kaart.auteur_id == self.id:
+            return False
+        groep = roi_groep_voor_kaart(kaart)
+        return groep is not None and self.roi_kerntaak == groep
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -189,6 +270,10 @@ class Kaart(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(20), nullable=False)
+    # v0.7.42 — Nummer wordt pas toegekend bij eerste indienen voor review.
+    # Concept-kaarten krijgen tot dan een placeholder "CONCEPT-xxxxxxxx" zodat
+    # de UNIQUE NOT NULL-constraint intact blijft; UI toont dan "Concept" i.p.v.
+    # het echte XX-#### nummer.
     nummer = db.Column(db.String(20), unique=True, nullable=False)
     naam = db.Column(db.String(200), nullable=False)
     status = db.Column(db.String(20), default='concept')
@@ -219,6 +304,18 @@ class Kaart(db.Model):
     wijzigingen = db.relationship('KaartWijziging', backref='kaart', lazy='dynamic',
                                   cascade='all, delete-orphan',
                                   order_by='KaartWijziging.datum.desc()')
+    # Koppeltabellen — cascade bij delete zodat een themakaart met koppelingen
+    # of een instructiekaart met QR-links schoon kan verdwijnen. Zonder deze
+    # cascades geeft SQLite een FOREIGN KEY-fout bij delete.
+    thema_koppelingen_bron = db.relationship(
+        'ThemaKaartLink', foreign_keys='ThemaKaartLink.kaart_id',
+        backref='bron_kaart', lazy='dynamic', cascade='all, delete-orphan')
+    thema_qr_koppelingen = db.relationship(
+        'ThemaQRLink', foreign_keys='ThemaQRLink.kaart_id',
+        backref='bron_kaart', lazy='dynamic', cascade='all, delete-orphan')
+    instructie_qr_koppelingen = db.relationship(
+        'InstructieQRLink', foreign_keys='InstructieQRLink.kaart_id',
+        backref='bron_kaart', lazy='dynamic', cascade='all, delete-orphan')
 
     def get_inhoud(self):
         return json.loads(self.inhoud) if self.inhoud else {}
@@ -242,24 +339,52 @@ class Kaart(db.Model):
         """
         if self.status not in ('peer_review', 'specialist_review'):
             return ''
-        open_rs = self.reviews.filter_by(status='open').order_by(
-            db.case((Review.fase == 'specialist', 2), else_=1),
-            Review.fase.asc()
-        ).all() if hasattr(self, 'reviews') else []
-        if not open_rs:
+        regels = self.review_locatie_regels
+        if not regels:
             return self.status_naam
-        onderdelen = []
+        return ' + '.join(r['tekst'] for r in regels)
+
+    @property
+    def review_locatie_regels(self):
+        """Gedetailleerde variant van huidige_review_locatie: per fase één dict
+        met {icoon, status, tekst}. Zo kan de template per rij een vinkje
+        (goedgekeurd), kruisje (afgekeurd) of klok (openstaand) renderen.
+        Bevat de rondes die nu LOPEN of in de huidige flow-ronde al afgerond
+        zijn — niet de volledige geschiedenis.
+        """
+        if self.status not in ('peer_review', 'specialist_review'):
+            return []
+        # Alleen open reviews horen hier in de "ligt nu bij"-weergave — die zijn
+        # waar de kaart op wacht. Afgekeurde reviews sturen de kaart terug naar
+        # concept dus komen hier nooit voor; eerder-goedgekeurde van dezelfde
+        # ronde slaan we ook even over want die wachten niet meer.
+        if not hasattr(self, 'reviews'):
+            return []
+        open_rs = (self.reviews.filter_by(status='open')
+                   .order_by(db.case((Review.fase == 'specialist', 2), else_=1),
+                             Review.fase.asc())
+                   .all())
+        regels = []
         for r in open_rs:
             naam = r.reviewer.naam if r.reviewer else '?'
-            onderdelen.append(f'{r.fase_naam} bij {naam}')
-        return ' + '.join(onderdelen)
+            regels.append({
+                'status': 'open',
+                'icoon': '⏳',
+                'tekst': f'{r.fase_naam} bij {naam}',
+                'reviewer': r.reviewer,
+                'fase': r.fase,
+            })
+        return regels
 
     @property
     def effectieve_kerngroep(self):
-        """De kerngroep die reviews aanstuurt. Standaard = kerntaak; bij 'algemeen'
-        kijkt-ie naar peer_kerngroep (gezet door maker bij indienen).
+        """De kerngroep die peer- en specialist-review aanstuurt. Als de
+        kerntaak zelf één van de 5 kerngroep-sleutels is (brand, natuurbrand,
+        water, thv, ibgs) → gebruik die. Anders (algemeen, redvoertuig,
+        bijzondere_blusmiddelen, overig, leiding_coordinatie) gebruikt-ie
+        peer_kerngroep die de maker bij indienen koos.
         """
-        if self.kerntaak and self.kerntaak != 'algemeen':
+        if self.kerntaak and self.kerntaak in KERNGROEPEN:
             return self.kerntaak
         return self.peer_kerngroep
 
@@ -358,15 +483,22 @@ class Kaart(db.Model):
         1e #   = kerntaak-cijfer (0-9).
         2e #   = subcategorie-cijfer (0-9) binnen die kerntaak.
         3e+4e# = volgnummer 01-99, één hoger dan het hoogste bestaande
-                 nummer met dezelfde 4-cijfer-prefix.
+                 OF gereserveerde nummer met dezelfde 4-cijfer-prefix. Een
+                 gereserveerd nummer (afkomstig van een verwijderde kaart)
+                 wordt nooit opnieuw toegekend.
 
         Voorbeeld: volgende_nummer('instructie', 1, 1) → 'IK-1101' (of hoger
-        als er al IK-1101, IK-1102, … bestaan).
+        als er al IK-1101, IK-1102, … bestaan of gereserveerd zijn).
         """
         prefix_letters = KAART_TYPES[kaart_type]['prefix']
         prefix_cijfers = f'{int(kerntaak_cijfer)}{int(subcat_cijfer)}'
         zoek = f'{prefix_letters}-{prefix_cijfers}'
         max_nr = 0
+        # Bestaande kaarten (placeholders CONCEPT-* beginnen met 'C' en matchen
+        # nooit het XX-####-prefix — geen aparte filter nodig). Een eenmaal
+        # toegekend nummer verdwijnt NOOIT (kaarten met definitief nummer
+        # blijven voor de logging bewaard, ook na afkeur), dus de max over
+        # bestaande kaarten is altijd de hoogste ooit uitgegeven.
         for k in Kaart.query.filter(
             Kaart.type == kaart_type,
             Kaart.nummer.like(f'{zoek}%'),
@@ -374,14 +506,28 @@ class Kaart(db.Model):
             suffix = (k.nummer or '')[len(zoek):]
             # Strikt: exact 2 cijfers als volgnummer. Zo raken oude 3-cijfer
             # nummers (TK-001, IK-042 uit v0.7.x) de nieuwe generator niet in
-            # de war. Fase 4 wist die oude records — daarna is dit onnodig,
-            # maar het is een goedkope safety-net.
+            # de war.
             if len(suffix) != 2 or not suffix.isdigit():
                 continue
             n = int(suffix)
             if n > max_nr:
                 max_nr = n
         return f'{zoek}{max_nr + 1:02d}'
+
+    @property
+    def heeft_definitief_nummer(self):
+        """False zolang de kaart nog een placeholder (CONCEPT-xxxxxxxx) draagt
+        — kaart is dan nog nooit ingediend geweest. Zodra het echte XX-####-
+        nummer is toegekend bij eerste indienen, blijft True permanent."""
+        return bool(self.nummer) and not self.nummer.startswith('CONCEPT-')
+
+    @property
+    def nummer_leesbaar(self):
+        """Toont het officiële nummer; bij een placeholder de werkbenaming
+        'Concept #<id>' (voor overzichten / dashboards)."""
+        if self.heeft_definitief_nummer:
+            return self.nummer
+        return f'Concept #{self.id}'
 
     def __repr__(self):
         return f'<Kaart {self.nummer} - {self.naam}>'
@@ -517,6 +663,7 @@ class KaartWijziging(db.Model):
 REVIEW_FASEN = {
     'peer':             'Peer-review',
     'ensceneringstips': 'Ensceneringstips-review',
+    'roi':              'ROI-review',
     'specialist':       'Specialist-eindcheck',
 }
 
@@ -951,11 +1098,20 @@ def migreer_schema():
         if 'kerngroep' not in kolommen:
             with db.engine.begin() as conn:
                 conn.execute(text('ALTER TABLE users ADD COLUMN kerngroep VARCHAR(20)'))
+        if 'roi_kerntaak' not in kolommen:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE users ADD COLUMN roi_kerntaak VARCHAR(30)'))
         with db.engine.begin() as conn:
             conn.execute(text("UPDATE users SET rol='admin' WHERE rol='beheerder'"))
             conn.execute(text("UPDATE users SET rol='medewerker' WHERE rol='redacteur'"))
             conn.execute(text("UPDATE users SET rol='oefencoordinator' WHERE rol='coordinator'"))
             conn.execute(text("UPDATE users SET rol='medewerker_oo' WHERE rol='medewerker'"))
+            # v0.7.41 — kerngroep 'roi' bestaat niet meer; die rol is nu een
+            # aparte oefencoordinator_roi met roi_kerntaak-koppeling. Oude
+            # gebruikers met kerngroep='roi' zetten we tijdelijk zonder
+            # kerngroep neer zodat admin ze kan omzetten — ze verliezen geen
+            # inlog-mogelijkheid.
+            conn.execute(text("UPDATE users SET kerngroep=NULL WHERE kerngroep='roi'"))
 
     # Kaart: peer_kerngroep-kolom toevoegen. Bij EERSTE toevoeging (= deze
     # migratie draait voor het eerst op een bestaande DB) zetten we meteen
@@ -969,6 +1125,7 @@ def migreer_schema():
             with db.engine.begin() as conn:
                 conn.execute(text('ALTER TABLE kaarten ADD COLUMN peer_kerngroep VARCHAR(20)'))
                 conn.execute(text("UPDATE kaarten SET status='gepubliceerd'"))
+
 
     # QR-codes: transparante_achtergrond kolom toevoegen als die ontbreekt
     if 'qr_codes' in inspector.get_table_names():

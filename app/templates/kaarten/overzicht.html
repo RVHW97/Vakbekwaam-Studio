@@ -76,7 +76,7 @@
         <tbody>
             {% for kaart in kaarten %}
             <tr>
-                <td><strong>{{ kaart.nummer }}</strong></td>
+                <td><strong>{{ kaart.nummer_leesbaar }}</strong></td>
                 <td>{{ kaart.naam }}</td>
                 <td>
                     {% if kaart.kerntaak %}
@@ -88,8 +88,15 @@
                 {% if not kaart_type %}<td><span class="badge badge-type">{{ kaart.type_naam }}</span></td>{% endif %}
                 <td><span class="badge badge-status badge-{{ kaart.status }}">{{ kaart.status_naam }}</span></td>
                 <td class="cell-locatie">
-                    {% set loc = kaart.huidige_review_locatie %}
-                    {% if loc %}{{ loc }}{% else %}—{% endif %}
+                    {% set regels = kaart.review_locatie_regels %}
+                    {% if regels %}
+                        {% for r in regels %}
+                        <div class="locatie-rij locatie-{{ r.status }}">
+                            <span class="locatie-icoon" aria-hidden="true">{{ r.icoon }}</span>
+                            <span class="locatie-tekst">{{ r.tekst }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}—{% endif %}
                 </td>
                 <td>{{ kaart.auteur.naam if kaart.auteur else '—' }}</td>
                 <td>{{ (kaart.bijgewerkt_door.naam if kaart.bijgewerkt_door else kaart.auteur.naam) }}</td>

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ review.fase_naam }} — {{ kaart.nummer }}{% endblock %}
+{% block title %}{{ review.fase_naam }} — {{ kaart.nummer_leesbaar }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1>
         {{ review.fase_naam }}
-        <span class="kaart-nummer">— {{ kaart.nummer }}</span>
+        <span class="kaart-nummer">— {{ kaart.nummer_leesbaar }}</span>
     </h1>
     <div class="btn-group">
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Terug naar dashboard</a>

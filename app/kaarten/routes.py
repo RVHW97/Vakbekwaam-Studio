@@ -10,11 +10,13 @@ from PIL import Image, ImageOps
 from app import db
 
 
-# === Kenniskaart rich-text sanitizer ===
+# === Rich-text sanitizer ===
 # Whitelist van tags/attributen die de editor mag produceren. Alles daarbuiten
 # wordt door bleach.clean() gestript — beschermt tegen XSS bij weergave in de app
-# en tegen ongewenste opmaak in de PDF (fonts, inline scripts, etc.).
-KENNIS_TOEGESTANE_TAGS = [
+# en tegen ongewenste opmaak in de PDF (fonts, inline scripts, etc.). Wordt
+# gebruikt voor werkwijze-stappen (instructiekaart) en ensceneringstips
+# (scenariokaart).
+RICH_TEXT_TOEGESTANE_TAGS = [
     'p', 'br', 'strong', 'b', 'em', 'i', 'u',
     'h3', 'h4',
     'ul', 'ol', 'li',
@@ -23,11 +25,11 @@ KENNIS_TOEGESTANE_TAGS = [
 ]
 # Enige attribuut dat we toelaten is `style="color: <hex>"` op <span>. Kleuren
 # worden verder gefilterd tot de 3 huisstijl-kleuren (navy, brandweer-rood, zwart).
-KENNIS_HUISSTIJL_KLEUREN = {'#1B2A4A', '#C8102E', '#000000', '#1b2a4a', '#c8102e'}
+RICH_TEXT_HUISSTIJL_KLEUREN = {'#1B2A4A', '#C8102E', '#000000', '#1b2a4a', '#c8102e'}
 _KLEUR_STYLE_RE = re.compile(r'color\s*:\s*(#[0-9a-fA-F]{6})', re.IGNORECASE)
 
 
-def _kennis_style_filter(tag, name, value):
+def _rich_text_style_filter(tag, name, value):
     """bleach attribute-filter: sta alleen 'style' toe op <span>, alleen met
     color-waarde uit de huisstijl. Al het andere wordt geweigerd."""
     if name != 'style' or tag != 'span':
@@ -36,20 +38,19 @@ def _kennis_style_filter(tag, name, value):
     if not match:
         return False
     kleur = match.group(1)
-    return kleur in KENNIS_HUISSTIJL_KLEUREN
+    return kleur in RICH_TEXT_HUISSTIJL_KLEUREN
 
 
-def sanitize_kennis_html(ruw_html):
-    """Sanitize + normaliseer rich-text input. Oorspronkelijk voor kenniskaart,
-    nu generiek gebruikt voor werkwijze-stappen (v0.7.31) en ensceneringstips
-    (v0.7.32). Leverstijl: één HTML-string die veilig in Jinja én in WeasyPrint
-    gerenderd kan worden."""
+def sanitize_rich_html(ruw_html):
+    """Sanitize + normaliseer rich-text input. Gebruikt voor werkwijze-stappen
+    (v0.7.31) en ensceneringstips (v0.7.32). Leverstijl: één HTML-string die
+    veilig in Jinja én in WeasyPrint gerenderd kan worden."""
     if not ruw_html:
         return ''
     schoon = bleach.clean(
         ruw_html,
-        tags=KENNIS_TOEGESTANE_TAGS,
-        attributes={'span': _kennis_style_filter},
+        tags=RICH_TEXT_TOEGESTANE_TAGS,
+        attributes={'span': _rich_text_style_filter},
         strip=True,
     )
     # Reduceer whitespace-blokken en verwijder lege paragrafen die contenteditable
@@ -80,10 +81,13 @@ def _hernummer_als_subcategorie_wijzigt(kaart):
     sub = kaart.subcategorie
     if sub is None or sub.kerntaak is None:
         return None, None
+    # Placeholder-concepten hebben nog geen echt nummer — subcategorie-wissel
+    # heeft dan geen effect (nummer wordt pas bij indienen toegekend).
+    if not kaart.heeft_definitief_nummer:
+        return None, None
     letters = KAART_TYPES[kaart.type]['prefix']
     verwachte_start = f'{letters}-{sub.kerntaak.cijfer}{sub.cijfer}'
     if kaart.nummer and kaart.nummer.startswith(verwachte_start):
-        # Prefix klopt al — nummer blijft ongewijzigd
         return None, None
     oud_nummer = kaart.nummer
     kaart.nummer = Kaart.volgende_nummer(kaart.type, sub.kerntaak.cijfer, sub.cijfer)
@@ -127,7 +131,8 @@ HEADER_FOTO_RATIO = 3.0
 # - oefencoordinator / medewerker_oo mogen aanmaken + eigen kaarten bewerken
 #   (medewerker_oo wordt in fase 3 beperkt tot instructiekaart materieel)
 BEWERK_ROLLEN = {'admin', 'specialist'}
-AANMAAK_ROLLEN = {'admin', 'specialist', 'oefencoordinator', 'medewerker_oo'}
+AANMAAK_ROLLEN = {'admin', 'specialist', 'oefencoordinator',
+                  'oefencoordinator_roi', 'medewerker_oo'}
 PUBLICATIE_ROLLEN = {'admin', 'specialist'}
 
 
@@ -167,10 +172,15 @@ def _vereis_bewerken(kaart):
     specialist_review) mag ook de maker zelf niet schrijven. Hij moet eerst de
     kaart terugtrekken (POST /<id>/terugtrekken), dan is-ie weer concept en start
     de workflow opnieuw bij indienen.
+
+    Extra regel (v0.7.44): gearchiveerde kaarten zijn alleen-lezen voor iedereen
+    behalve admin (die kan 'm uit archief halen via /dearchiveren).
     """
     if not kan_kaart_bewerken(current_user, kaart):
         abort(403)
     if kaart_is_in_review(kaart) and not current_user.is_admin:
+        abort(403)
+    if kaart.status == 'archief' and not current_user.is_admin:
         abort(403)
 
 
@@ -360,16 +370,19 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
 
     # Types die een aantal-veld tonen in de UI → aantal verplicht als dit type gekozen is.
     _BASIS_VEREIST_AANTAL = {'anders'}
-    _EXTRA_VEREIST_AANTAL = {'extra_gespreksgroep', 'cirrus', 'zware_oefenpop',
-                              'ademlucht', 'anders'}
+    _EXTRA_VEREIST_AANTAL = {'extra_basisoefenset', 'extra_gespreksgroep',
+                              'cirrus', 'zware_oefenpop', 'ademlucht', 'anders'}
     _BASIS_LABELS = {
         'ts': 'TS', 'basisoefenset': 'Basisoefenset',
         'lokaal_beamer': 'Lokaal met beamer en scherm',
-        'oefenterrein': 'Oefenterrein / buitenlocatie',
+        'oefenterrein': 'Oefenterrein',
+        'externe_locatie': 'Externe locatie',
         'flipover': 'Flipover of whiteboard', 'laptop': 'Laptop',
     }
     _EXTRA_LABELS = {
-        'extra_ts': 'Extra TS', 'extra_gespreksgroep': 'Extra gespreksgroep',
+        'extra_ts': 'Extra TS',
+        'extra_basisoefenset': 'Extra basisoefenset',
+        'extra_gespreksgroep': 'Extra gespreksgroep',
         'cirrus': 'Cirrus', 'moi': 'MOI-oefenset',
         'zware_oefenpop': 'Zware oefenpop',
         'autoambulance': 'Autoambulance', 'ademlucht': 'Ademlucht',
@@ -618,7 +631,7 @@ def verwerk_tips_fotos(json_string):
         tip['fotos'] = nieuwe_fotos
         # v0.7.31 rich-text: sanitize tekst_html per tip.
         if tip.get('tekst_html'):
-            tip['tekst_html'] = sanitize_kennis_html(tip.get('tekst_html'))
+            tip['tekst_html'] = sanitize_rich_html(tip.get('tekst_html'))
     return json.dumps(tips[:3], ensure_ascii=False)
 
 
@@ -744,7 +757,7 @@ def verwerk_werkwijze_fotos(json_string):
         # v0.7.31 rich-text: sanitize tekst_html van de vrije-tekst-modus.
         # Bullets-modus (tekst_opmaak='lijst') blijft plain-text.
         if stap.get('tekst_opmaak') != 'lijst' and stap.get('tekst_html'):
-            stap['tekst_html'] = sanitize_kennis_html(stap.get('tekst_html'))
+            stap['tekst_html'] = sanitize_rich_html(stap.get('tekst_html'))
     return json.dumps(stappen, ensure_ascii=False)
 
 
@@ -772,11 +785,11 @@ def verwijder_bestand(bestandsnaam):
 def overzicht():
     # Mappenoverzicht: per kaarttype aantallen tonen
     mappen = []
-    totaal_archief = Kaart.query.filter_by(status='gearchiveerd').count()
+    totaal_archief = Kaart.query.filter_by(status='archief').count()
     for type_key, type_info in KAART_TYPES.items():
         actief = Kaart.query.filter(
             Kaart.type == type_key,
-            Kaart.status != 'gearchiveerd'
+            Kaart.status != 'archief'
         ).count()
         mappen.append({
             'key': type_key,
@@ -799,10 +812,10 @@ def overzicht_type(kaart_type):
     kerntaak_filter = (request.args.get('kerntaak') or '').strip()
     query = Kaart.query.filter_by(type=kaart_type)
     if weergave == 'archief':
-        query = query.filter_by(status='gearchiveerd')
+        query = query.filter_by(status='archief')
     else:
         weergave = 'actief'
-        query = query.filter(Kaart.status != 'gearchiveerd')
+        query = query.filter(Kaart.status != 'archief')
     if kerntaak_filter and kerntaak_filter in KERNTAKEN:
         query = query.filter(Kaart.kerntaak == kerntaak_filter)
     if query_string:
@@ -823,7 +836,7 @@ def overzicht_type(kaart_type):
 @bp.route('/archief')
 @login_required
 def archief():
-    kaarten = Kaart.query.filter_by(status='gearchiveerd').order_by(Kaart.bijgewerkt_op.desc()).all()
+    kaarten = Kaart.query.filter_by(status='archief').order_by(Kaart.bijgewerkt_op.desc()).all()
     return render_template('kaarten/overzicht.html', kaarten=kaarten,
                            types=KAART_TYPES, weergave='archief',
                            kaart_type=None, type_info=None)
@@ -879,9 +892,14 @@ def aanmaken(kaart_type):
                                    WERKWIJZE_TEKST_MAX=WERKWIJZE_TEKST_MAX,
                                    subcategorieen_per_kerntaak=_subcategorieen_per_kerntaak_ctx())
 
+        # v0.7.42 — Concept-kaarten krijgen een placeholder-nummer tot eerste
+        # indienen. Zo blijven ze zichtbaar in lijsten zonder al een echt
+        # XX-####-nummer te 'claimen' (en dus later te moeten reserveren bij
+        # verwijdering).
+        placeholder_nummer = f'CONCEPT-{uuid.uuid4().hex[:8]}'
         kaart = Kaart(
             type=kaart_type,
-            nummer=Kaart.volgende_nummer(kaart_type, subcat.kerntaak.cijfer, subcat.cijfer),
+            nummer=placeholder_nummer,
             naam=_kaart_naam_uit_form(form, kaart_type),
             kerntaak=form.kerntaak.data or None,
             subcategorie_id=subcat.id,
@@ -910,9 +928,9 @@ def aanmaken(kaart_type):
         db.session.commit()
         auto_save_tab = (request.form.get('auto_save_tab') or '').strip()
         if auto_save_tab:
-            flash(f'Concept opgeslagen als {kaart.nummer}.', 'success')
+            flash(f'Concept opgeslagen als {kaart.nummer_leesbaar}.', 'success')
             return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + f'#tab-{auto_save_tab}')
-        flash(f'{kaart.type_naam} "{kaart.naam}" opgeslagen als concept ({kaart.nummer}).', 'success')
+        flash(f'{kaart.type_naam} "{kaart.naam}" opgeslagen als concept ({kaart.nummer_leesbaar}).', 'success')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
 
     if hasattr(form, 'kenmerken_kerntaak'):
@@ -1092,7 +1110,7 @@ def bewerken(kaart_id):
 
         log_wijziging(kaart, 'Auto-save (tab-wissel)', '')
         db.session.commit()
-        flash(f'Concept opgeslagen ({kaart.nummer}).', 'info')
+        flash(f'Concept opgeslagen ({kaart.nummer_leesbaar}).', 'info')
         return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id) + f'#tab-{auto_save_tab}')
 
     # === NORMALE OPSLAAN (submit-knop) ===
@@ -1273,7 +1291,7 @@ def bewerken(kaart_id):
         for type_key, t_info in KAART_TYPES.items():
             rijen = Kaart.query.filter(
                 Kaart.type == type_key,
-                Kaart.status != 'gearchiveerd',
+                Kaart.status != 'archief',
                 ~Kaart.id.in_(huidige_ids),
             ).order_by(Kaart.nummer).all()
             if rijen:
@@ -1312,7 +1330,7 @@ def bewerken(kaart_id):
         gekoppelde_ids.add(kaart.id)
         beschikbare_kaarten = Kaart.query.filter(
             Kaart.type != 'thema',
-            Kaart.status != 'gearchiveerd',
+            Kaart.status != 'archief',
             ~Kaart.id.in_(gekoppelde_ids),
         ).order_by(Kaart.nummer).all()
         # Groepeer per type, in vaste volgorde (instructie / scenario / opdracht)
@@ -1356,8 +1374,19 @@ def bewerken(kaart_id):
         or current_user.id in bijdrager_ids
         or current_user.id == kaart.auteur_id
     )
-    kaart_wijzigingen = kaart.wijzigingen.order_by(KaartWijziging.datum.desc()).limit(50).all() \
-        if geschiedenis_zichtbaar else []
+    # Voor de leesbare geschiedenis houden we alleen significante flow-overgangen
+    # zichtbaar: aangemaakt / ingediend / review-besluiten / gepubliceerd /
+    # teruggetrokken / nummer toegekend / eigenaar gewijzigd / overdracht.
+    # Ruis (auto-saves, kleine 'Bewerkt'-regels, koppel-acties) blijft in de DB
+    # voor audit-trail maar niet zichtbaar in deze lijst.
+    ruis_acties = ['Auto-save%', 'Bewerkt', 'Koppeling %',
+                    'Kaart-koppeling %', 'QR-koppeling %']
+    wijziging_q = kaart.wijzigingen
+    for patroon in ruis_acties:
+        wijziging_q = wijziging_q.filter(~KaartWijziging.actie.like(patroon))
+    kaart_wijzigingen = (wijziging_q.order_by(KaartWijziging.datum.desc())
+                         .limit(50).all()
+                         if geschiedenis_zichtbaar else [])
 
     return render_template('kaarten/formulier.html', form=form, kaart_type=kaart.type,
                            type_info=type_info, bewerken=True, kaart=kaart,
@@ -1676,7 +1705,7 @@ def _zoek_kaarten(query_string, kaart_type=None, status=None, exclude_id=None):
     if status:
         q = q.filter(Kaart.status == status)
     else:
-        q = q.filter(Kaart.status != 'gearchiveerd')
+        q = q.filter(Kaart.status != 'archief')
     if exclude_id:
         q = q.filter(Kaart.id != exclude_id)
     if query_string:
@@ -1755,6 +1784,17 @@ def indienen(kaart_id):
                           'Kaart kan nog niet ingediend worden — vul eerst alle '
                           'verplichte velden in: ' + kort)
 
+    # v0.7.42 — Bij EERSTE indienen krijgt de kaart zijn definitieve XX-####-
+    # nummer (vervangt de CONCEPT-xxxxxxxx-placeholder). Daarna blijft het
+    # nummer vast, ook als de kaart tussentijds terug naar concept gaat.
+    if not kaart.heeft_definitief_nummer and kaart.subcategorie_id:
+        sub = kaart.subcategorie
+        if sub is not None and sub.kerntaak is not None:
+            nieuw = Kaart.volgende_nummer(kaart.type, sub.kerntaak.cijfer, sub.cijfer)
+            log_wijziging(kaart, 'Nummer toegekend',
+                          f'{kaart.nummer} → {nieuw}')
+            kaart.nummer = nieuw
+
     resultaat = dien_in_voor_review(kaart, current_user)
     if not resultaat['ok']:
         return _antwoord(False, resultaat['fout'])
@@ -1766,9 +1806,11 @@ def indienen(kaart_id):
     toegewezen = []
     for r in resultaat['reviews']:
         reviewer = r.reviewer
-        kg = (reviewer.kerngroep_naam or reviewer.kerngroep or '').strip()
+        label = (reviewer.kerngroep_naam
+                 or reviewer.roi_kerntaak_naam
+                 or reviewer.kerngroep or '').strip()
         toegewezen.append(f'{r.fase_naam} bij {reviewer.naam}'
-                           + (f' ({kg})' if kg else ''))
+                           + (f' ({label})' if label else ''))
     reviewers_tekst = '; '.join(toegewezen) if toegewezen else 'geen reviewers'
     boodschap = (f'Kaart "{kaart.naam}" is ingediend voor review. '
                  f'Ligt nu bij: {reviewers_tekst}. '
@@ -2132,6 +2174,187 @@ def terugtrekken(kaart_id):
     return redirect(terug)
 
 
+def _mag_archiveren(user, kaart):
+    """Specialist van de kerntaak van de kaart (effectieve kerngroep) of admin
+    mag een gepubliceerde kaart archiveren en terugzetten.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_admin:
+        return True
+    if user.is_specialist and user.kerngroep:
+        return user.kerngroep == kaart.effectieve_kerngroep
+    return False
+
+
+def _kaarten_die_koppelen_naar(kaart):
+    """Lijst van kaarten die naar DEZE kaart verwijzen via thema-kaart-links of
+    anderszins. Gebruikt in de archiveer-bevestig-modal als waarschuwing.
+    """
+    from app.models import ThemaKaartLink
+    rows = (ThemaKaartLink.query
+            .filter_by(gekoppelde_kaart_id=kaart.id)
+            .all())
+    unieke_kaart_ids = {r.kaart_id for r in rows}
+    if not unieke_kaart_ids:
+        return []
+    return (Kaart.query
+            .filter(Kaart.id.in_(unieke_kaart_ids))
+            .order_by(Kaart.nummer)
+            .all())
+
+
+@bp.route('/<int:kaart_id>/archiveren', methods=['POST'])
+@login_required
+def archiveren(kaart_id):
+    """Archiveer een gepubliceerde kaart. Alleen specialist van de kerntaak
+    of admin. Kaart blijft raadpleegbaar maar niet bewerkbaar en niet opnieuw
+    in te dienen."""
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    if not _mag_archiveren(current_user, kaart):
+        return _fout('Alleen de specialist van deze kerntaak of een admin mag deze '
+                      'kaart archiveren.', 403)
+    if kaart.status != 'gepubliceerd':
+        return _fout('Alleen gepubliceerde kaarten kunnen gearchiveerd worden.', 400)
+
+    kaart.status = 'archief'
+    log_wijziging(
+        kaart, 'Gearchiveerd',
+        f'Kaart uit actief gebruik gehaald door {current_user.naam} ({current_user.rol_naam}).'
+    )
+    db.session.commit()
+
+    boodschap = f'Kaart "{kaart.naam}" is gearchiveerd. QR-codes blijven werken.'
+    terug = url_for('kaarten.bewerken', kaart_id=kaart.id)
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': boodschap, 'redirect': terug})
+    flash(boodschap, 'success')
+    return redirect(terug)
+
+
+@bp.route('/<int:kaart_id>/dearchiveren', methods=['POST'])
+@login_required
+def dearchiveren(kaart_id):
+    """Zet een gearchiveerde kaart terug op 'gepubliceerd'."""
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    if not _mag_archiveren(current_user, kaart):
+        return _fout('Alleen de specialist van deze kerntaak of een admin mag deze '
+                      'kaart uit het archief halen.', 403)
+    if kaart.status != 'archief':
+        return _fout('Deze kaart staat niet in het archief.', 400)
+
+    kaart.status = 'gepubliceerd'
+    log_wijziging(
+        kaart, 'Uit archief gehaald',
+        f'Kaart terug in actief gebruik door {current_user.naam} ({current_user.rol_naam}).'
+    )
+    db.session.commit()
+
+    boodschap = f'Kaart "{kaart.naam}" staat weer in actief gebruik.'
+    terug = url_for('kaarten.bewerken', kaart_id=kaart.id)
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': boodschap, 'redirect': terug})
+    flash(boodschap, 'success')
+    return redirect(terug)
+
+
+@bp.route('/<int:kaart_id>/koppelend-naar', methods=['GET'])
+@login_required
+def koppelend_naar(kaart_id):
+    """JSON-helper voor de archiveer-modal: geeft de lijst kaarten terug die
+    naar deze kaart verwijzen (thema-koppelingen). Zo kan de UI een
+    waarschuwing tonen voordat de gebruiker bevestigt."""
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    kaarten = _kaarten_die_koppelen_naar(kaart)
+    return jsonify({
+        'ok': True,
+        'count': len(kaarten),
+        'kaarten': [{'id': k.id, 'nummer': k.nummer_leesbaar,
+                     'naam': k.naam, 'status': k.status,
+                     'status_naam': k.status_naam} for k in kaarten]
+    })
+
+
+@bp.route('/<int:kaart_id>/verwijderen', methods=['POST'])
+@login_required
+def verwijderen(kaart_id):
+    """Verwijder een concept-kaart definitief. Toegestaan alléén als:
+    - status = 'concept' EN
+    - de kaart heeft NOG NOOIT een definitief XX-####-nummer gekregen
+      (= nog nooit ingediend geweest), EN
+    - de huidige gebruiker is de maker of een admin.
+
+    Zodra een kaart ooit in de workflow is geweest (definitief nummer gekregen)
+    blijft die permanent bestaan — ook na afkeur of terugtrekken — voor de
+    logging en traceerbaarheid.
+    """
+    from flask import jsonify
+    kaart = Kaart.query.get_or_404(kaart_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def _fout(bood, status=400):
+        if is_ajax:
+            return jsonify({'ok': False, 'boodschap': bood}), status
+        flash(bood, 'danger')
+        return redirect(url_for('kaarten.bewerken', kaart_id=kaart.id))
+
+    # Rechten-check: alleen maker of admin.
+    if not (current_user.is_admin or kaart.auteur_id == current_user.id):
+        return _fout('Alleen de maker of een admin mag deze kaart verwijderen.', 403)
+
+    # Statuscheck: alleen concept.
+    if kaart.status != 'concept':
+        return _fout('Alleen concept-kaarten mogen verwijderd worden. '
+                      'Trek de kaart eerst terug uit de review als-ie daar nog ligt.', 400)
+
+    # Levensloop-check: zodra er een definitief nummer was toegekend blijft de
+    # kaart bewaard (voor logging + traceerbaarheid in de workflow).
+    if kaart.heeft_definitief_nummer:
+        return _fout(f'Deze kaart heeft al nummer {kaart.nummer} gekregen en is in de '
+                      'workflow geweest — nummer en kaart blijven bewaard voor de logging. '
+                      'Verwijderen kan niet meer; wel kan een specialist of admin het '
+                      'makerschap overdragen als dat nodig is.', 400)
+
+    # Ruim fysieke bestanden op (header-foto + overige uploads die alleen aan
+    # deze kaart hangen). Reviews, wijzigingen en link-tabellen vallen onder
+    # cascade (FK).
+    bestandsnamen = [kaart.header_foto, kaart.ensceneringstips_foto,
+                      kaart.ensceneringstips_foto_2, kaart.productfoto]
+    for bn in bestandsnamen:
+        if bn:
+            verwijder_bestand(bn)
+
+    kaart_naam = kaart.naam
+    db.session.delete(kaart)
+    db.session.commit()
+
+    boodschap = f'Kaart "{kaart_naam}" is verwijderd.'
+    terug = url_for('kaarten.overzicht')
+    if is_ajax:
+        return jsonify({'ok': True, 'boodschap': boodschap, 'redirect': terug})
+    flash(boodschap, 'success')
+    return redirect(terug)
+
+
 def _collega_reviewers(review, huidige_user):
     """Alle gebruikers die deze review MOGEN doen, minus de huidige user en de
     maker. Gebruikt dezelfde regels als _mag_review_doen. Retourneert User-lijst.
@@ -2253,7 +2476,7 @@ def publiceren(kaart_id):
     kaart = Kaart.query.get_or_404(kaart_id)
     _vereis_publiceren()
     _vereis_bewerken(kaart)
-    if kaart.status == 'gearchiveerd':
+    if kaart.status == 'archief':
         flash('Gearchiveerde kaarten kunnen niet direct gepubliceerd worden. Heractiveer eerst.', 'warning')
         return redirect(url_for('kaarten.overzicht'))
 
@@ -2302,30 +2525,10 @@ def depubliceren(kaart_id):
     return redirect(url_for('kaarten.overzicht'))
 
 
-@bp.route('/<int:kaart_id>/archiveren', methods=['POST'])
-@login_required
-def archiveren(kaart_id):
-    kaart = Kaart.query.get_or_404(kaart_id)
-    _vereis_bewerken(kaart)
-    kaart.status = 'gearchiveerd'
-    kaart.bijgewerkt_door_id = current_user.id
-    log_wijziging(kaart, 'Gearchiveerd')
-    db.session.commit()
-    flash(f'Kaart "{kaart.naam}" is gearchiveerd.', 'info')
-    return redirect(url_for('kaarten.overzicht'))
-
-
-@bp.route('/<int:kaart_id>/heractiveren', methods=['POST'])
-@login_required
-def heractiveren(kaart_id):
-    kaart = Kaart.query.get_or_404(kaart_id)
-    _vereis_bewerken(kaart)
-    kaart.status = 'concept'
-    kaart.bijgewerkt_door_id = current_user.id
-    log_wijziging(kaart, 'Uit archief gehaald')
-    db.session.commit()
-    flash(f'Kaart "{kaart.naam}" is uit het archief gehaald en staat nu als concept.', 'success')
-    return redirect(url_for('kaarten.overzicht'))
+# NB: /archiveren + /dearchiveren routes staan boven bij _mag_archiveren.
+# De oude routes (die via _vereis_bewerken naar concept zetten) zijn vervangen
+# door de strikte versie: specialist van de kerntaak of admin, overgang
+# gepubliceerd ↔ archief.
 
 
 @bp.route('/<int:kaart_id>/kopieren', methods=['POST'])
@@ -2388,6 +2591,6 @@ def download_pdf(kaart_id):
     pdf = genereer_pdf(kaart)
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    bestandsnaam = f'{kaart.nummer}_{kaart.naam}.pdf'.replace(' ', '_')
+    bestandsnaam = f'{kaart.nummer_leesbaar}_{kaart.naam}.pdf'.replace(' ', '_')
     response.headers['Content-Disposition'] = f'inline; filename="{bestandsnaam}"'
     return response

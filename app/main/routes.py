@@ -3,7 +3,8 @@ from flask import render_template, redirect, url_for, abort, send_from_directory
 from flask_login import login_required, current_user
 from app import db
 from app.main import bp
-from app.models import Kaart, QRCode, QRKlik, Review, KaartWijziging, OverdraagVerzoek
+from app.models import (Kaart, QRCode, QRKlik, Review, KaartWijziging,
+                        OverdraagVerzoek, KERNTAAK_NAAR_ROI)
 
 
 @bp.route('/')
@@ -69,8 +70,10 @@ def dashboard():
     # kaart.peer_kerngroep (door maker gekozen bij indienen). Admin en medewerker
     # O&O hebben geen kerngroep — die sectie blijft dan leeg.
     kerngroep_kaarten = []
+    kerngroep_label = None
     if current_user.kerngroep:
         kg = current_user.kerngroep
+        kerngroep_label = current_user.kerngroep_naam
         kerngroep_kaarten = (Kaart.query
                               .filter(db.or_(Kaart.kerntaak == kg,
                                               db.and_(Kaart.kerntaak == 'algemeen',
@@ -79,10 +82,37 @@ def dashboard():
                               .order_by(Kaart.bijgewerkt_op.desc())
                               .limit(10)
                               .all())
+    elif current_user.is_oefencoordinator_roi and current_user.roi_kerntaak:
+        # ROI-oefencoord ziet alle NIET-scenariokaarten binnen zijn ROI-groep
+        # (de hele set kerntaken die onder zijn roi_kerntaak valt).
+        kerntaken_in_groep = [kt for kt, rg in KERNTAAK_NAAR_ROI.items()
+                              if rg == current_user.roi_kerntaak]
+        # Thema- en scenariokaarten vallen buiten de ROI-review; die horen
+        # dus ook niet in de "mijn ROI-kerntaak"-dashboard-sectie.
+        if current_user.roi_kerntaak == 'specialistisch':
+            uitgesloten = set(KERNTAAK_NAAR_ROI.keys())
+            kerngroep_kaarten = (Kaart.query
+                                  .filter(~Kaart.type.in_(['scenario', 'thema']))
+                                  .filter(db.or_(Kaart.kerntaak.is_(None),
+                                                  ~Kaart.kerntaak.in_(uitgesloten)))
+                                  .filter(~Kaart.id.in_(mijn_ids) if mijn_ids else db.text('1=1'))
+                                  .order_by(Kaart.bijgewerkt_op.desc())
+                                  .limit(10)
+                                  .all())
+        else:
+            kerngroep_kaarten = (Kaart.query
+                                  .filter(~Kaart.type.in_(['scenario', 'thema']))
+                                  .filter(Kaart.kerntaak.in_(kerntaken_in_groep))
+                                  .filter(~Kaart.id.in_(mijn_ids) if mijn_ids else db.text('1=1'))
+                                  .order_by(Kaart.bijgewerkt_op.desc())
+                                  .limit(10)
+                                  .all())
+        kerngroep_label = f'ROI {current_user.roi_kerntaak_naam}'
 
     return render_template('main/dashboard.html',
                            mijn_kaarten=mijn_kaarten,
                            kerngroep_kaarten=kerngroep_kaarten,
+                           kerngroep_label=kerngroep_label,
                            openstaande_reviews=openstaande_reviews,
                            afkeur_meldingen=afkeur_meldingen,
                            rechten_verzoeken=rechten_verzoeken)

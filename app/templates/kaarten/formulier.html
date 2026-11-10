@@ -1109,8 +1109,7 @@
         justify-content: center;
     }
 
-    /* === Gedeelde rich-text-editor styling (werkwijze, tips) ===
-       Oorspronkelijk voor de kenniskaart (v0.7.11), nu generiek gebruikt. */
+    /* === Gedeelde rich-text-editor styling (werkwijze, tips) === */
     .kk-editor-toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -1218,7 +1217,7 @@
 <div class="page-header">
     <h1>
         {{ type_info.naam }} {{ 'bekijken' if readonly_modus else ('bewerken' if bewerken else 'aanmaken') }}
-        {% if bewerken and kaart %}<span class="kaart-nummer">— {{ kaart.nummer }}</span>{% endif %}
+        {% if bewerken and kaart %}<span class="kaart-nummer">— {{ kaart.nummer_leesbaar }}</span>{% endif %}
     </h1>
     <div class="btn-group">
         {% if bewerken and kaart %}
@@ -1709,17 +1708,19 @@
         </div>
     </div>
 
-    {# Kenmerkenschema #}
+    {# Kenmerkenschema. In de UITGEPRINTE PDF krijgt elk kenmerk rechts nog een
+       lege schrijfruimte voor de oefenleider met kop "Notities oefenleider —
+       eigen aan oefenlocatie". Die is alleen papier-ruimte, geen app-veld. #}
     <div class="form-groep-blok">
         <h3 class="form-groep-titel">Kenmerkenschema</h3>
-        <p class="form-hint">Beschrijf kort per kenmerk. Hou het beknopt (max 180 tekens per veld).</p>
+        <p class="form-hint">Beschrijf kort per kenmerk. Hou het beknopt (max 180 tekens per veld). In de uitgeprinte kaart staat er rechts ruimte voor eigen notities van de oefenleider.</p>
         {% set kenmerken_groep = ['kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken', 'omgevingskenmerken', 'interventiekenmerken'] %}
         {% for subnaam in kenmerken_groep %}
             {% set subfield = form[subnaam] %}
             <div class="form-subgroep-blok">
                 <div class="form-group">
                     {{ subfield.label(class="form-label") }}
-                    {{ subfield(class="form-input form-textarea", rows=2, maxlength=180,
+                    {{ subfield(class="form-input form-textarea", rows=3, maxlength=270,
                        placeholder="Typ hier de " + subfield.label.text|lower + "...") }}
                     {% for error in subfield.errors %}
                     <span class="form-error">{{ error }}</span>
@@ -3029,7 +3030,42 @@
             {% else %}
             <a href="{{ url_for('kaarten.download_pdf', kaart_id=kaart.id) }}" class="btn btn-secondary btn-large" target="_blank">Bekijk PDF</a>
             {% endif %}
-            <a href="{{ url_for('kaarten.overzicht') }}" class="btn btn-secondary">Sluiten</a>
+            {# Verwijderen — alleen voor nog-nooit-ingediende concepten door
+               maker of admin. Zodra de kaart een definitief XX-####-nummer
+               heeft gekregen (= ooit in de workflow geweest) blijft die
+               permanent bestaan voor de logging. #}
+            {% if kaart.status == 'concept' and not kaart.heeft_definitief_nummer
+                  and (current_user.is_admin or kaart.auteur_id == current_user.id) %}
+            <button type="button" id="verwijder-knop" class="btn btn-danger"
+                    data-url="{{ url_for('kaarten.verwijderen', kaart_id=kaart.id) }}"
+                    data-naam="{{ kaart.naam }}"
+                    data-nummer="{{ kaart.nummer_leesbaar }}"
+                    style="margin-left:auto;">
+                🗑️ Verwijderen
+            </button>
+            {% endif %}
+            {# Archiveren — gepubliceerde kaart uit actief gebruik halen. Alleen
+               specialist van dezelfde kerntaak als de kaart, of admin. #}
+            {% set kan_archiveren = current_user.is_admin
+                                     or (current_user.is_specialist and current_user.kerngroep
+                                          and current_user.kerngroep == kaart.effectieve_kerngroep) %}
+            {% if kaart.status == 'gepubliceerd' and kan_archiveren %}
+            <button type="button" id="archiveer-knop" class="btn btn-secondary"
+                    data-url="{{ url_for('kaarten.archiveren', kaart_id=kaart.id) }}"
+                    data-check-url="{{ url_for('kaarten.koppelend_naar', kaart_id=kaart.id) }}"
+                    data-naam="{{ kaart.naam }}"
+                    data-nummer="{{ kaart.nummer_leesbaar }}"
+                    style="margin-left:auto;">
+                📦 Archiveren
+            </button>
+            {% elif kaart.status == 'archief' and kan_archiveren %}
+            <button type="button" id="dearchiveer-knop" class="btn btn-primary"
+                    data-url="{{ url_for('kaarten.dearchiveren', kaart_id=kaart.id) }}"
+                    data-naam="{{ kaart.naam }}"
+                    style="margin-left:auto;">
+                ♻️ Terug naar actief
+            </button>
+            {% endif %}
         {% else %}
             <a href="{{ url_for('kaarten.kies_type') }}" class="btn btn-secondary">Annuleren</a>
         {% endif %}
@@ -3057,7 +3093,6 @@
                 <option value="water">Waterongevallen</option>
                 <option value="thv">THV</option>
                 <option value="ibgs">IBGS</option>
-                <option value="roi">ROI</option>
             </select>
             <span id="indienen-kerngroep-fout" class="form-error" style="display:none;">
                 Kies een kerngroep.
@@ -3269,6 +3304,285 @@
                 knop.disabled = false;
                 toonResultaat(false, 'Fout tijdens terugtrekken: ' + err.message);
             });
+        });
+    });
+})();
+
+/* === Verwijder-knop (concept-kaart) === */
+(function() {
+    var knop = document.getElementById('verwijder-knop');
+    if (!knop) return;
+
+    function toonModal(titel, boodschap, bevestig_tekst, bevestig_cb) {
+        var oud = document.getElementById('verwijder-modal');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'verwijder-modal';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">🗑️</div>'
+            + '<h2 class="vs-modal-titel"></h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-secondary" data-actie="annuleer">Annuleren</button>'
+            +   '<button type="button" class="btn btn-danger" data-actie="bevestig"></button>'
+            + '</div></div>';
+        overlay.querySelector('.vs-modal-titel').textContent = titel;
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        overlay.querySelector('[data-actie="bevestig"]').textContent = bevestig_tekst;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-actie="annuleer"]').addEventListener('click', function() {
+            overlay.remove();
+        });
+        overlay.querySelector('[data-actie="bevestig"]').addEventListener('click', function() {
+            overlay.remove();
+            bevestig_cb();
+        });
+    }
+
+    function toonResultaat(ok, boodschap, redirect) {
+        var oud = document.getElementById('verwijder-resultaat');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'verwijder-resultaat';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">' + (ok ? '✅' : '⚠️') + '</div>'
+            + '<h2 class="vs-modal-titel">' + (ok ? 'Verwijderd' : 'Niet gelukt') + '</h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-primary" data-actie="ok">Ok</button>'
+            + '</div></div>';
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-actie="ok"]').addEventListener('click', function() {
+            overlay.remove();
+            if (ok && redirect) window.location.href = redirect;
+        });
+    }
+
+    knop.addEventListener('click', function() {
+        var naam   = knop.dataset.naam   || 'deze kaart';
+        var nummer = knop.dataset.nummer || '';
+        var tekst  = 'Weet je zeker dat je "' + naam + '" (' + nummer + ') wilt verwijderen? '
+                   + 'Deze actie is niet ongedaan te maken.';
+        toonModal('Kaart verwijderen?', tekst, 'Ja, verwijderen', function() {
+            knop.disabled = true;
+            var tokenEl = document.querySelector('input[name="csrf_token"]');
+            var fd = new FormData();
+            if (tokenEl) fd.append('csrf_token', tokenEl.value);
+            fetch(knop.dataset.url, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function(resp) {
+                // Robuust: server kan ook een HTML-error-pagina (500) teruggeven
+                // bij DB-integriteit-issues. Geen rauwe JSON.parse-fout tonen.
+                return resp.text().then(function(raw) {
+                    knop.disabled = false;
+                    var data = null;
+                    try { data = JSON.parse(raw); } catch (_) { data = null; }
+                    if (data && typeof data === 'object') {
+                        toonResultaat(!!data.ok,
+                                      data.boodschap || 'Onbekende respons van server.',
+                                      data.redirect);
+                    } else {
+                        toonResultaat(false,
+                            'Verwijderen mislukt (server-fout ' + resp.status + '). '
+                            + 'Mogelijk hangen er nog koppelingen aan deze kaart.');
+                    }
+                });
+            }).catch(function(err) {
+                knop.disabled = false;
+                toonResultaat(false, 'Fout tijdens verwijderen: ' + err.message);
+            });
+        });
+    });
+})();
+
+/* === Archiveer-knop (gepubliceerde kaart → archief, met waarschuwing over
+       gekoppelde kaarten) === */
+(function() {
+    var knop = document.getElementById('archiveer-knop');
+    if (!knop) return;
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function(c) {
+            return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+        });
+    }
+
+    function toonModal(binnenHtml, bevestigTekst, bevestigCb) {
+        var oud = document.getElementById('archiveer-modal');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'archiveer-modal';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal" style="text-align:left; max-width:560px;">'
+            + '<div class="vs-modal-icoon" style="text-align:center;">📦</div>'
+            + '<h2 class="vs-modal-titel" style="text-align:center;">Kaart archiveren?</h2>'
+            + '<div class="vs-modal-tekst" id="archiveer-modal-body"></div>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-secondary" data-actie="annuleer">Annuleren</button>'
+            +   '<button type="button" class="btn btn-primary" data-actie="bevestig"></button>'
+            + '</div></div>';
+        overlay.querySelector('#archiveer-modal-body').innerHTML = binnenHtml;
+        overlay.querySelector('[data-actie="bevestig"]').textContent = bevestigTekst;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-actie="annuleer"]').addEventListener('click', function() {
+            overlay.remove();
+        });
+        overlay.querySelector('[data-actie="bevestig"]').addEventListener('click', function() {
+            overlay.remove();
+            bevestigCb();
+        });
+    }
+
+    function toonResultaat(ok, boodschap, redirect) {
+        var oud = document.getElementById('archiveer-resultaat');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'archiveer-resultaat';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">' + (ok ? '✅' : '⚠️') + '</div>'
+            + '<h2 class="vs-modal-titel">' + (ok ? 'Verwerkt' : 'Niet gelukt') + '</h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-primary" data-actie="ok">Ok</button>'
+            + '</div></div>';
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-actie="ok"]').addEventListener('click', function() {
+            overlay.remove();
+            if (ok && redirect) window.location.href = redirect;
+        });
+    }
+
+    function doeArchiveren() {
+        knop.disabled = true;
+        var tokenEl = document.querySelector('input[name="csrf_token"]');
+        var fd = new FormData();
+        if (tokenEl) fd.append('csrf_token', tokenEl.value);
+        fetch(knop.dataset.url, {
+            method: 'POST', body: fd, credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function(resp) {
+            return resp.text().then(function(raw) {
+                knop.disabled = false;
+                var data = null;
+                try { data = JSON.parse(raw); } catch (_) { data = null; }
+                if (data && typeof data === 'object') {
+                    toonResultaat(!!data.ok,
+                                  data.boodschap || 'Onbekende respons van server.',
+                                  data.redirect);
+                } else {
+                    toonResultaat(false,
+                        'Archiveren mislukt (server-fout ' + resp.status + ').');
+                }
+            });
+        }).catch(function(err) {
+            knop.disabled = false;
+            toonResultaat(false, 'Fout tijdens archiveren: ' + err.message);
+        });
+    }
+
+    knop.addEventListener('click', function() {
+        var naam   = knop.dataset.naam   || 'deze kaart';
+        var nummer = knop.dataset.nummer || '';
+        knop.disabled = true;
+        fetch(knop.dataset.checkUrl, {
+            method: 'GET', credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            knop.disabled = false;
+            var lijst = (data && data.kaarten) || [];
+            var intro = '<p>Weet je zeker dat je <strong>' + escapeHtml(naam)
+                      + '</strong> (' + escapeHtml(nummer) + ') wilt archiveren?</p>'
+                      + '<p>De kaart blijft raadpleegbaar (QR-codes blijven werken), '
+                      + 'maar is niet meer bewerkbaar en wordt in het overzicht als '
+                      + '<strong>Archief</strong> getoond.</p>';
+            if (lijst.length > 0) {
+                intro += '<p style="background:#FFF4E0; border-left:3px solid #D97706; '
+                       + 'padding:0.6rem 0.8rem; margin-top:0.8rem; border-radius:4px;">'
+                       + '⚠️ <strong>Let op:</strong> deze kaart is gekoppeld aan '
+                       + lijst.length + ' andere kaart(en). Controleer die ook even:</p>';
+                intro += '<ul style="margin:0.4rem 0 0 1.2rem; padding:0;">';
+                for (var i = 0; i < lijst.length; i++) {
+                    var k = lijst[i];
+                    intro += '<li><strong>' + escapeHtml(k.nummer) + '</strong> — '
+                           + escapeHtml(k.naam) + ' <small style="color:#666;">('
+                           + escapeHtml(k.status_naam) + ')</small></li>';
+                }
+                intro += '</ul>';
+            }
+            toonModal(intro, 'Ja, archiveren', doeArchiveren);
+        }).catch(function() {
+            knop.disabled = false;
+            // Fallback zonder gekoppelde-kaarten-check
+            toonModal('<p>Weet je zeker dat je <strong>' + escapeHtml(naam)
+                      + '</strong> (' + escapeHtml(nummer) + ') wilt archiveren?</p>',
+                      'Ja, archiveren', doeArchiveren);
+        });
+    });
+})();
+
+/* === Dearchiveer-knop (archief → gepubliceerd) === */
+(function() {
+    var knop = document.getElementById('dearchiveer-knop');
+    if (!knop) return;
+
+    function toonResultaat(ok, boodschap, redirect) {
+        var oud = document.getElementById('dearchiveer-resultaat');
+        if (oud) oud.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'vs-modal-overlay';
+        overlay.id = 'dearchiveer-resultaat';
+        overlay.innerHTML = ''
+            + '<div class="vs-modal">'
+            + '<div class="vs-modal-icoon">' + (ok ? '✅' : '⚠️') + '</div>'
+            + '<h2 class="vs-modal-titel">' + (ok ? 'Verwerkt' : 'Niet gelukt') + '</h2>'
+            + '<p class="vs-modal-tekst"></p>'
+            + '<div class="vs-modal-acties">'
+            +   '<button type="button" class="btn btn-primary" data-actie="ok">Ok</button>'
+            + '</div></div>';
+        overlay.querySelector('.vs-modal-tekst').textContent = boodschap;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-actie="ok"]').addEventListener('click', function() {
+            overlay.remove();
+            if (ok && redirect) window.location.href = redirect;
+        });
+    }
+
+    knop.addEventListener('click', function() {
+        knop.disabled = true;
+        var tokenEl = document.querySelector('input[name="csrf_token"]');
+        var fd = new FormData();
+        if (tokenEl) fd.append('csrf_token', tokenEl.value);
+        fetch(knop.dataset.url, {
+            method: 'POST', body: fd, credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        }).then(function(resp) {
+            return resp.text().then(function(raw) {
+                knop.disabled = false;
+                var data = null;
+                try { data = JSON.parse(raw); } catch (_) { data = null; }
+                if (data && typeof data === 'object') {
+                    toonResultaat(!!data.ok, data.boodschap || 'Onbekende respons.',
+                                  data.redirect);
+                } else {
+                    toonResultaat(false,
+                        'De-archiveren mislukt (server-fout ' + resp.status + ').');
+                }
+            });
+        }).catch(function(err) {
+            knop.disabled = false;
+            toonResultaat(false, 'Fout: ' + err.message);
         });
     });
 })();
@@ -4639,8 +4953,8 @@ setupCropper({
 
 /* === Filter/zoek boven lange koppel-selects ===
    Voor elke koppel-blok-dropdown (kaart-koppel + QR-koppel op thema/scenario/
-   instructie/opdracht/kennis) plaatst dit een zoek-input erboven. Filtert
-   live terwijl je typt.
+   instructie/opdracht) plaatst dit een zoek-input erboven. Filtert live
+   terwijl je typt.
 
    IMPLEMENTATIE: naast het zoekveld tonen we een custom lijst-panel dat
    live meeloopt met de input. Native <select>-dropdowns sluiten zodra de
@@ -5501,9 +5815,7 @@ setupCropper({
     });
 })();
 
-/* Sluit het instructie-only script-blok — de kenniskaart heeft sinds v0.7.13
-   een eigen hoofdstukken-editor (verderop) en gebruikt de werkwijze-editor
-   niet meer. */
+/* Sluit het instructie-only script-blok. */
 </script>
 {% endif %}
 
@@ -7208,13 +7520,14 @@ initKeuzeLijst({
     toevoegBtnId: 'oefenmiddelen-basis-toevoegen',
     max: 10,
     opties: [
-        { value: 'ts',             label: 'TS',                           metAantal: false },
-        { value: 'basisoefenset',  label: 'Basisoefenset',                metAantal: false },
-        { value: 'lokaal_beamer',  label: 'Lokaal met beamer en scherm',  metAantal: false },
-        { value: 'oefenterrein',   label: 'Oefenterrein / buitenlocatie', metAantal: false },
-        { value: 'flipover',       label: 'Flipover of whiteboard',       metAantal: false },
-        { value: 'laptop',         label: 'Laptop',                       metAantal: false },
-        { value: 'anders',         label: 'Andere…',                      metAantal: true  }
+        { value: 'ts',               label: 'TS',                           metAantal: false },
+        { value: 'basisoefenset',    label: 'Basisoefenset',                metAantal: false },
+        { value: 'lokaal_beamer',    label: 'Lokaal met beamer en scherm',  metAantal: false },
+        { value: 'oefenterrein',     label: 'Oefenterrein',                 metAantal: false },
+        { value: 'externe_locatie',  label: 'Externe locatie',              metAantal: false },
+        { value: 'flipover',         label: 'Flipover of whiteboard',       metAantal: false },
+        { value: 'laptop',           label: 'Laptop',                       metAantal: false },
+        { value: 'anders',           label: 'Andere…',                      metAantal: true  }
     ]
 });
 
@@ -7225,14 +7538,15 @@ initKeuzeLijst({
     toevoegBtnId: 'oefenmiddelen-extra-toevoegen',
     max: 10,
     opties: [
-        { value: 'extra_ts',             label: 'Extra TS',             metAantal: false },
-        { value: 'extra_gespreksgroep',  label: 'Extra gespreksgroep',  metAantal: true  },
-        { value: 'cirrus',               label: 'Cirrus',               metAantal: true  },
-        { value: 'moi',                  label: 'MOI-oefenset',         metAantal: false },
-        { value: 'zware_oefenpop',       label: 'Zware oefenpop',       metAantal: true  },
-        { value: 'autoambulance',        label: 'Autoambulance',        metAantal: false },
-        { value: 'ademlucht',            label: 'Ademlucht',            metAantal: true  },
-        { value: 'anders',               label: 'Andere…',              metAantal: true  }
+        { value: 'extra_ts',             label: 'Extra TS',              metAantal: false },
+        { value: 'extra_basisoefenset',  label: 'Extra basisoefenset',   metAantal: true  },
+        { value: 'extra_gespreksgroep',  label: 'Extra gespreksgroep',   metAantal: true  },
+        { value: 'cirrus',               label: 'Cirrus',                metAantal: true  },
+        { value: 'moi',                  label: 'MOI-oefenset',          metAantal: false },
+        { value: 'zware_oefenpop',       label: 'Zware oefenpop',        metAantal: true  },
+        { value: 'autoambulance',        label: 'Autoambulance',         metAantal: false },
+        { value: 'ademlucht',            label: 'Ademlucht',             metAantal: true  },
+        { value: 'anders',               label: 'Andere…',               metAantal: true  }
     ]
 });
 
