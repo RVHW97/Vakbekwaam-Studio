@@ -19,8 +19,8 @@ def _enable_sqlite_fk(dbapi_conn, _connection_record):
 
 # Versie van de applicatie — toont in de footer van elke pagina.
 # Bumpen volgens semver: patch bij bugfix, minor bij afgeronde fase.
-__version__ = '0.7.46'
-__version_date__ = '10 november 2026'
+__version__ = '0.7.49'
+__version_date__ = '11 november 2026'
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -35,6 +35,20 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    # Jinja-filter: parse JSON-string veilig naar lijst/dict; bij fout → lege lijst.
+    import json as _json
+
+    @app.template_filter('from_json_safe')
+    def _from_json_safe(value):
+        if not value:
+            return []
+        if not isinstance(value, str):
+            return value
+        try:
+            return _json.loads(value)
+        except (ValueError, TypeError):
+            return []
+
     @app.context_processor
     def inject_versie():
         return {'app_versie': __version__, 'app_versie_datum': __version_date__}
@@ -42,10 +56,16 @@ def create_app():
     @app.context_processor
     def inject_kaart_constantes():
         # Constanten die in meerdere templates (formulier + PDF) gebruikt worden.
-        from app.kaarten.forms import VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX
+        from app.kaarten.forms import (VEILIGHEID_MAX_ZINNEN, VEILIGHEID_ZIN_MAX,
+                                        DOELGROEP_GROEPEN, DOELGROEP_LABELS,
+                                        OEFENSTAF_OVERIG_KEUZES, OEFENSTAF_OVERIG_LABELS)
         return {
             'VEILIGHEID_MAX_ZINNEN': VEILIGHEID_MAX_ZINNEN,
             'VEILIGHEID_ZIN_MAX': VEILIGHEID_ZIN_MAX,
+            'DOELGROEP_GROEPEN': DOELGROEP_GROEPEN,
+            'DOELGROEP_LABELS': DOELGROEP_LABELS,
+            'OEFENSTAF_OVERIG_KEUZES': OEFENSTAF_OVERIG_KEUZES,
+            'OEFENSTAF_OVERIG_LABELS': OEFENSTAF_OVERIG_LABELS,
         }
 
     login_manager.login_view = 'auth.login'

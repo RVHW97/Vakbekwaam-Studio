@@ -140,7 +140,7 @@
         <div class="form-actions">
             {{ form.submit(class="btn btn-primary") }}
             <a href="{{ url_for('qr.overzicht') }}" class="btn btn-secondary">Sluiten</a>
-            {% if qr %}
+            {% if qr and qr.mag_verwijderen(current_user) %}
             <button type="button" class="btn btn-danger qr-verwijder-knop"
                     data-verwijder-url="{{ url_for('qr.verwijderen', qr_id=qr.id) }}"
                     style="margin-left:auto">Verwijderen</button>

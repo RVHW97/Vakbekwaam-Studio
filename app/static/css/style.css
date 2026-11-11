@@ -709,6 +709,190 @@ body {
     color: #fff;
 }
 
+/* === Doelgroep-blok: zoekveld + gegroepeerde chips + "Anders"-flow === */
+.doelgroep-blok {
+    margin-bottom: 0.5rem;
+}
+
+.doelgroep-zoek-rij {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.3rem 0 0.9rem;
+}
+
+.doelgroep-zoek {
+    flex: 1;
+    max-width: 480px;
+}
+
+.doelgroep-teller {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+.doelgroep-groepen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.doelgroep-groep-kop {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    margin: 0 0 0.4rem;
+}
+
+.doelgroep-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.doelgroep-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.9rem;
+    border: 1.5px solid var(--kleur-grijs-rand, #c7c2b4);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--kleur-navy, #1B2A4A);
+    user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    margin-bottom: 0;
+}
+
+.doelgroep-chip:hover {
+    border-color: var(--kleur-navy, #1B2A4A);
+}
+
+.doelgroep-chip input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.doelgroep-chip:has(input:checked) {
+    background: var(--kleur-navy, #1B2A4A);
+    border-color: var(--kleur-navy, #1B2A4A);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* "Anders" krijgt een iets andere look — streepje eromheen zodat je direct ziet
+   dat die een eigen tekstveld openmaakt. */
+.doelgroep-chip-anders {
+    border-style: dashed;
+}
+
+.doelgroep-geen-resultaat {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: #888;
+    font-style: italic;
+}
+
+.doelgroep-anders-blok {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: #f6f5f1;
+    border-radius: 6px;
+}
+
+/* === Oefenstaf-chips (oefenleider-rol + overige oefenstaf) ===
+   Dezelfde chip-stijl als doelgroep, maar met ruimte voor een aantal-input
+   per gekozen chip bij "overige oefenstaf". */
+.oefenstaf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+}
+
+.oefenstaf-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.9rem;
+    border: 1.5px solid var(--kleur-grijs-rand, #c7c2b4);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--kleur-navy, #1B2A4A);
+    user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    margin-bottom: 0;
+}
+
+.oefenstaf-chip:hover {
+    border-color: var(--kleur-navy, #1B2A4A);
+}
+
+.oefenstaf-chip input[type="radio"],
+.oefenstaf-chip input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.oefenstaf-chip:has(input:checked) {
+    background: var(--kleur-navy, #1B2A4A);
+    border-color: var(--kleur-navy, #1B2A4A);
+    color: #fff;
+    font-weight: 600;
+}
+
+.oefenstaf-chip-anders {
+    border-style: dashed;
+}
+
+.oefenstaf-chip-geen {
+    font-style: italic;
+    color: #777;
+}
+
+/* Overige oefenstaf-grid: per rij een chip + aantal-input (en voor "Anders"
+   nog een vrije tekstveld ertussen). */
+.oefenstaf-overig-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+}
+
+.oefenstaf-overig-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.oefenstaf-overig-item .oefenstaf-chip {
+    min-width: 11rem;
+}
+
+.oefenstaf-overig-aantal {
+    max-width: 5rem;
+    text-align: center;
+}
+
+.oefenstaf-overig-tekst {
+    max-width: 18rem;
+    flex: 1 1 10rem;
+}
+
 .form-error {
     color: var(--kleur-fout);
     font-size: 0.85rem;

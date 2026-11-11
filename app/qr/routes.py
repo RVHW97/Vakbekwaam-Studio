@@ -17,6 +17,46 @@ from app.models import QRCode, ThemaQRLink, InstructieQRLink, QR_CATEGORIE_KEUZE
 QR_PDF_SUBFOLDER = 'qr_pdf'
 QR_PDF_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
+# Rollen die QR-codes mogen aanmaken en bewerken. Zelfde groep als die kaarten
+# mogen aanmaken (admin, specialist, oefencoordinator, oefencoordinator_roi,
+# medewerker_oo). Andere rollen kunnen QR's wel bekijken en koppelen aan hun
+# kaarten, maar niet zelf een QR maken of wijzigen.
+QR_BEHEER_ROLLEN = {'admin', 'specialist', 'oefencoordinator',
+                    'oefencoordinator_roi', 'medewerker_oo'}
+
+
+def _mag_qr_beheren(user):
+    return bool(user and user.is_authenticated and user.rol in QR_BEHEER_ROLLEN)
+
+
+def _mag_qr_bewerken(user, qr):
+    """Beheer-rol OF eigenaar. Admin mag altijd."""
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_admin:
+        return True
+    if user.rol in QR_BEHEER_ROLLEN:
+        return True
+    return qr is not None and qr.eigenaar_id == user.id
+
+
+def _vereis_qr_aanmaken():
+    if not _mag_qr_beheren(current_user):
+        abort(403)
+
+
+def _vereis_qr_bewerken(qr):
+    if not _mag_qr_bewerken(current_user, qr):
+        abort(403)
+
+
+def _vereis_qr_verwijderen(qr):
+    # Verwijderen: alleen admin of eigenaar. Specialisten/oefencoördinatoren
+    # mogen wel bewerken maar niet de QR-code van een collega wissen.
+    if not (current_user.is_authenticated and (current_user.is_admin
+                                                 or qr.eigenaar_id == current_user.id)):
+        abort(403)
+
 
 def _slugify(raw):
     if not raw:
@@ -121,6 +161,7 @@ def overzicht():
 @bp.route('/nieuw', methods=['GET', 'POST'])
 @login_required
 def nieuw():
+    _vereis_qr_aanmaken()
     form = QRForm()
 
     if form.validate_on_submit():
@@ -168,9 +209,7 @@ def bewerken(qr_id):
     qr = db.session.get(QRCode, qr_id)
     if not qr:
         abort(404)
-    if not qr.mag_bewerken(current_user):
-        flash('Je mag deze QR-code niet bewerken.', 'danger')
-        return redirect(url_for('qr.overzicht'))
+    _vereis_qr_bewerken(qr)
 
     form = QRForm(obj=qr)
 
@@ -218,9 +257,10 @@ def pauzeren(qr_id):
     qr = db.session.get(QRCode, qr_id)
     if not qr:
         abort(404)
-    if not qr.mag_bewerken(current_user):
-        flash('Je mag deze QR-code niet beheren.', 'danger')
-        return redirect(url_for('qr.overzicht'))
+    # Pauzeren (actief/inactief): eigenaar of admin. Een specialist die de QR
+    # niet zelf heeft gemaakt kan hem wel bewerken maar niet uit roulatie halen.
+    if not (current_user.is_admin or qr.eigenaar_id == current_user.id):
+        abort(403)
     qr.actief = not qr.actief
     db.session.commit()
     flash(('QR gepauzeerd.' if not qr.actief else 'QR geactiveerd.'), 'info')
@@ -233,9 +273,7 @@ def verwijderen(qr_id):
     qr = db.session.get(QRCode, qr_id)
     if not qr:
         abort(404)
-    if not qr.mag_bewerken(current_user):
-        flash('Je mag deze QR-code niet verwijderen.', 'danger')
-        return redirect(url_for('qr.overzicht'))
+    _vereis_qr_verwijderen(qr)
     _verwijder_pdf(qr.pdf_bestand)
     # Eventuele koppelingen opruimen — anders blijven verweesde rijen achter en crashen
     # thema- of instructiekaart-templates op `link.qr_code.naam` (NoneType).

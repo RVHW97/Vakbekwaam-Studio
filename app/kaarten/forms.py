@@ -19,14 +19,52 @@ def _kerntaak_keuzes():
 KERNTAAK_KEUZES = _kerntaak_keuzes()
 KERNTAAK_VALIDATORS = [DataRequired(message='Kies een kerntaak.')]
 
-DOELGROEP_KEUZES = [
-    ('', '— kies doelgroep —'),
-    ('manschappen', 'Manschappen'),
-    ('bevelvoerders', 'Bevelvoerders'),
-    ('chauffeurs', 'Chauffeurs'),
-    ('spec', 'SPEC'),
+# Doelgroepen voor scenario- en opdrachtkaart. Multi-select met zoekveld in de UI.
+# Gegroepeerd op functie-type voor visuele structuur; zoekveld filtert alle labels
+# los van de groep. "Anders (zelf invullen)" is een aparte chip die het tekstveld
+# `doelgroep_anders` zichtbaar maakt.
+DOELGROEP_GROEPEN = [
+    ('Algemeen', [
+        ('manschap',              'Manschap'),
+        ('bevelvoerder',          'Bevelvoerder'),
+        ('aspirant_manschap',     'Aspirant manschap'),
+        ('aspirant_bevelvoerder', 'Aspirant bevelvoerder'),
+        ('chauffeur_zwaar',       'Chauffeur zwaar'),
+        ('chauffeur_licht',       'Chauffeur licht'),
+    ]),
+    ('Specialistisch', [
+        ('ags',               'AGS'),
+        ('duiker',            'Duiker'),
+        ('duikploegleider',   'Duikploegleider'),
+        ('gaspakdrager',      'Gaspakdrager'),
+        ('lac_bemanning',     'LAC bemanning'),
+        ('oppervlakteredder', 'Oppervlakteredder'),
+        ('sbe_leider',        'SBE leider'),
+        ('sbe_manschap',      'SBE manschap'),
+        ('she_leider',        'SHE leider'),
+        ('she_manschap',      'SHE manschap'),
+        ('schipper',          'Schipper'),
+        ('vke',               'VKE'),
+        ('verzorgingsgroep',  'Verzorgingsgroep'),
+    ]),
+    ('Commando / leiding', [
+        ('cve', 'CVE'),
+        ('poc', 'POC'),
+    ]),
+    ('Opleiding & kennis', [
+        ('instructeur',   'Instructeur'),
+        ('kennisdrager',  'Kennisdrager'),
+        ('oefenleider',   'Oefenleider'),
+        ('testleider',    'Testleider'),
+    ]),
+]
+
+# Flat list voor SelectMultipleField-validatie + makkelijke lookup. "anders" is
+# een aparte key die het tekstveld `doelgroep_anders` triggert.
+DOELGROEP_KEUZES = [opt for _, opts in DOELGROEP_GROEPEN for opt in opts] + [
     ('anders', 'Anders (zelf invullen)'),
 ]
+DOELGROEP_LABELS = dict(DOELGROEP_KEUZES)
 
 TIJDSDUUR_KEUZES = [
     ('', '— kies tijdsduur —'),
@@ -62,6 +100,23 @@ OEFENLEIDER_ROL_KEUZES = [
     ('PKD-zagen', 'PKD Zagen'),
     ('anders', 'Anders (zelf invullen)'),
 ]
+
+# Overige oefenstaf-rollen (ondersteuning naast de oefenleider). Chip-grid in de UI,
+# per aangevinkte chip verschijnt een aantal-inputveld. Opslag als JSON-lijst van
+# {rol: 'key', aantal: N} in het veld `oefenstaf_overig`; "anders" krijgt een
+# `eigen_tekst`-sleutel erbij.
+OEFENSTAF_OVERIG_KEUZES = [
+    ('ensceneerder',            'Ensceneerder'),
+    ('waarnemer',               'Waarnemer'),
+    ('mkb',                     'MKB'),
+    ('leerwerkplekbegeleider',  'Leerwerkplekbegeleider'),
+    ('ondersteuner',            'Ondersteuner'),
+    ('opleidingsstaf',          'Opleidingsstaf'),
+    ('technisch_regisseur_virtueel', 'Technisch regisseur virtueel'),
+    ('trajectbegeleider',       'Trajectbegeleider'),
+    ('jeugdleider',             'Jeugdleider'),
+]
+OEFENSTAF_OVERIG_LABELS = dict(OEFENSTAF_OVERIG_KEUZES)
 
 # Pager toont uitsluitend voertuig-/eenheids-TYPES (geen specifieke voertuignummers).
 # Dit is de standaardlijst voor Brandweer Limburg-Noord.
@@ -187,15 +242,14 @@ class ScenariokaartForm(FlaskForm):
                                     validators=[Optional()], validate_choice=False)
     header_foto = FileField('Headerfoto')
     # Gestructureerde velden: Doelgroep, Oefenstaf, Tijdsduur
-    doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
+    doelgroep = SelectMultipleField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
     oefenleider_aantal = IntegerField('Aantal oefenleiders', validators=[Optional(), NumberRange(min=0, max=20)])
     oefenleider_rol = SelectField('Rol / specialisme', choices=OEFENLEIDER_ROL_KEUZES, validators=[Optional()])
     oefenleider_rol_anders = StringField('Eigen rol', validators=[Optional(), Length(max=60)])
-    ensceneerder_aantal = IntegerField('Ensceneerder', validators=[Optional(), NumberRange(min=0, max=20)])
-    waarnemer_aantal = IntegerField('Waarnemer', validators=[Optional(), NumberRange(min=0, max=20)])
-    overig_functie = StringField('Overige functie', validators=[Optional(), Length(max=40)])
-    overig_aantal = IntegerField('Aantal', validators=[Optional(), NumberRange(min=0, max=20)])
+    # v0.7.48: één JSON-veld voor alle overige oefenstaf-rollen (chip-grid + aantallen).
+    # Vervangt ensceneerder_aantal / waarnemer_aantal / overig_functie / overig_aantal.
+    oefenstaf_overig = StringField('Overige oefenstaf', validators=[Optional(), Length(max=4000)])
     tijdsduur = SelectField('Tijdsduur', choices=TIJDSDUUR_KEUZES, validators=[Optional()])
     # "Praktisch" gesplitst (zelfde patroon als opdrachtkaart):
     # "Wat regel jij" (op eigen post / zelf te regelen) + "Wat regelen wij"
@@ -230,8 +284,7 @@ class ScenariokaartForm(FlaskForm):
     submit = SubmitField('Opslaan als concept')
 
 # Velden die gegroepeerd worden in het "Doelgroep, Oefenstaf en tijdsduur" blok
-SCENARIO_GROEP_VELDEN = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'ensceneerder_aantal',
-                          'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur',
+SCENARIO_GROEP_VELDEN = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenstaf_overig', 'tijdsduur',
                           'oefenmiddelen_basis', 'oefenmiddelen_extra']
 
 
@@ -242,7 +295,7 @@ class OpdrachtkaartForm(FlaskForm):
                                     validators=[Optional()], validate_choice=False)
     header_foto = FileField('Headerfoto')
     # Voorbereiding
-    doelgroep = SelectField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
+    doelgroep = SelectMultipleField('Doelgroep', choices=DOELGROEP_KEUZES, validators=[Optional()])
     doelgroep_anders = StringField('Eigen doelgroep', validators=[Optional(), Length(max=40)])
     # Tijdsduur van de opdracht — korte opties (15/30/45 minuten).
     tijdsduur = SelectField('Tijdsduur', choices=OPDRACHT_TIJDSDUUR_KEUZES, validators=[Optional()])
@@ -286,10 +339,9 @@ INHOUD_VELDEN = {
                    'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                    'veiligheid_zin_4', 'veiligheid_zin_5',
                    'werkwijze_stappen_json'],
-    'scenario': ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
+    'scenario': ['doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol',
                  'oefenleider_rol_anders',
-                 'ensceneerder_aantal',
-                 'waarnemer_aantal', 'overig_functie', 'overig_aantal',
+                 'oefenstaf_overig',
                  'tijdsduur', 'oefenmiddelen_basis', 'oefenmiddelen_extra', 'aanleiding_doelen',
                  'pager_prio', 'pager_soort', 'pager_soort_anders',
                  'scenariobeschrijving',
@@ -297,7 +349,7 @@ INHOUD_VELDEN = {
                  'kenmerken_kerntaak', 'gebouwkenmerken', 'menskenmerken',
                  'omgevingskenmerken', 'interventiekenmerken',
                  'evaluatie'],
-    'opdracht': ['doelgroep', 'doelgroep_anders', 'tijdsduur',
+    'opdracht': ['doelgroep_anders', 'tijdsduur',
                  'oefenmiddelen_basis', 'oefenmiddelen_extra',
                  'veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3',
                  'veiligheid_zin_4', 'veiligheid_zin_5',
@@ -309,5 +361,6 @@ INHOUD_VELDEN = {
 # Velden die als lijst in de JSON-inhoud staan (i.p.v. enkele string).
 # Vereisen request.form.getlist() bij opslaan en lijst-prefill bij bewerken.
 INHOUD_LIJST_VELDEN = {
-    'scenario': ['pager_voertuigen'],
+    'scenario': ['pager_voertuigen', 'doelgroep'],
+    'opdracht': ['doelgroep'],
 }

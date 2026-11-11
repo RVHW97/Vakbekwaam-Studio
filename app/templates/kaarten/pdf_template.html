@@ -1276,7 +1276,7 @@
 {% endif %}
 
 <!-- INFOSTRIP: Doelgroep / Oefenstaf / Tijdsduur (alleen scenariokaarten) -->
-{% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen', 'oefenmiddelen_basis', 'oefenmiddelen_extra'] %}
+{% set groep_velden = ['doelgroep', 'doelgroep_anders', 'oefenleider_aantal', 'oefenleider_rol', 'oefenleider_rol_anders', 'oefenstaf_overig', 'ensceneerder_aantal', 'waarnemer_aantal', 'overig_functie', 'overig_aantal', 'tijdsduur', 'oefenmiddelen', 'oefenmiddelen_basis', 'oefenmiddelen_extra'] %}
 {% set pager_velden = ['pager_prio', 'pager_soort', 'pager_soort_anders', 'pager_voertuigen'] %}
 {% set pager_soort_tekst = inhoud.get('pager_soort_anders') if inhoud.get('pager_soort') == 'anders' else inhoud.get('pager_soort', '') %}
 {# pager_voertuigen kan lijst (nieuw) of string (oude kaarten) zijn — normaliseer naar spatie-gescheiden tekst. #}
@@ -1292,8 +1292,25 @@
 {% set veiligheid_velden = ['veiligheid_zin_1', 'veiligheid_zin_2', 'veiligheid_zin_3', 'veiligheid_zin_4', 'veiligheid_zin_5'] %}
 {% set heeft_kenmerken = namespace(v=false) %}
 {% for k in kenmerken_velden %}{% if inhoud.get(k) %}{% set heeft_kenmerken.v = true %}{% endif %}{% endfor %}
-{% set doelgroep_tekst = inhoud.get('doelgroep_anders') if inhoud.get('doelgroep') == 'anders' else (inhoud.get('doelgroep', '')|capitalize) %}
-{% set heeft_infostrip = inhoud.get('doelgroep') or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels %}
+{# doelgroep kan sinds v0.7.47 een lijst met keys zijn (nieuwe multi-select),
+   maar oude kaarten hebben nog een enkele string. Normaliseer naar een lijst
+   labels — "anders" toont de eigen tekst uit `doelgroep_anders`. #}
+{% set _dg_raw = inhoud.get('doelgroep') %}
+{% if _dg_raw is string %}
+    {% set _dg_lijst = [_dg_raw] if _dg_raw else [] %}
+{% else %}
+    {% set _dg_lijst = _dg_raw or [] %}
+{% endif %}
+{% set _dg_labels = [] %}
+{% for _k in _dg_lijst %}
+    {% if _k == 'anders' %}
+        {% if inhoud.get('doelgroep_anders') %}{% set _ = _dg_labels.append(inhoud.get('doelgroep_anders')) %}{% endif %}
+    {% elif _k %}
+        {% set _ = _dg_labels.append(DOELGROEP_LABELS.get(_k, _k|capitalize)) %}
+    {% endif %}
+{% endfor %}
+{% set doelgroep_tekst = _dg_labels | join(', ') %}
+{% set heeft_infostrip = doelgroep_tekst or inhoud.get('oefenleider_aantal') or inhoud.get('tijdsduur') or inhoud.get('oefenstaf_overig') or inhoud.get('ensceneerder_aantal') or inhoud.get('waarnemer_aantal') or inhoud.get('overig_aantal') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels %}
 {# Infostrip is scenariokaart-specifiek (4 kolommen: doelgroep/tijdsduur/oefenstaf/oefenmiddelen).
    Opdrachtkaart heeft alleen doelgroep + oefenmiddelen — die krijgt hieronder een eigen simpel blok. #}
 {% if heeft_infostrip and kaart.type != 'opdracht' %}
@@ -1328,16 +1345,28 @@
                 {% set rol_raw = inhoud.get('oefenleider_rol') %}
                 {% set rol_tekst = inhoud.get('oefenleider_rol_anders') if rol_raw == 'anders' else rol_labels.get(rol_raw, '') %}
                 {% if inhoud.get('oefenleider_aantal') %}Oefenleider: <strong>{{ inhoud.get('oefenleider_aantal') }}</strong>{% if rol_tekst %} <em>({{ rol_tekst }})</em>{% endif %}<br>{% endif %}
-                {% set ensc = inhoud.get('ensceneerder_aantal')|int if inhoud.get('ensceneerder_aantal') else 0 %}
-                {% set waarn = inhoud.get('waarnemer_aantal')|int if inhoud.get('waarnemer_aantal') else 0 %}
-                {% set overig = inhoud.get('overig_aantal')|int if inhoud.get('overig_aantal') else 0 %}
-                {% set ondersteuners_totaal = ensc + waarn + overig %}
-                {% if ondersteuners_totaal > 0 %}
-                Ondersteuners: <strong>{{ ondersteuners_totaal }}</strong>
+                {# Overige oefenstaf — nieuwe JSON-lijst. Backward-compat: oude losse velden
+                   worden ook meegenomen als oefenstaf_overig leeg is. #}
+                {% set _os_raw = inhoud.get('oefenstaf_overig') %}
+                {% if _os_raw is string %}
+                    {% set _os_lijst = _os_raw | from_json_safe %}
+                {% else %}
+                    {% set _os_lijst = _os_raw or [] %}
+                {% endif %}
+                {% if not _os_lijst %}
+                    {% set _os_lijst = [] %}
+                    {% if inhoud.get('ensceneerder_aantal') %}{% set _ = _os_lijst.append({'rol': 'ensceneerder', 'aantal': inhoud.get('ensceneerder_aantal')|int}) %}{% endif %}
+                    {% if inhoud.get('waarnemer_aantal') %}{% set _ = _os_lijst.append({'rol': 'waarnemer', 'aantal': inhoud.get('waarnemer_aantal')|int}) %}{% endif %}
+                    {% if inhoud.get('overig_aantal') and inhoud.get('overig_functie') %}{% set _ = _os_lijst.append({'rol': 'anders', 'aantal': inhoud.get('overig_aantal')|int, 'eigen_tekst': inhoud.get('overig_functie')}) %}{% endif %}
+                {% endif %}
+                {% set _os_totaal = _os_lijst | map(attribute='aantal') | select | map('int') | sum %}
+                {% if _os_totaal > 0 %}
+                Ondersteuners: <strong>{{ _os_totaal }}</strong>
                 <div class="pdf-infostrip-sublijst">
-                    {% if ensc %}<span>Ensceneerder ({{ ensc }})</span>{% endif %}
-                    {% if waarn %}<span>Waarnemer ({{ waarn }})</span>{% endif %}
-                    {% if overig and inhoud.get('overig_functie') %}<span>{{ inhoud.get('overig_functie') }} ({{ overig }})</span>{% endif %}
+                    {% for _it in _os_lijst %}
+                    {% set _label = _it.eigen_tekst if _it.rol == 'anders' else OEFENSTAF_OVERIG_LABELS.get(_it.rol, _it.rol) %}
+                    {% if _label and _it.aantal %}<span>{{ _label }} ({{ _it.aantal }})</span>{% endif %}
+                    {% endfor %}
                 </div>
                 {% endif %}
             </div>
@@ -1374,10 +1403,10 @@
 {% endif %}
 
 <!-- OPDRACHTKAART: infostrip (doelgroep + tijdsduur + oefenmiddelen basis + extra) -->
-{% if kaart.type == 'opdracht' and (inhoud.get('doelgroep') or inhoud.get('tijdsduur') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels) %}
+{% if kaart.type == 'opdracht' and (doelgroep_tekst or inhoud.get('tijdsduur') or oefenmiddelen_basis_labels or oefenmiddelen_extra_labels) %}
 <div class="pdf-infostrip">
     <div class="pdf-infostrip-rij">
-        {% if inhoud.get('doelgroep') %}
+        {% if doelgroep_tekst %}
         <div class="pdf-infostrip-kolom">
             <svg class="pdf-infostrip-icoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="12" cy="7" r="4" fill="{{ kerntaak_kleur }}"/>

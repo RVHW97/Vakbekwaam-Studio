@@ -2,9 +2,14 @@
 {% block title %}QR-codes — Vakbekwaam Studio{% endblock %}
 
 {% block content %}
+{# QR-beheer-rollen (sync met QR_BEHEER_ROLLEN in app/qr/routes.py):
+   admin / specialist / oefencoordinator / oefencoordinator_roi / medewerker_oo. #}
+{% set mag_qr_aanmaken = current_user.is_authenticated and (current_user.is_admin or current_user.rol in ['specialist', 'oefencoordinator', 'oefencoordinator_roi', 'medewerker_oo']) %}
 <div class="page-header">
     <h1>QR-codes</h1>
+    {% if mag_qr_aanmaken %}
     <a href="{{ url_for('qr.nieuw') }}" class="btn btn-primary">+ Nieuwe QR-code</a>
+    {% endif %}
 </div>
 
 <form method="GET" action="{{ url_for('qr.overzicht') }}" class="qr-filters">
@@ -37,7 +42,11 @@
 
 {% if not qrs %}
 <div class="leeg-blok">
+    {% if mag_qr_aanmaken %}
     <p>Nog geen QR-codes. <a href="{{ url_for('qr.nieuw') }}">Maak de eerste aan</a>.</p>
+    {% else %}
+    <p>Nog geen QR-codes aanwezig.</p>
+    {% endif %}
 </div>
 {% else %}
 <div class="table-wrapper">
@@ -77,6 +86,8 @@
                 <td class="qr-acties-cel">
                     {% if qr.mag_bewerken(current_user) %}
                     <a href="{{ url_for('qr.bewerken', qr_id=qr.id) }}" class="btn btn-small">Bewerken</a>
+                    {% endif %}
+                    {% if qr.mag_pauzeren(current_user) %}
                     <form method="POST" action="{{ url_for('qr.pauzeren', qr_id=qr.id) }}" style="display:inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-small btn-secondary">

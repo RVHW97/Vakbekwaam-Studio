@@ -847,9 +847,26 @@ class QRCode(db.Model):
         return (None, None)
 
     def mag_bewerken(self, user):
+        """QR bewerken: admin + alle rollen met QR-beheer-rechten, plus eigenaar.
+        Rechten in sync met `QR_BEHEER_ROLLEN` in `app/qr/routes.py`."""
         if not user or not user.is_authenticated:
             return False
-        return user.id == self.eigenaar_id or user.is_admin or user.is_specialist
+        if user.is_admin or user.id == self.eigenaar_id:
+            return True
+        return user.rol in {'specialist', 'oefencoordinator',
+                             'oefencoordinator_roi', 'medewerker_oo'}
+
+    def mag_pauzeren(self, user):
+        """Pauzeren: alleen admin of eigenaar — niet elke beheerder."""
+        if not user or not user.is_authenticated:
+            return False
+        return user.is_admin or user.id == self.eigenaar_id
+
+    def mag_verwijderen(self, user):
+        """Verwijderen: alleen admin of eigenaar."""
+        if not user or not user.is_authenticated:
+            return False
+        return user.is_admin or user.id == self.eigenaar_id
 
     def __repr__(self):
         return f'<QRCode {self.slug} -> {self.naam}>'

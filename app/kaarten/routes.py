@@ -324,6 +324,10 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
     def _tekst_leeg(veld_naam):
         return not (request_form.get(veld_naam) or '').strip()
 
+    def _lijst_veld_leeg(veld_naam):
+        """Check voor multi-select (getlist). Lege lijst of alleen lege strings = leeg."""
+        return not any((v or '').strip() for v in request_form.getlist(veld_naam))
+
     def _lijst_min(veld_naam, min_aantal=1):
         val = request_form.get(veld_naam) or ''
         regels = [r for r in val.split('\n') if r.strip()]
@@ -471,9 +475,13 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
                 ontbrekend.append('Werkwijze-stap-titel')
 
     elif kaart_type == 'scenario':
-        if _tekst_leeg('doelgroep'):
-            _add_error('doelgroep', 'Kies een doelgroep.')
+        _doelgroepen = [v for v in request_form.getlist('doelgroep') if (v or '').strip()]
+        if not _doelgroepen:
+            _add_error('doelgroep', 'Kies minstens één doelgroep.')
             ontbrekend.append('Doelgroep')
+        elif 'anders' in _doelgroepen and _tekst_leeg('doelgroep_anders'):
+            _add_error('doelgroep_anders', 'Vul een eigen doelgroep in (of haal "Anders" uit de selectie).')
+            ontbrekend.append('Eigen doelgroep')
         try:
             oefenleider_n = int(request_form.get('oefenleider_aantal') or 0)
         except (ValueError, TypeError):
@@ -526,9 +534,13 @@ def _controleer_verplichte_velden(kaart_type, form, request_form, kaart=None):
             ontbrekend.append('Evaluatie')
 
     elif kaart_type == 'opdracht':
-        if _tekst_leeg('doelgroep'):
-            _add_error('doelgroep', 'Kies een doelgroep.')
+        _doelgroepen_op = [v for v in request_form.getlist('doelgroep') if (v or '').strip()]
+        if not _doelgroepen_op:
+            _add_error('doelgroep', 'Kies minstens één doelgroep.')
             ontbrekend.append('Doelgroep')
+        elif 'anders' in _doelgroepen_op and _tekst_leeg('doelgroep_anders'):
+            _add_error('doelgroep_anders', 'Vul een eigen doelgroep in (of haal "Anders" uit de selectie).')
+            ontbrekend.append('Eigen doelgroep')
         if _json_lijst_min('oefenmiddelen_basis', 1):
             _add_error('oefenmiddelen_basis', 'Voeg minstens 1 item toe bij "Wat regel jij".')
             ontbrekend.append('Praktisch — Wat regel jij')
@@ -970,12 +982,51 @@ def bewerken(kaart_id):
             data[veld] = huidige.get(veld, '')
         for veld in INHOUD_LIJST_VELDEN.get(kaart.type, []):
             raw = huidige.get(veld, []) or []
-            # Backward-compat: ouder pager_voertuigen was een vrije string
-            # ("TS 2441"). Split op spaties zodat de SelectMultipleField
-            # de losse tokens kan matchen op zijn choices.
+            # Backward-compat: enkele velden waren voorheen een string.
+            # - pager_voertuigen: vrije tekst ("TS 2441") → split op spaties.
+            # - doelgroep: single-select string ("manschappen") → map oude keys
+            #   naar nieuwe (de oude enkelvoudige 'manschappen'/'bevelvoerders'/
+            #   'chauffeurs' zijn in v0.7.47 vervangen door fijnmazigere keys).
             if isinstance(raw, str):
-                raw = [t for t in raw.split() if t]
+                if veld == 'doelgroep':
+                    _oud_naar_nieuw = {
+                        'manschappen': 'manschap',
+                        'bevelvoerders': 'bevelvoerder',
+                        'chauffeurs': 'chauffeur_zwaar',
+                        'spec': 'ags',  # SPEC had geen 1-op-1 mapping — AGS is dichtste match
+                        'anders': 'anders',
+                    }
+                    raw = [_oud_naar_nieuw.get(raw, raw)] if raw.strip() else []
+                else:
+                    raw = [t for t in raw.split() if t]
             data[veld] = raw
+        # Backward-compat voor oefenstaf: v0.7.48 heeft losse velden
+        # (ensceneerder_aantal / waarnemer_aantal / overig_functie+aantal)
+        # vervangen door JSON-lijst `oefenstaf_overig`. Open-je een oudere
+        # kaart dan bouwen we die lijst hier op uit de losse velden.
+        if kaart.type == 'scenario' and not huidige.get('oefenstaf_overig'):
+            _oefenstaf = []
+            try:
+                _ea = int(huidige.get('ensceneerder_aantal') or 0)
+            except (ValueError, TypeError):
+                _ea = 0
+            if _ea > 0:
+                _oefenstaf.append({'rol': 'ensceneerder', 'aantal': _ea})
+            try:
+                _wa = int(huidige.get('waarnemer_aantal') or 0)
+            except (ValueError, TypeError):
+                _wa = 0
+            if _wa > 0:
+                _oefenstaf.append({'rol': 'waarnemer', 'aantal': _wa})
+            _of = (huidige.get('overig_functie') or '').strip()
+            try:
+                _oa = int(huidige.get('overig_aantal') or 0)
+            except (ValueError, TypeError):
+                _oa = 0
+            if _of and _oa > 0:
+                _oefenstaf.append({'rol': 'anders', 'aantal': _oa, 'eigen_tekst': _of})
+            if _oefenstaf:
+                data['oefenstaf_overig'] = json.dumps(_oefenstaf)
         form = form_class(data=data)
 
     wijziging_toelichting = (request.form.get('wijziging_toelichting') or '').strip()

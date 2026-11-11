@@ -1339,6 +1339,60 @@
     {{ form.hidden_tag() }}
     <input type="hidden" name="auto_save_tab" id="auto-save-tab" value="">
 
+    {# ==================== DOELGROEP-BLOK (multi-select chips + zoekveld) ==================== #}
+    {# Herbruikt op scenariokaart én opdrachtkaart. `uniek_id` onderscheidt de twee
+       instanties zodat JS per blok werkt (scoped). `geselecteerd` komt uit form.doelgroep.data. #}
+    {% macro render_doelgroep_blok(uniek_id='doelgroep') %}
+    {% set geselecteerd = form.doelgroep.data or [] %}
+    <div class="doelgroep-blok" data-doelgroep-blok="{{ uniek_id }}">
+        <div class="doelgroep-zoek-rij">
+            {{ form.doelgroep.label(class="form-label") }}
+            <span class="doelgroep-teller" id="{{ uniek_id }}-teller">
+                {{ geselecteerd|length }} geselecteerd
+            </span>
+        </div>
+        <div class="doelgroep-groepen">
+            {% for groep_naam, opties in DOELGROEP_GROEPEN %}
+            <div class="doelgroep-groep" data-groep="{{ groep_naam }}">
+                <h5 class="doelgroep-groep-kop">{{ groep_naam }}</h5>
+                <div class="doelgroep-chips">
+                    {% for waarde, label in opties %}
+                    <label class="doelgroep-chip" data-label="{{ label|lower }}">
+                        <input type="checkbox" name="doelgroep" value="{{ waarde }}"
+                               {% if waarde in geselecteerd %}checked{% endif %}>
+                        <span>{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            {# "Anders" staat los — toont het eigen-tekstveld hieronder #}
+            <div class="doelgroep-groep" data-groep="Anders">
+                <h5 class="doelgroep-groep-kop">Anders</h5>
+                <div class="doelgroep-chips">
+                    <label class="doelgroep-chip doelgroep-chip-anders" data-label="anders">
+                        <input type="checkbox" name="doelgroep" value="anders"
+                               id="{{ uniek_id }}-anders-checkbox"
+                               {% if 'anders' in geselecteerd %}checked{% endif %}>
+                        <span>Anders (zelf invullen)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="doelgroep-anders-blok" id="{{ uniek_id }}-anders-blok"
+             style="{% if 'anders' not in geselecteerd %}display:none;{% endif %}">
+            {{ form.doelgroep_anders.label(class="form-label") }}
+            {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
+            {% for error in form.doelgroep_anders.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        {% for error in form.doelgroep.errors %}
+        <span class="form-error">{{ error }}</span>
+        {% endfor %}
+    </div>
+    {% endmacro %}
+
     {# ==================== ALGEMEEN BLOK (naam + kerntaak + header foto) ==================== #}
     {% macro render_algemeen() %}
     {% if form.naam is defined %}
@@ -1521,49 +1575,42 @@
 
         <div class="form-subgroep-blok">
             <h4 class="form-subgroep-titel">Doelgroep</h4>
-            <div class="form-groep-rij">
-                <div class="form-groep-kolom">
-                    <div class="form-group">
-                        {{ form.doelgroep.label(class="form-label") }}
-                        {{ form.doelgroep(class="form-input form-select", id="doelgroep-select") }}
-                        {% for error in form.doelgroep.errors %}
-                        <span class="form-error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="form-groep-kolom" id="doelgroep-anders-kolom" style="{% if form.doelgroep.data != 'anders' %}display:none;{% endif %}">
-                    <div class="form-group">
-                        {{ form.doelgroep_anders.label(class="form-label") }}
-                        {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
-                        {% for error in form.doelgroep_anders.errors %}
-                        <span class="form-error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+            {{ render_doelgroep_blok('scenario-doelgroep') }}
         </div>
 
         <div class="form-subgroep-blok">
-            <h4 class="form-subgroep-titel">Oefenstaf</h4>
+            <h4 class="form-subgroep-titel">Oefenleider</h4>
             <div class="form-groep-rij">
-                <div class="form-groep-kolom">
+                <div class="form-groep-kolom" style="max-width: 180px;">
                     <div class="form-group">
                         {{ form.oefenleider_aantal.label(class="form-label") }}
-                        {{ form.oefenleider_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
+                        {{ form.oefenleider_aantal(class="form-input form-number", min=0, max=20, placeholder="1") }}
                         {% for error in form.oefenleider_aantal.errors %}
                         <span class="form-error">{{ error }}</span>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="form-groep-kolom" style="flex: 2;">
-                    <div class="form-group">
-                        {{ form.oefenleider_rol.label(class="form-label") }}
-                        {{ form.oefenleider_rol(class="form-input form-select", id="oefenleider-rol-select") }}
-                        <p class="form-hint">Optioneel. Specificeer de rol van de oefenleider.</p>
-                    </div>
-                </div>
             </div>
-            <div class="form-groep-rij" id="oefenleider-rol-anders-rij" style="{% if form.oefenleider_rol.data != 'anders' %}display:none;{% endif %}">
+            <div class="form-group">
+                <label class="form-label">Specificatie (optioneel)</label>
+                <div class="oefenstaf-chips" id="oefenleider-rol-chips">
+                    {% for waarde, label in form.oefenleider_rol.choices if waarde %}
+                    <label class="oefenstaf-chip {% if waarde == 'anders' %}oefenstaf-chip-anders{% endif %}">
+                        <input type="radio" name="oefenleider_rol" value="{{ waarde }}"
+                               {% if form.oefenleider_rol.data == waarde %}checked{% endif %}>
+                        <span>{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                    <label class="oefenstaf-chip oefenstaf-chip-geen">
+                        <input type="radio" name="oefenleider_rol" value=""
+                               {% if not form.oefenleider_rol.data %}checked{% endif %}>
+                        <span>Geen specificatie</span>
+                    </label>
+                </div>
+                <p class="form-hint">Kies 1 specificatie van de oefenleider, of laat "Geen specificatie" staan.</p>
+            </div>
+            <div class="form-groep-rij" id="oefenleider-rol-anders-rij"
+                 style="{% if form.oefenleider_rol.data != 'anders' %}display:none;{% endif %}">
                 <div class="form-groep-kolom">
                     <div class="form-group">
                         {{ form.oefenleider_rol_anders.label(class="form-label") }}
@@ -1571,38 +1618,56 @@
                     </div>
                 </div>
             </div>
-            <div class="form-subgroep-blok">
-                <h4 class="form-subgroep-titel">Ondersteuners</h4>
-                <p class="form-hint">Geef per functie het aantal ondersteuners aan.</p>
-                <div class="form-groep-rij">
-                    <div class="form-groep-kolom">
-                        <div class="form-group">
-                            {{ form.ensceneerder_aantal.label(class="form-label") }}
-                            {{ form.ensceneerder_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
-                        </div>
-                    </div>
-                    <div class="form-groep-kolom">
-                        <div class="form-group">
-                            {{ form.waarnemer_aantal.label(class="form-label") }}
-                            {{ form.waarnemer_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
-                        </div>
-                    </div>
+        </div>
+
+        {# Blok 2: overige oefenstaf — chip-grid met aantal-input per gekozen chip.
+           Opgeslagen als JSON-lijst in oefenstaf_overig. #}
+        {% set _overig_raw = form.oefenstaf_overig.data or '[]' %}
+        {% set _overig_lijst = _overig_raw | from_json_safe %}
+        {% set _overig_map = {} %}
+        {% for _it in _overig_lijst %}{% if _it.rol %}{% set _ = _overig_map.update({_it.rol: _it}) %}{% endif %}{% endfor %}
+        <div class="form-subgroep-blok">
+            <h4 class="form-subgroep-titel">Overige oefenstaf</h4>
+            <p class="form-hint">Vink alle ondersteunende rollen aan die aanwezig zijn. Per aangevinkte rol verschijnt een aantal-veldje.</p>
+            <input type="hidden" name="oefenstaf_overig" id="oefenstaf-overig-json"
+                   value="{{ form.oefenstaf_overig.data or '' }}">
+            <div class="oefenstaf-overig-grid" id="oefenstaf-overig-grid">
+                {% for waarde, label in OEFENSTAF_OVERIG_KEUZES %}
+                {% set _it = _overig_map.get(waarde) %}
+                <div class="oefenstaf-overig-item {% if _it %}gekozen{% endif %}" data-rol="{{ waarde }}">
+                    <label class="oefenstaf-chip">
+                        <input type="checkbox" class="oefenstaf-overig-checkbox"
+                               value="{{ waarde }}" {% if _it %}checked{% endif %}>
+                        <span>{{ label }}</span>
+                    </label>
+                    <input type="number" class="form-input form-number oefenstaf-overig-aantal"
+                           min="1" max="99" value="{{ _it.aantal if _it else 1 }}"
+                           {% if not _it %}style="display:none;"{% endif %}
+                           aria-label="Aantal {{ label }}">
                 </div>
-                <div class="form-groep-rij">
-                    <div class="form-groep-kolom">
-                        <div class="form-group">
-                            {{ form.overig_aantal.label(class="form-label") }}
-                            {{ form.overig_aantal(class="form-input form-number", min=0, max=20, placeholder="0") }}
-                        </div>
-                    </div>
-                    <div class="form-groep-kolom" style="flex: 2;">
-                        <div class="form-group">
-                            {{ form.overig_functie.label(class="form-label") }}
-                            {{ form.overig_functie(class="form-input", placeholder="Bijv. Veiligheidsfunctionaris", maxlength=40) }}
-                        </div>
-                    </div>
+                {% endfor %}
+                {# "Anders" — dashed-chip + eigen tekst + aantal #}
+                {% set _it_anders = _overig_map.get('anders') %}
+                <div class="oefenstaf-overig-item oefenstaf-overig-anders {% if _it_anders %}gekozen{% endif %}"
+                     data-rol="anders">
+                    <label class="oefenstaf-chip oefenstaf-chip-anders">
+                        <input type="checkbox" class="oefenstaf-overig-checkbox"
+                               value="anders" {% if _it_anders %}checked{% endif %}>
+                        <span>Anders</span>
+                    </label>
+                    <input type="text" class="form-input oefenstaf-overig-tekst"
+                           maxlength="40" placeholder="Bijv. Veiligheidsfunctionaris"
+                           value="{{ _it_anders.eigen_tekst if _it_anders else '' }}"
+                           {% if not _it_anders %}style="display:none;"{% endif %}>
+                    <input type="number" class="form-input form-number oefenstaf-overig-aantal"
+                           min="1" max="99" value="{{ _it_anders.aantal if _it_anders else 1 }}"
+                           {% if not _it_anders %}style="display:none;"{% endif %}
+                           aria-label="Aantal (anders)">
                 </div>
             </div>
+            {% for error in form.oefenstaf_overig.errors %}
+            <span class="form-error">{{ error }}</span>
+            {% endfor %}
         </div>
 
         <div class="form-subgroep-blok">
@@ -2637,21 +2702,8 @@
             {# Doelgroep + tijdsduur #}
             <div class="form-groep-blok">
                 <h3 class="form-groep-titel">Doelgroep en tijdsduur</h3>
-                <div class="form-groep-rij">
-                    <div class="form-groep-kolom">
-                        <div class="form-group">
-                            {{ form.doelgroep.label(class="form-label") }}
-                            {{ form.doelgroep(class="form-input form-select", id="doelgroep-select") }}
-                            {% for error in form.doelgroep.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                        </div>
-                    </div>
-                    <div class="form-groep-kolom" id="doelgroep-anders-kolom" style="{% if form.doelgroep.data != 'anders' %}display:none;{% endif %}">
-                        <div class="form-group">
-                            {{ form.doelgroep_anders.label(class="form-label") }}
-                            {{ form.doelgroep_anders(class="form-input", placeholder="Bijv. Nieuwe instroom", maxlength=40) }}
-                            {% for error in form.doelgroep_anders.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
-                        </div>
-                    </div>
+                {{ render_doelgroep_blok('opdracht-doelgroep') }}
+                <div class="form-groep-rij" style="margin-top: 1rem;">
                     <div class="form-groep-kolom">
                         <div class="form-group">
                             {{ form.tijdsduur.label(class="form-label") }}
@@ -3858,13 +3910,34 @@
     }
 })();
 
-/* === Doelgroep "anders"-veld tonen/verbergen === */
+/* === Doelgroep-blok: chip-selectie + teller + "Anders"-tekstveld toggle === */
 (function() {
-    var sel = document.getElementById('doelgroep-select');
-    var kol = document.getElementById('doelgroep-anders-kolom');
-    if (!sel || !kol) return;
-    sel.addEventListener('change', function() {
-        kol.style.display = (sel.value === 'anders') ? '' : 'none';
+    document.querySelectorAll('[data-doelgroep-blok]').forEach(function(blok) {
+        var prefix = blok.dataset.doelgroepBlok;
+        var chips = blok.querySelectorAll('.doelgroep-chip');
+        var teller = blok.querySelector('.doelgroep-teller');
+        var andersCheckbox = blok.querySelector('#' + prefix + '-anders-checkbox');
+        var andersBlok = blok.querySelector('#' + prefix + '-anders-blok');
+
+        function updateTeller() {
+            var n = blok.querySelectorAll('input[type="checkbox"]:checked').length;
+            if (teller) teller.textContent = n + ' geselecteerd';
+        }
+
+        function updateAnders() {
+            if (!andersCheckbox || !andersBlok) return;
+            andersBlok.style.display = andersCheckbox.checked ? '' : 'none';
+        }
+
+        chips.forEach(function(chip) {
+            var cb = chip.querySelector('input[type="checkbox"]');
+            if (cb) cb.addEventListener('change', function() {
+                updateTeller();
+                if (cb === andersCheckbox) updateAnders();
+            });
+        });
+        updateTeller();
+        updateAnders();
     });
 })();
 
@@ -3878,14 +3951,65 @@
     });
 })();
 
-/* === Oefenleider-rol "anders"-veld tonen/verbergen === */
+/* === Oefenleider-rol chips: "anders"-veld tonen/verbergen === */
 (function() {
-    var sel = document.getElementById('oefenleider-rol-select');
+    var chips = document.getElementById('oefenleider-rol-chips');
     var rij = document.getElementById('oefenleider-rol-anders-rij');
-    if (!sel || !rij) return;
-    sel.addEventListener('change', function() {
-        rij.style.display = (sel.value === 'anders') ? '' : 'none';
+    if (!chips || !rij) return;
+    chips.querySelectorAll('input[type="radio"]').forEach(function(r) {
+        r.addEventListener('change', function() {
+            rij.style.display = (r.checked && r.value === 'anders') ? '' : 'none';
+        });
     });
+})();
+
+/* === Overige oefenstaf: chip-grid met aantal-input per gekozen chip ===
+   Vult het hidden JSON-veld `oefenstaf-overig-json` continu bij; dat veld
+   wordt bij submit meegestuurd als `oefenstaf_overig`. */
+(function() {
+    var grid = document.getElementById('oefenstaf-overig-grid');
+    var hidden = document.getElementById('oefenstaf-overig-json');
+    if (!grid || !hidden) return;
+
+    function serialiseer() {
+        var items = [];
+        grid.querySelectorAll('.oefenstaf-overig-item').forEach(function(item) {
+            var cb = item.querySelector('.oefenstaf-overig-checkbox');
+            if (!cb || !cb.checked) return;
+            var rol = cb.value;
+            var aantalInput = item.querySelector('.oefenstaf-overig-aantal');
+            var aantal = parseInt(aantalInput ? aantalInput.value : '1', 10);
+            if (isNaN(aantal) || aantal < 1) aantal = 1;
+            var entry = { rol: rol, aantal: aantal };
+            if (rol === 'anders') {
+                var tekstInput = item.querySelector('.oefenstaf-overig-tekst');
+                var tekst = (tekstInput ? tekstInput.value : '').trim();
+                if (tekst) entry.eigen_tekst = tekst;
+            }
+            items.push(entry);
+        });
+        hidden.value = JSON.stringify(items);
+    }
+
+    grid.querySelectorAll('.oefenstaf-overig-item').forEach(function(item) {
+        var cb = item.querySelector('.oefenstaf-overig-checkbox');
+        var aantalInput = item.querySelector('.oefenstaf-overig-aantal');
+        var tekstInput = item.querySelector('.oefenstaf-overig-tekst');
+
+        function syncVisibility() {
+            var zichtbaar = cb.checked;
+            if (aantalInput) aantalInput.style.display = zichtbaar ? '' : 'none';
+            if (tekstInput) tekstInput.style.display = zichtbaar ? '' : 'none';
+            item.classList.toggle('gekozen', zichtbaar);
+        }
+
+        if (cb) cb.addEventListener('change', function() { syncVisibility(); serialiseer(); });
+        if (aantalInput) aantalInput.addEventListener('input', serialiseer);
+        if (tekstInput) tekstInput.addEventListener('input', serialiseer);
+    });
+
+    // Eerste serialisatie om prefill-staat correct in de hidden input te krijgen.
+    serialiseer();
 })();
 </script>
 
@@ -4525,7 +4649,7 @@ setupCropper({
             { id: 'header-foto-input', label: 'Header/achtergrondfoto', aanmakenOnly: true, type: 'file-of-bestaand' }
         ],
         'opzet': [
-            { id: 'doelgroep-select', label: 'Doelgroep' },
+            { type: 'doelgroep', blok: 'scenario-doelgroep', label: 'Doelgroep' },
             { id: 'oefenleider_aantal', label: 'Aantal oefenleiders' },
             { id: 'tijdsduur', label: 'Tijdsduur' },
             { type: 'json-lijst', hidden: 'oefenmiddelen-basis-hidden', label: 'Praktisch — Wat regel jij (minimaal 1)', min: 1 },
@@ -4548,7 +4672,7 @@ setupCropper({
         'verwijzingen': [],
         // Opdrachtkaart-tabs (voorbereiding/verdieping/evaluatie/achtergrond zijn optioneel)
         'voorbereiding': [
-            { id: 'doelgroep-select', label: 'Doelgroep' },
+            { type: 'doelgroep', blok: 'opdracht-doelgroep', label: 'Doelgroep' },
             { type: 'json-lijst', hidden: 'oefenmiddelen-basis-hidden', label: 'Praktisch — Wat regel jij (minimaal 1)', min: 1 }
         ],
         'opdrachten': [
@@ -4603,22 +4727,36 @@ setupCropper({
                     } catch (_) {}
                     if (aantal < (v.min || 1)) ontbrekend.push(v.label);
                 }
+            } else if (v.type === 'doelgroep') {
+                var blok = document.querySelector('[data-doelgroep-blok="' + v.blok + '"]');
+                if (blok) {
+                    var aantal = blok.querySelectorAll('input[type="checkbox"]:checked').length;
+                    if (aantal === 0) {
+                        ontbrekend.push(v.label);
+                    } else {
+                        var andersCb = blok.querySelector('input[type="checkbox"][value="anders"]');
+                        if (andersCb && andersCb.checked) {
+                            var andersTxt = blok.querySelector('input[name="doelgroep_anders"]');
+                            if (andersTxt && !(andersTxt.value || '').trim()) {
+                                ontbrekend.push('Eigen doelgroep');
+                            }
+                        }
+                    }
+                }
             } else {
                 var el = document.getElementById(v.id);
                 if (el && !(el.value || '').trim()) ontbrekend.push(v.label);
             }
         });
-        // Voorwaardelijk: doelgroep='anders' → doelgroep_anders verplicht
+        // Voorwaardelijk: oefenleider-rol='anders' → eigen rol verplicht
         if (tabId === 'opzet') {
-            var dg = document.getElementById('doelgroep-select');
-            if (dg && dg.value === 'anders') {
-                var dgA = document.getElementById('doelgroep_anders');
-                if (dgA && !(dgA.value || '').trim()) ontbrekend.push('Eigen doelgroep');
-            }
-            var orol = document.getElementById('oefenleider-rol-select');
-            if (orol && orol.value === 'anders') {
-                var orolA = document.getElementById('oefenleider_rol_anders');
-                if (orolA && !(orolA.value || '').trim()) ontbrekend.push('Eigen rol (oefenleider)');
+            var orolChips = document.getElementById('oefenleider-rol-chips');
+            if (orolChips) {
+                var gekozen = orolChips.querySelector('input[type="radio"]:checked');
+                if (gekozen && gekozen.value === 'anders') {
+                    var orolA = document.getElementById('oefenleider_rol_anders');
+                    if (orolA && !(orolA.value || '').trim()) ontbrekend.push('Eigen rol (oefenleider)');
+                }
             }
         }
         if (tabId === 'scenario') {
