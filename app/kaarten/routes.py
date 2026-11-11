@@ -11,46 +11,26 @@ from app import db
 
 
 # === Rich-text sanitizer ===
-# Whitelist van tags/attributen die de editor mag produceren. Alles daarbuiten
-# wordt door bleach.clean() gestript — beschermt tegen XSS bij weergave in de app
-# en tegen ongewenste opmaak in de PDF (fonts, inline scripts, etc.). Wordt
-# gebruikt voor werkwijze-stappen (instructiekaart) en ensceneringstips
-# (scenariokaart).
+# v0.7.51: alleen bold/italic/lijsten toegestaan — kleuren uit de Quill-toolbar
+# gehaald (Rebecca: 'te druk'). Oude kaarten met gekleurde spans worden gestript
+# naar platte tekst. Alles buiten deze whitelist wordt door bleach gestript —
+# beschermt tegen XSS en ongewenste opmaak in de PDF.
 RICH_TEXT_TOEGESTANE_TAGS = [
-    'p', 'br', 'strong', 'b', 'em', 'i', 'u',
-    'h3', 'h4',
+    'p', 'br', 'strong', 'b', 'em', 'i',
     'ul', 'ol', 'li',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
-    'span',
 ]
-# Enige attribuut dat we toelaten is `style="color: <hex>"` op <span>. Kleuren
-# worden verder gefilterd tot de 3 huisstijl-kleuren (navy, brandweer-rood, zwart).
-RICH_TEXT_HUISSTIJL_KLEUREN = {'#1B2A4A', '#C8102E', '#000000', '#1b2a4a', '#c8102e'}
-_KLEUR_STYLE_RE = re.compile(r'color\s*:\s*(#[0-9a-fA-F]{6})', re.IGNORECASE)
-
-
-def _rich_text_style_filter(tag, name, value):
-    """bleach attribute-filter: sta alleen 'style' toe op <span>, alleen met
-    color-waarde uit de huisstijl. Al het andere wordt geweigerd."""
-    if name != 'style' or tag != 'span':
-        return False
-    match = _KLEUR_STYLE_RE.search(value or '')
-    if not match:
-        return False
-    kleur = match.group(1)
-    return kleur in RICH_TEXT_HUISSTIJL_KLEUREN
 
 
 def sanitize_rich_html(ruw_html):
     """Sanitize + normaliseer rich-text input. Gebruikt voor werkwijze-stappen
-    (v0.7.31) en ensceneringstips (v0.7.32). Leverstijl: één HTML-string die
-    veilig in Jinja én in WeasyPrint gerenderd kan worden."""
+    (instructiekaart) en ensceneringstips (scenariokaart). Leverstijl: één
+    HTML-string die veilig in Jinja én in WeasyPrint gerenderd kan worden."""
     if not ruw_html:
         return ''
     schoon = bleach.clean(
         ruw_html,
         tags=RICH_TEXT_TOEGESTANE_TAGS,
-        attributes={'span': _rich_text_style_filter},
+        attributes={},
         strip=True,
     )
     # Reduceer whitespace-blokken en verwijder lege paragrafen die contenteditable

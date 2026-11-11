@@ -990,6 +990,17 @@
         line-height: 1.45;
         color: #1B2A4A;
     }
+    /* Rich-text content uit Quill (v0.7.50): bullets, genummerde lijsten,
+       kleur en vet/cursief netjes renderen. */
+    .pdf-tip-stap-tekst p { margin: 0 0 1mm 0; }
+    .pdf-tip-stap-tekst ul,
+    .pdf-tip-stap-tekst ol {
+        margin: 0.5mm 0 1mm 0;
+        padding-left: 5mm;
+    }
+    .pdf-tip-stap-tekst li { margin-bottom: 0.3mm; }
+    .pdf-tip-stap-tekst strong, .pdf-tip-stap-tekst b { font-weight: 700; }
+    .pdf-tip-stap-tekst em, .pdf-tip-stap-tekst i { font-style: italic; }
     .pdf-tip-stap-foto {
         overflow: hidden;
         display: flex;

@@ -4,6 +4,10 @@
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/cropperjs/cropper.min.css') }}">
 <script src="{{ url_for('static', filename='vendor/cropperjs/cropper.min.js') }}"></script>
+{# Quill 1.3.7 — rich-text editor voor werkwijze-stappen en ensceneringstips.
+   Vervangt de oude contenteditable + execCommand-aanpak uit v0.7.31/32. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}">
+<script src="{{ url_for('static', filename='vendor/quill/quill.min.js') }}"></script>
 <style>
     .cropper-knoppen { display:flex; flex-wrap:wrap; gap:0.5rem; }
     .cropper-knoppen .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.9rem; }
@@ -764,11 +768,23 @@
         object-fit: contain;
     }
     .werkwijze-preview-tekst {
-        white-space: pre-wrap;
         font-size: 9.5pt;
         margin-top: 0;
         color: #1A1A1A;
     }
+    /* Quill rich-text content in de preview (v0.7.50): bullets/nummers krijgen
+       inspringing, paragrafen lichte onderlinge margin, vet/cursief/kleur
+       respecteren inline styles die Quill produceert. */
+    .werkwijze-preview-tekst p { margin: 0 0 2mm 0; }
+    .werkwijze-preview-tekst p:last-child { margin-bottom: 0; }
+    .werkwijze-preview-tekst ul,
+    .werkwijze-preview-tekst ol {
+        margin: 1mm 0 2mm 0;
+        padding-left: 5mm;
+    }
+    .werkwijze-preview-tekst li { margin-bottom: 0.5mm; line-height: 1.3; }
+    .werkwijze-preview-tekst strong, .werkwijze-preview-tekst b { font-weight: 700; }
+    .werkwijze-preview-tekst em, .werkwijze-preview-tekst i { font-style: italic; }
     .werkwijze-preview-bullets {
         list-style: none;
         padding: 0;
@@ -1109,94 +1125,46 @@
         justify-content: center;
     }
 
-    /* === Gedeelde rich-text-editor styling (werkwijze, tips) === */
-    .kk-editor-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        padding: 0.4rem 0.5rem;
-        background: #F5F5F1;
+    /* === Quill rich-text editor (werkwijze, tips) — v0.7.50 ===
+       Vervangt de oude contenteditable + gedeelde toolbar. Elke editor heeft
+       zijn eigen compacte toolbar bovenaan met bullet, ordered, bold, italic
+       en 4 kleuren (zwart, brandweer-rood, succes-groen, brandweergoud). */
+    .vs-rte-wrapper {
+        margin-top: 0.3rem;
+    }
+    .vs-rte-wrapper .ql-toolbar.ql-snow {
         border: 1px solid #D6D2C7;
-        border-bottom: none;
         border-radius: 4px 4px 0 0;
-        align-items: center;
+        background: #F5F5F1;
+        padding: 0.3rem 0.5rem;
     }
-    .kk-tb-knop {
-        min-width: 32px;
-        height: 30px;
-        padding: 0 0.5rem;
-        border: 1px solid #C5C0B4;
-        background: #FFF;
-        color: #1B2A4A;
-        font-family: 'Open Sans', sans-serif;
-        font-size: 0.85rem;
-        cursor: pointer;
-        border-radius: 3px;
-    }
-    .kk-tb-knop:hover { background: #E8E4D8; }
-    .kk-tb-kleur {
-        width: 24px;
-        height: 24px;
-        border: 2px solid #FFF;
-        outline: 1px solid #C5C0B4;
-        cursor: pointer;
-        border-radius: 3px;
-        padding: 0;
-    }
-    .kk-tb-kleur:hover { outline-color: #1B2A4A; outline-width: 2px; }
-    .kk-tb-scheiding {
-        width: 1px;
-        background: #C5C0B4;
-        height: 22px;
-        margin: 0 0.25rem;
-    }
-    .kk-editor {
-        min-height: 300px;
+    .vs-rte-wrapper .ql-container.ql-snow {
         border: 1px solid #D6D2C7;
+        border-top: none;
         border-radius: 0 0 4px 4px;
-        padding: 1rem 1.25rem;
+        min-height: 120px;
+        max-height: 50vh;
+        overflow-y: auto;
+        background: #FFF;
         font-family: 'Open Sans', sans-serif;
         font-size: 1rem;
+    }
+    .vs-rte-wrapper .ql-editor {
+        padding: 0.8rem 1rem;
         line-height: 1.55;
-        background: #FFF;
         color: #1A1A1A;
-        overflow-y: auto;
-        max-height: 60vh;
     }
-    .kk-editor:focus { outline: 2px solid #1B2A4A; outline-offset: -2px; }
-    .kk-editor[data-empty="true"]::before {
-        content: attr(data-placeholder);
-        color: #999;
+    .vs-rte-wrapper .ql-editor.ql-blank::before {
         font-style: italic;
-        pointer-events: none;
+        color: #999;
     }
-    .kk-editor h3 {
-        font-family: 'Frutiger', 'Open Sans', sans-serif;
-        color: #1B2A4A;
-        font-size: 1.2rem;
-        margin: 1rem 0 0.5rem 0;
-    }
-    .kk-editor h4 {
-        font-family: 'Frutiger', 'Open Sans', sans-serif;
-        color: #1B2A4A;
-        font-size: 1rem;
-        margin: 0.8rem 0 0.4rem 0;
-    }
-    .kk-editor p { margin: 0 0 0.5rem 0; }
-    .kk-editor ul, .kk-editor ol { margin: 0.4rem 0 0.8rem 1.5rem; }
-    .kk-editor li { margin-bottom: 0.2rem; }
-    .kk-editor table {
-        border-collapse: collapse;
-        margin: 0.5rem 0;
-        min-width: 60%;
-    }
-    .kk-editor th, .kk-editor td {
-        border: 1px solid #B8B2A4;
-        padding: 0.4rem 0.6rem;
-        min-width: 60px;
-        vertical-align: top;
-    }
-    .kk-editor th { background: #F0EFEC; text-align: left; font-weight: 700; }
+    /* Quill's eigen list-styling: bullet via ::before op li, standaard
+       padding-left 1.5em. We duwen het geheel verder naar rechts voor
+       zichtbare inspringing — de bullet schuift mee omdat die op
+       margin-left: -1.5em staat tov. de padding. */
+    .vs-rte-wrapper .ql-editor p { margin: 0 0 0.3rem 0; }
+    .vs-rte-wrapper .ql-editor ul,
+    .vs-rte-wrapper .ql-editor ol { padding-left: 3em; }
 
 </style>
 {% endblock %}
@@ -1815,22 +1783,6 @@
         <h3 class="form-groep-titel">Ensceneringstips</h3>
         <p class="form-hint">Per tip een korte omschrijving en optioneel max 2 foto's. Max <strong>3</strong> tips — <span id="tips-teller">0 / 3</span>.</p>
         <p class="form-hint">💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een tip — de tweede foto binnen dezelfde tip volgt automatisch dezelfde verhouding.</p>
-
-        {# Gedeelde rich-text toolbar (v0.7.32) — bedient de laatst-gefocuste tip-omschrijving. #}
-        <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak" id="tips-shared-toolbar">
-            <button type="button" class="kk-tb-knop" data-kk-cmd="bold" title="Vet (Ctrl+B)"><strong>B</strong></button>
-            <button type="button" class="kk-tb-knop" data-kk-cmd="italic" title="Cursief (Ctrl+I)"><em>I</em></button>
-            <span class="kk-tb-scheiding"></span>
-            <button type="button" class="kk-tb-knop" data-kk-cmd="insertUnorderedList" title="Opsomming">• Lijst</button>
-            <button type="button" class="kk-tb-knop" data-kk-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
-            <span class="kk-tb-scheiding"></span>
-            <button type="button" class="kk-tb-kleur" data-kk-kleur="#000000" style="background:#000000" title="Zwart"></button>
-            <button type="button" class="kk-tb-kleur" data-kk-kleur="#1B2A4A" style="background:#1B2A4A" title="Huisstijl-navy"></button>
-            <button type="button" class="kk-tb-kleur" data-kk-kleur="#C8102E" style="background:#C8102E" title="Brandweer-rood"></button>
-            <span class="kk-tb-scheiding"></span>
-            <button type="button" class="kk-tb-knop" data-kk-cmd="removeFormat" title="Opmaak weghalen">Wis opmaak</button>
-        </div>
-        <p class="form-hint" style="margin-top:0.4rem;">💡 De toolbar werkt op de tip-omschrijving waar je cursor het laatst stond.</p>
 
         {{ form.ensceneringstips(type="hidden", id="tips-json") }}
         <div id="tips-lijst"></div>
@@ -2489,22 +2441,6 @@
             <p class="form-hint">
                 💡 <strong>Tip:</strong> kies de gewenste verhouding (breed, liggend, vierkant of staand) bij de <strong>eerste foto</strong> van een stap — de volgende foto's binnen die stap volgen automatisch dezelfde verhouding voor een strak eindresultaat.
             </p>
-
-            {# Gedeelde rich-text toolbar (v0.7.31) — bedient de laatst-gefocuste vrije-tekst-editor. #}
-            <div class="kk-editor-toolbar" role="toolbar" aria-label="Opmaak" id="ww-shared-toolbar">
-                <button type="button" class="kk-tb-knop" data-kk-cmd="bold" title="Vet (Ctrl+B)"><strong>B</strong></button>
-                <button type="button" class="kk-tb-knop" data-kk-cmd="italic" title="Cursief (Ctrl+I)"><em>I</em></button>
-                <span class="kk-tb-scheiding"></span>
-                <button type="button" class="kk-tb-knop" data-kk-cmd="insertUnorderedList" title="Opsomming">• Lijst</button>
-                <button type="button" class="kk-tb-knop" data-kk-cmd="insertOrderedList" title="Genummerde lijst">1. Lijst</button>
-                <span class="kk-tb-scheiding"></span>
-                <button type="button" class="kk-tb-kleur" data-kk-kleur="#000000" style="background:#000000" title="Zwart"></button>
-                <button type="button" class="kk-tb-kleur" data-kk-kleur="#1B2A4A" style="background:#1B2A4A" title="Huisstijl-navy"></button>
-                <button type="button" class="kk-tb-kleur" data-kk-kleur="#C8102E" style="background:#C8102E" title="Brandweer-rood"></button>
-                <span class="kk-tb-scheiding"></span>
-                <button type="button" class="kk-tb-knop" data-kk-cmd="removeFormat" title="Opmaak weghalen">Wis opmaak</button>
-            </div>
-            <p class="form-hint" style="margin-top:0.4rem;">💡 De toolbar werkt op de vrije-tekst-uitleg waar je cursor het laatst stond.</p>
 
             <div id="werkwijze-stappen-lijst"></div>
 
@@ -3178,6 +3114,58 @@
 
 {# ==================== SCRIPTS ==================== #}
 <script>
+/* === Gedeelde Quill rich-text helper (v0.7.50) ===
+   Vervangt de oude contenteditable-editors voor ensceneringstips en
+   werkwijze-stappen. Gebruik:
+       var quill = window.vsInitQuill(hostDiv, '<p>html</p>', 'placeholder',
+                                       function(html, plainText) { ... });
+   De handler wordt op elke tekstwijziging aangeroepen met de schone HTML en
+   de plat-tekst-versie. Quill produceert consistente HTML tussen browsers;
+   de server sanitize'd nog eens met bleach in `sanitize_rich_html`. */
+window.vsInitQuill = function(hostDiv, initialHtml, placeholder, onChange) {
+    // Wrap voor onze eigen styling-haak + Quill's eigen DOM-structuur eronder.
+    var wrapper = document.createElement('div');
+    wrapper.className = 'vs-rte-wrapper';
+    hostDiv.parentNode.insertBefore(wrapper, hostDiv);
+    hostDiv.remove();
+
+    var editorDiv = document.createElement('div');
+    wrapper.appendChild(editorDiv);
+
+    var quill = new Quill(editorDiv, {
+        theme: 'snow',
+        placeholder: placeholder || '',
+        formats: ['bold', 'italic', 'list'],
+        modules: {
+            toolbar: [
+                ['bold', 'italic'],
+                [{ list: 'bullet' }, { list: 'ordered' }],
+                ['clean'],
+            ],
+        },
+    });
+
+    // Initiale HTML plaatsen (zonder styling-sanitize door Quill zelf te triggeren).
+    if (initialHtml) {
+        // dangerouslyPasteHTML respecteert de 'formats'-whitelist — alles wat
+        // niet in b/i/list/color past wordt automatisch gestript.
+        quill.clipboard.dangerouslyPasteHTML(initialHtml);
+    }
+
+    if (onChange) {
+        quill.on('text-change', function() {
+            // Quill's lege toestand is '<p><br></p>' — onnodige opslag vermijden.
+            var plain = (quill.getText() || '').replace(/ /g, ' ').trim();
+            var html = plain.length === 0 ? '' : quill.root.innerHTML;
+            onChange(html, plain);
+        });
+    }
+
+    return quill;
+};
+</script>
+
+<script>
 /* === "Indienen voor review"-knop ===
    Volgt het patroon uit CLAUDE.md voor koppel-acties:
    1. Volledige auto-save van hoofdform (window.__vsSaveHoofdformAlleVelden)
@@ -3812,6 +3800,15 @@
     });
     form.querySelectorAll('[contenteditable="true"]').forEach(function(el) {
         el.setAttribute('contenteditable', 'false');
+    });
+    // Quill-editors: toolbar visueel uitschakelen (klikken onmogelijk) en de
+    // contenteditable-flag op de .ql-editor div blijvend op false zetten.
+    form.querySelectorAll('.vs-rte-wrapper .ql-toolbar').forEach(function(tb) {
+        tb.style.pointerEvents = 'none';
+        tb.style.opacity = '0.5';
+    });
+    form.querySelectorAll('.vs-rte-wrapper .ql-editor').forEach(function(ed) {
+        ed.setAttribute('contenteditable', 'false');
     });
     // Beveiliging: block de submit-event voor als er toch iets probeert te submitten.
     form.addEventListener('submit', function(e) {
@@ -5347,11 +5344,7 @@ setupCropper({
     var nieuweBtn  = document.getElementById('tips-nieuwe-knop');
     var teller     = document.getElementById('tips-teller');
     var modal      = document.getElementById('tips-cropper-modal');
-    var tipsToolbar = document.getElementById('tips-shared-toolbar');
     if (!hiddenJson || !lijst || !nieuweBtn) return;
-
-    // Rich-text state (v0.7.32): laatst-gefocuste tip-omschrijving.
-    var tipsActieveEditor = null;
 
     var MAX_TIPS   = 3;
     var MAX_FOTOS  = 2;
@@ -5575,34 +5568,23 @@ setupCropper({
         var lblTekst = document.createElement('label'); lblTekst.className = 'form-label';
         lblTekst.textContent = 'Omschrijving van de tip';
         grpTekst.appendChild(lblTekst);
-        // v0.7.32: rich-text i.p.v. textarea. Werkt met gedeelde tips-shared-toolbar.
+        // v0.7.50: Quill-editor (vervangt contenteditable + gedeelde toolbar).
         var inpTekst = document.createElement('div');
-        inpTekst.className = 'kk-editor';
-        inpTekst.setAttribute('contenteditable', 'true');
-        inpTekst.setAttribute('role', 'textbox');
-        inpTekst.setAttribute('aria-multiline', 'true');
-        inpTekst.setAttribute('data-placeholder', 'Bijv. Rookmachine in de hoek plaatsen — met opmaak via de toolbar bovenaan');
+        grpTekst.appendChild(inpTekst);
+        body.appendChild(grpTekst);
         var initTipHtml = t.tekst_html;
         if (!initTipHtml && t.tekst) {
             var escT = String(t.tekst).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             initTipHtml = '<p>' + escT.replace(/\n/g, '<br>') + '</p>';
         }
-        inpTekst.innerHTML = initTipHtml || '';
-        function markEmptyTip() {
-            var leeg = (inpTekst.textContent || '').trim().length === 0 && !inpTekst.querySelector('img,table');
-            inpTekst.setAttribute('data-empty', leeg ? 'true' : 'false');
-        }
-        markEmptyTip();
-        inpTekst.addEventListener('focus', function() { tipsActieveEditor = inpTekst; });
-        inpTekst.addEventListener('input', function() {
-            t.tekst_html = inpTekst.innerHTML;
-            t.tekst = (inpTekst.textContent || '').trim();
-            markEmptyTip();
-            syncJson();
-            updatePreviewNu();
-        });
-        grpTekst.appendChild(inpTekst);
-        body.appendChild(grpTekst);
+        window.vsInitQuill(inpTekst, initTipHtml || '',
+            'Bijv. Rookmachine in de hoek plaatsen…',
+            function(html, plain) {
+                t.tekst_html = html;
+                t.tekst = plain;
+                syncJson();
+                updatePreviewNu();
+            });
 
         var lblFotos = document.createElement('label'); lblFotos.className = 'form-label';
         lblFotos.textContent = 'Foto\'s bij deze tip (max ' + MAX_FOTOS + ')';
@@ -5718,7 +5700,16 @@ setupCropper({
     }
     function maakPreviewTekst(t) {
         var el = document.createElement('div'); el.className = 'werkwijze-preview-tekst';
-        el.textContent = (t.tekst || '').trim() || '(tip)';
+        // v0.7.50: Quill levert tekst_html — innerHTML om bullets/kleur/vet te
+        // behouden; valt terug op plain tekst (met <br> voor newlines) voor oude kaarten.
+        if ((t.tekst_html || '').trim()) {
+            el.innerHTML = t.tekst_html;
+        } else if ((t.tekst || '').trim()) {
+            el.textContent = t.tekst;
+            el.innerHTML = el.innerHTML.replace(/\n/g, '<br>');
+        } else {
+            el.textContent = '(tip)';
+        }
         return el;
     }
 
@@ -5907,31 +5898,8 @@ setupCropper({
         });
     }
 
-    // ==== Gedeelde rich-text toolbar (v0.7.32) ====
-    if (tipsToolbar) {
-        tipsToolbar.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
-            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (!tipsActieveEditor) return;
-                tipsActieveEditor.focus();
-                var cmd = btn.dataset.kkCmd;
-                var arg = btn.dataset.kkArg || null;
-                try { document.execCommand(cmd, false, arg); } catch (_) {}
-                tipsActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-        });
-        tipsToolbar.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
-            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (!tipsActieveEditor) return;
-                tipsActieveEditor.focus();
-                try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
-                tipsActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-        });
-    }
+    // v0.7.50: oude 'gedeelde toolbar'-logica weg — elke Quill-editor heeft
+    // nu zijn eigen compacte toolbar bovenaan de editor zelf.
 })();
 </script>
 {% endif %}
@@ -6005,11 +5973,7 @@ setupCropper({
     var lijst         = document.getElementById('werkwijze-stappen-lijst');
     var nieuweStapBtn = document.getElementById('werkwijze-nieuwe-stap-knop');
     var teller        = document.getElementById('werkwijze-teller');
-    var wwToolbar     = document.getElementById('ww-shared-toolbar');
     if (!hiddenJson || !lijst || !nieuweStapBtn) return;
-
-    // Rich-text state: laatst-gefocuste vrije-tekst-editor.
-    var wwActieveEditor = null;
 
     var MAX_STAPPEN = {{ WERKWIJZE_MAX_STAPPEN|default(20) }};
     var TITEL_MAX   = {{ WERKWIJZE_TITEL_MAX|default(40) }};
@@ -6527,36 +6491,22 @@ setupCropper({
     }
 
     function bouwVrijeTekstEditor(s, body, container, tekstMax) {
-        // v0.7.31: rich-text i.p.v. textarea. Bedient door de gedeelde ww-toolbar
-        // die op wwActieveEditor werkt.
-        var editor = document.createElement('div');
-        editor.className = 'kk-editor';
-        editor.setAttribute('contenteditable', 'true');
-        editor.setAttribute('role', 'textbox');
-        editor.setAttribute('aria-multiline', 'true');
-        editor.setAttribute('data-placeholder', 'Wat moet er bij deze stap gebeuren? (opmaak via de toolbar)');
-        // Backward compat: als er nog geen tekst_html is maar wel tekst (plain), migreer.
+        // v0.7.50: Quill-editor (vervangt contenteditable + gedeelde ww-toolbar).
+        var host = document.createElement('div');
+        container.appendChild(host);
         var initHtml = s.tekst_html;
         if (!initHtml && s.tekst) {
             var esc = String(s.tekst).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             initHtml = '<p>' + esc.replace(/\n/g, '<br>') + '</p>';
         }
-        editor.innerHTML = initHtml || '';
-        function markEmpty() {
-            var leeg = (editor.textContent || '').trim().length === 0 && !editor.querySelector('img,table');
-            editor.setAttribute('data-empty', leeg ? 'true' : 'false');
-        }
-        markEmpty();
-        editor.addEventListener('focus', function() { wwActieveEditor = editor; });
-        editor.addEventListener('input', function() {
-            s.tekst_html = editor.innerHTML;
-            // Fallback: houd s.tekst gesynchroniseerd voor code die nog naar plain tekst kijkt.
-            s.tekst = (editor.textContent || '').trim();
-            markEmpty();
-            syncJson();
-            updatePreviewTekst(s, body);
-        });
-        container.appendChild(editor);
+        window.vsInitQuill(host, initHtml || '',
+            'Wat moet er bij deze stap gebeuren?',
+            function(html, plain) {
+                s.tekst_html = html;
+                s.tekst = plain;
+                syncJson();
+                updatePreviewTekst(s, body);
+            });
     }
 
     function bouwBulletsEditor(s, body, container) {
@@ -7068,8 +7018,14 @@ setupCropper({
                 ul.appendChild(li);
             });
             t.appendChild(ul);
+        } else if ((s.tekst_html || '').trim()) {
+            // v0.7.50: Quill levert tekst_html — innerHTML om bullets/kleur/vet te behouden.
+            t.innerHTML = s.tekst_html;
+        } else if (ruwe.trim()) {
+            t.textContent = ruwe;
+            t.innerHTML = t.innerHTML.replace(/\n/g, '<br>');
         } else {
-            t.textContent = ruwe || '(uitleg)';
+            t.textContent = '(uitleg)';
         }
         return t;
     }
@@ -7201,32 +7157,8 @@ setupCropper({
         });
     }
 
-    // ==== Gedeelde rich-text toolbar (v0.7.31) ====
-    // Werkt op wwActieveEditor (laatst-gefocuste .kk-editor binnen deze editor).
-    if (wwToolbar) {
-        wwToolbar.querySelectorAll('.kk-tb-knop[data-kk-cmd]').forEach(function(btn) {
-            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (!wwActieveEditor) return;
-                wwActieveEditor.focus();
-                var cmd = btn.dataset.kkCmd;
-                var arg = btn.dataset.kkArg || null;
-                try { document.execCommand(cmd, false, arg); } catch (_) {}
-                wwActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-        });
-        wwToolbar.querySelectorAll('.kk-tb-kleur').forEach(function(btn) {
-            btn.addEventListener('mousedown', function(e) { e.preventDefault(); });
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (!wwActieveEditor) return;
-                wwActieveEditor.focus();
-                try { document.execCommand('foreColor', false, btn.dataset.kkKleur); } catch (_) {}
-                wwActieveEditor.dispatchEvent(new Event('input', { bubbles: true }));
-            });
-        });
-    }
+    // v0.7.50: oude 'gedeelde toolbar'-logica weg — elke Quill-editor heeft
+    // nu zijn eigen compacte toolbar bovenaan de editor zelf.
 })();
 
 /* Sluit werkwijze-editor-blok; markers-editor is weer instructie-only. */
